@@ -62,13 +62,13 @@
             </div>
           </div>
           <nav class="nav flex-column">
-            <a class="nav-link text-white-50" href="/admin-client/dashboard">Dashboard</a>
-            <a class="nav-link text-white-50" href="/admin-client/orders">Orders</a>
-            <a class="nav-link text-white-50" href="/admin-client/menu">Menu</a>
-            <a class="nav-link text-white-50" href="/admin-client/customers">Customers</a>
-            <a class="nav-link text-white-50" href="/admin-client/reports">Reports</a>
-            <a class="nav-link text-white-50" href="/admin-client/ai-training" style="color:#ffd700 !important; font-weight:600; background:rgba(255,215,0,0.1);">⚡ AI Training</a>
-            <a class="nav-link text-white-50" href="/admin-client/settings">Settings</a>
+            <a class="nav-link text-white-50 {% if request.path == '/admin-client/dashboard' %}active{% endif %}" href="/admin-client/dashboard">Dashboard</a>
+            <a class="nav-link text-white-50 {% if request.path == '/admin-client/orders' %}active{% endif %}" href="/admin-client/orders">Orders</a>
+            <a class="nav-link text-white-50 {% if request.path == '/admin-client/menu' %}active{% endif %}" href="/admin-client/menu">Menu</a>
+            <a class="nav-link text-white-50 {% if request.path == '/admin-client/customers' %}active{% endif %}" href="/admin-client/customers">Customers</a>
+            <a class="nav-link text-white-50 {% if request.path == '/admin-client/reports' %}active{% endif %}" href="/admin-client/reports">Reports</a>
+            <a class="nav-link text-white-50 {% if request.path == '/admin-client/settings' %}active{% endif %}" href="/admin-client/settings">Settings</a>
+            <a class="nav-link text-white-50 {% if request.path == '/admin-client/ai-training' %}active{% endif %}" href="/admin-client/ai-training" style="color:#ffd700 !important; font-weight:600; background:rgba(255,215,0,0.1);">⚡ AI Training</a>
           </nav>
         </div>
       </aside>
