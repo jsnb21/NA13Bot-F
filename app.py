@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from tools import save_config, load_config
 
 app = Flask(__name__)
@@ -6,6 +6,19 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return render_template('chatbot.html')
+
+
+@app.route('/chatbot')
+def chatbot_route():
+    # explicit route for /chatbot for convenience
+    return render_template('chatbot.html')
+
+
+@app.route('/api/config', methods=['GET'])
+def api_config():
+    """Return the current admin config as JSON for the chatbot to consume."""
+    cfg = load_config()
+    return jsonify(cfg)
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():

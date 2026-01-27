@@ -1,12 +1,88 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Chatbot Page</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Chatbot — Resto</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      :root{--accent:#1f6feb; --bg:#f7f9fb; --bubble-light:#e9eefb; --bubble-dark:#d1e4ff}
+      body{margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:var(--bg);color:#0f172a}
+      .chat-shell{max-width:980px;margin:18px auto;display:flex;gap:18px}
+      .phone{flex:0 0 420px;background:#fff;border-radius:18px;box-shadow:0 10px 30px rgba(15,23,42,0.08);overflow:hidden;display:flex;flex-direction:column;height:720px}
+      .phone .header{padding:14px 18px;background:var(--accent);color:#fff;font-weight:700;text-align:center}
+      .phone .messages{flex:1;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+      .bubble{max-width:78%;padding:10px 14px;border-radius:14px;display:inline-block}
+      .bubble.user{align-self:flex-end;background:var(--bubble-dark);border-bottom-right-radius:6px}
+      .bubble.bot{align-self:flex-start;background:#f1f5f9;border-bottom-left-radius:6px}
+      .composer{display:flex;padding:12px;border-top:1px solid #eef2f7;background:#fff}
+      .composer input{flex:1;border:1px solid #e6eefc;padding:10px 12px;border-radius:999px}
+      .composer button{margin-left:8px;border-radius:999px;padding:10px 14px;background:var(--accent);color:#fff;border:0}
+      .desktop-preview{flex:1;padding:22px}
+      .menu-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    </style>
   </head>
   <body>
-    <h1>Chatbot (Interface Layer)</h1>
-    <p>Welcome to the minimal chatbot UI. This is a placeholder page.</p>
-    <p><a href="/superadmin">Go to Super Admin</a></p>
+    <div class="chat-shell">
+      <div class="phone" id="phone">
+        <div class="header" id="resto-name">Resto Name</div>
+        <div class="messages" id="messages">
+          <div class="bubble bot">Welcome! How can I help?</div>
+          <div class="bubble user">I'd like to order.</div>
+        </div>
+        <div class="composer">
+          <input id="txt" placeholder="Type message...">
+          <button id="send">➤</button>
+        </div>
+      </div>
+
+      <div class="desktop-preview">
+        <div class="menu-card">
+          <h4 id="preview-title">Chatbot Preview</h4>
+          <p id="preview-menu">Menu and dynamic styling will apply here.</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function loadConfig(){
+        try{
+          const res = await fetch('/api/config');
+          if(!res.ok) return {};
+          return await res.json();
+        }catch(e){return {}}
+      }
+
+      function applyConfig(cfg){
+        if(!cfg) return;
+        const root = document.documentElement;
+        if(cfg.color_hex) root.style.setProperty('--accent', cfg.color_hex);
+        if(cfg.menu_text) document.getElementById('preview-menu').textContent = cfg.menu_text;
+        if(cfg.establishment_name) document.getElementById('resto-name').textContent = cfg.establishment_name;
+        if(cfg.font_family) document.body.style.fontFamily = cfg.font_family + ', Arial, sans-serif';
+      }
+
+      function postMessage(text, from='user'){
+        const div = document.createElement('div');
+        div.className = 'bubble ' + (from==='user' ? 'user' : 'bot');
+        div.textContent = text;
+        document.getElementById('messages').appendChild(div);
+        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+      }
+
+      document.getElementById('send').addEventListener('click', ()=>{
+        const txt = document.getElementById('txt');
+        const v = txt.value.trim();
+        if(!v) return;
+        postMessage(v,'user');
+        txt.value='';
+        // placeholder bot reply
+        setTimeout(()=>postMessage('Got it — we are processing your order.', 'bot'), 700);
+      });
+
+      document.getElementById('txt').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('send').click(); } });
+
+      (async function(){ const cfg = await loadConfig(); applyConfig(cfg); })();
+    </script>
   </body>
 </html>
