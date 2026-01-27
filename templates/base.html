@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Resto Admin{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body { background:#f5f7fa; }
+      .admin-sidebar { width:260px; background:#0b1720; color:#fff; min-height:100vh; }
+      .sidebar-inner { padding:32px 20px; }
+      .sidebar-inner h2 { color:#ff6b6b; }
+      .main-content { margin-left:260px; padding:32px; }
+      .card-surface { background: #fff; border-radius:8px; padding:18px; box-shadow:0 6px 18px rgba(11,23,32,0.06); }
+    </style>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <div class="d-flex">
+      <aside class="admin-sidebar position-fixed">
+        <div class="sidebar-inner">
+          <div class="d-flex align-items-center mb-4">
+            <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style="width:46px;height:46px">R</div>
+            <div class="ms-3">
+              <div style="font-weight:700">Resto</div>
+              <div style="font-size:.85rem;opacity:.8">Admin Client</div>
+            </div>
+          </div>
+          <nav class="nav flex-column">
+            <a class="nav-link text-white-50" href="#">Dashboard</a>
+            <a class="nav-link text-white-50" href="#">Orders</a>
+            <a class="nav-link text-white-50" href="#">Menu</a>
+            <a class="nav-link text-white-50" href="#">Customers</a>
+            <a class="nav-link text-white-50" href="#">Reports</a>
+            <a class="nav-link text-white-50" href="#">Settings</a>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="main-content flex-fill">
+        {% block content %}
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-12 card-surface">
+              <h3>Welcome</h3>
+              <p>Use the admin sidebar to navigate.</p>
+            </div>
+          </div>
+        </div>
+        {% endblock %}
+      </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

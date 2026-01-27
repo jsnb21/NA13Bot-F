@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Configuration — Resto{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card-surface">
+                <h3>Admin Dashboard</h3>
+                <form method="post">
+                    <div class="mb-3">
+                        <label for="establishment_name" class="form-label">Establishment Name</label>
+                        <input id="establishment_name" name="establishment_name" type="text" class="form-control" value="{{ cfg.get('establishment_name','') }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="logo_url" class="form-label">Logo URL</label>
+                        <input id="logo_url" name="logo_url" type="text" class="form-control" value="{{ cfg.get('logo_url','') }}">
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="color_hex" class="form-label">Select Color (HEX)</label>
+                            <input id="color_hex" name="color_hex" type="text" class="form-control" value="{{ cfg.get('color_hex','') }}">
+                        </div>
+                        <div class="col-6">
+                            <label for="font_family" class="form-label">Select Font</label>
+                            <select id="font_family" name="font_family" class="form-select">
+                                {% set font = cfg.get('font_family','') %}
+                                <option value="">-- default --</option>
+                                <option value="Arial" {% if font=='Arial' %}selected{% endif %}>Arial</option>
+                                <option value="Helvetica" {% if font=='Helvetica' %}selected{% endif %}>Helvetica</option>
+                                <option value="Roboto" {% if font=='Roboto' %}selected{% endif %}>Roboto</option>
+                                <option value="Georgia" {% if font=='Georgia' %}selected{% endif %}>Georgia</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="menu_text" class="form-label">Input Menu Text</label>
+                        <textarea id="menu_text" name="menu_text" rows="8" class="form-control">{{ cfg.get('menu_text','') }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="image_urls" class="form-label">Food Image URLs (one per line)</label>
+                        <textarea id="image_urls" name="image_urls" rows="4" class="form-control">{% for u in cfg.get('image_urls',[]) %}{{ u }}
+{% endfor %}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-secondary">SAVE CONFIGURATION</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card-surface">
+                <h4>Preview / Dashboard</h4>
+                <p>This area is a simple placeholder showing how your form sits inside the admin layout.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
