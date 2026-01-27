@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Menu Kiosk — Resto Admin{% endblock %}
+
+{% block head %}
+<style>
+    .kiosk-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .menu-card {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        cursor: pointer;
+    }
+    .menu-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 8px 20px rgba(255, 107, 107, 0.2);
+    }
+    .menu-card-image {
+        width: 100%;
+        height: 200px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+    }
+    .menu-card-content {
+        padding: 16px;
+    }
+    .menu-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #0b1720;
+        margin-bottom: 8px;
+    }
+    .menu-card-description {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 12px;
+        height: 40px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .menu-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .menu-card-price {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #ff6b6b;
+    }
+    .menu-card-badge {
+        display: inline-block;
+        background: #ff6b6b;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .kiosk-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    .category-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .category-btn {
+        padding: 8px 16px;
+        border: 2px solid #ddd;
+        background: white;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+    .category-btn.active {
+        background: #ff6b6b;
+        color: white;
+        border-color: #ff6b6b;
+    }
+    .category-btn:hover {
+        border-color: #ff6b6b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="kiosk-header">
+        <h2>Menu Kiosk</h2>
+        <button class="btn btn-secondary" style="background:#ff6b6b; border:none;">+ Add Item</button>
+    </div>
+
+    <div class="category-tabs">
+        <button class="category-btn active">All Items</button>
+        <button class="category-btn">Appetizers</button>
+        <button class="category-btn">Main Course</button>
+        <button class="category-btn">Desserts</button>
+        <button class="category-btn">Beverages</button>
+        <button class="category-btn">Specials</button>
+    </div>
+
+    <div class="kiosk-grid">
+        <div class="menu-card">
+            <div class="menu-card-image">🍕</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Margherita Pizza</div>
+                <div class="menu-card-description">Fresh tomato, mozzarella, and basil on crispy crust</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$12.99</span>
+                    <span class="menu-card-badge">Popular</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🍔</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Classic Burger</div>
+                <div class="menu-card-description">Juicy beef patty with lettuce, tomato, and special sauce</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$11.50</span>
+                    <span class="menu-card-badge">Popular</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🥗</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Caesar Salad</div>
+                <div class="menu-card-description">Crisp romaine, croutons, parmesan, and creamy caesar dressing</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$9.99</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🍝</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Spaghetti Carbonara</div>
+                <div class="menu-card-description">Creamy pasta with bacon, eggs, and parmesan cheese</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$14.50</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🍖</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Grilled Steak</div>
+                <div class="menu-card-description">Tender ribeye steak with garlic butter and herbs</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$22.99</span>
+                    <span class="menu-card-badge">Premium</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🍗</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Crispy Fried Chicken</div>
+                <div class="menu-card-description">Golden fried chicken served with coleslaw and fries</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$13.99</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🥘</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Seafood Paella</div>
+                <div class="menu-card-description">Rice with shrimp, mussels, and saffron sauce</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$18.50</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🍰</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Chocolate Cake</div>
+                <div class="menu-card-description">Rich chocolate cake with ganache frosting</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$7.50</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-card">
+            <div class="menu-card-image">🍨</div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Tiramisu</div>
+                <div class="menu-card-description">Classic Italian dessert with coffee and mascarpone</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price">$6.99</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

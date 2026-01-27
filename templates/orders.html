@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders — Resto Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Orders</h2>
+            <button class="btn btn-secondary" style="background:#ff6b6b; border:none;">+ New Order</button>
+        </div>
+    </div>
+
+    <div class="card-surface mb-4">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <input type="text" class="form-control" placeholder="Search orders..." style="max-width:300px;">
+            <select class="form-select" style="max-width:150px;">
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </div>
+
+        <table class="table mb-0">
+            <thead style="background:#f8f9fa;">
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>#ORD-2024-001</strong></td>
+                    <td>John Doe</td>
+                    <td>Pizza, Salad, Drink</td>
+                    <td>$45.99</td>
+                    <td><span class="badge bg-success">Completed</span></td>
+                    <td>2:30 PM</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary">View</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>#ORD-2024-002</strong></td>
+                    <td>Jane Smith</td>
+                    <td>Burger, Fries</td>
+                    <td>$38.50</td>
+                    <td><span class="badge bg-warning">In Progress</span></td>
+                    <td>2:25 PM</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary">View</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>#ORD-2024-003</strong></td>
+                    <td>Mike Johnson</td>
+                    <td>Pasta, Garlic Bread, Dessert</td>
+                    <td>$62.25</td>
+                    <td><span class="badge bg-success">Completed</span></td>
+                    <td>2:15 PM</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary">View</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>#ORD-2024-004</strong></td>
+                    <td>Sarah Williams</td>
+                    <td>Steak, Vegetables</td>
+                    <td>$55.00</td>
+                    <td><span class="badge bg-primary">Pending</span></td>
+                    <td>2:10 PM</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary">View</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>#ORD-2024-005</strong></td>
+                    <td>Tom Brown</td>
+                    <td>Fish & Chips</td>
+                    <td>$32.75</td>
+                    <td><span class="badge bg-danger">Cancelled</span></td>
+                    <td>1:50 PM</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary">View</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-end">
+            <li class="page-item"><a class="page-link" href="#">Previous</a></li>
+            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li class="page-item"><a class="page-link" href="#">Next</a></li>
+        </ul>
+    </nav>
+</div>
+{% endblock %}

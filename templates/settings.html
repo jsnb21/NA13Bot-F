@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings — Resto Admin{% endblock %}
+
+{% block head %}
+<style>
+    .settings-section {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .settings-section h5 {
+        color: #0b1720;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #f8f9fa;
+        padding-bottom: 10px;
+    }
+    .setting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .setting-row:last-child {
+        border-bottom: none;
+    }
+    .setting-label {
+        font-weight: 500;
+    }
+    .toggle-switch {
+        position: relative;
+        width: 50px;
+        height: 24px;
+        background-color: #ccc;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .toggle-switch.active {
+        background-color: #ff6b6b;
+    }
+    .toggle-slider {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border-radius: 50%;
+        transition: left 0.3s;
+    }
+    .toggle-switch.active .toggle-slider {
+        left: 28px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <h2>Settings</h2>
+    </div>
+
+    <div class="settings-section">
+        <h5>Business Information</h5>
+        <div class="mb-3">
+            <label for="business_name" class="form-label">Business Name</label>
+            <input type="text" id="business_name" class="form-control" value="Resto Restaurant" />
+        </div>
+        <div class="mb-3">
+            <label for="business_email" class="form-label">Business Email</label>
+            <input type="email" id="business_email" class="form-control" value="contact@restorestaurant.com" />
+        </div>
+        <div class="mb-3">
+            <label for="business_phone" class="form-label">Business Phone</label>
+            <input type="tel" id="business_phone" class="form-control" value="555-0123" />
+        </div>
+        <div class="mb-3">
+            <label for="business_address" class="form-label">Business Address</label>
+            <input type="text" id="business_address" class="form-control" value="123 Main St, City, State 12345" />
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h5>Branding & Display</h5>
+        <div class="mb-3">
+            <label for="establishment_name" class="form-label">Establishment Name</label>
+            <input id="establishment_name" name="establishment_name" type="text" class="form-control" placeholder="Your restaurant name">
+        </div>
+
+        <div class="mb-3">
+            <label for="logo_url" class="form-label">Logo URL</label>
+            <input id="logo_url" name="logo_url" type="text" class="form-control" placeholder="https://example.com/logo.png">
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-6">
+                <label for="color_hex" class="form-label">Select Color (HEX)</label>
+                <input id="color_hex" name="color_hex" type="text" class="form-control" placeholder="#ff6b6b">
+            </div>
+            <div class="col-6">
+                <label for="font_family" class="form-label">Select Font</label>
+                <select id="font_family" name="font_family" class="form-select">
+                    <option value="">-- default --</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Roboto">Roboto</option>
+                    <option value="Georgia">Georgia</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="menu_text" class="form-label">Menu Text</label>
+            <textarea id="menu_text" name="menu_text" rows="6" class="form-control" placeholder="Enter your menu items and descriptions"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="image_urls" class="form-label">Food Image URLs (one per line)</label>
+            <textarea id="image_urls" name="image_urls" rows="4" class="form-control" placeholder="https://example.com/food1.jpg&#10;https://example.com/food2.jpg"></textarea>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h5>Notifications & Alerts</h5>
+        <div class="setting-row">
+            <span class="setting-label">Email Notifications on New Orders</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">SMS Alerts for Critical Issues</span>
+            <div class="toggle-switch" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Daily Sales Summary Email</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Inventory Low Stock Alerts</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h5>Operating Hours</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="open_time" class="form-label">Opening Time</label>
+                    <input type="time" id="open_time" class="form-control" value="10:00" />
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="close_time" class="form-label">Closing Time</label>
+                    <input type="time" id="close_time" class="form-control" value="22:00" />
+                </div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Enable Online Ordering</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Enable Delivery</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h5>Payment Settings</h5>
+        <div class="setting-row">
+            <span class="setting-label">Credit Card Payments</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Digital Wallet (Apple Pay, Google Pay)</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span class="setting-label">Cash Payments</span>
+            <div class="toggle-switch active" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="tax_rate" class="form-label">Tax Rate (%)</label>
+            <input type="number" id="tax_rate" class="form-control" value="8.5" step="0.1" />
+        </div>
+    </div>
+
+    <div class="settings-section">
+        <h5>Security & Privacy</h5>
+        <div class="setting-row">
+            <span class="setting-label">Two-Factor Authentication</span>
+            <div class="toggle-switch" onclick="this.classList.toggle('active')">
+                <div class="toggle-slider"></div>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="password" class="form-label">Change Password</label>
+            <input type="password" id="password" class="form-control" placeholder="Enter new password" />
+        </div>
+        <div class="mb-3">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" id="confirm_password" class="form-control" placeholder="Confirm new password" />
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <button class="btn btn-secondary" style="background:#ff6b6b; border:none; margin-right:10px;">Save Settings</button>
+        <button class="btn btn-outline-secondary">Cancel</button>
+    </div>
+
+    <div class="settings-section" style="border-top:2px solid #f0f0f0; padding-top:20px;">
+        <h5 style="color:#f44336;">Danger Zone</h5>
+        <p style="color:#666; margin-bottom:15px;">These actions cannot be undone. Please proceed with caution.</p>
+        <button class="btn btn-outline-danger">Reset All Settings to Default</button>
+        <button class="btn btn-danger ms-2">Delete Account & Data</button>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports — Resto Admin{% endblock %}
+
+{% block head %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .chart-placeholder {
+        background: #f8f9fa;
+        border-radius: 6px;
+        height: 250px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #999;
+        margin: 15px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <h2>Reports</h2>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="report-card">
+                <h5 class="mb-3">Revenue Over Time</h5>
+                <div class="chart-placeholder">
+                    📊 Revenue Chart Placeholder
+                </div>
+                <small class="text-muted">Total Revenue This Month: $12,450</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="report-card">
+                <h5 class="mb-3">Top Categories</h5>
+                <div style="padding: 10px 0;">
+                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                        <span>Main Courses</span>
+                        <strong>45%</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                        <span>Appetizers</span>
+                        <strong>25%</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                        <span>Desserts</span>
+                        <strong>18%</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding:10px 0;">
+                        <span>Beverages</span>
+                        <strong>12%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="report-card">
+                <h5 class="mb-3">Orders by Day of Week</h5>
+                <div class="chart-placeholder">
+                    📈 Daily Orders Chart
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="report-card">
+                <h5 class="mb-3">Customer Growth</h5>
+                <div class="chart-placeholder">
+                    📉 Growth Trend Chart
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="report-card">
+                <h5 class="mb-3">Sales Summary</h5>
+                <table class="table mb-0">
+                    <thead style="background:#f8f9fa;">
+                        <tr>
+                            <th>Metric</th>
+                            <th>This Month</th>
+                            <th>Last Month</th>
+                            <th>Change</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Total Revenue</strong></td>
+                            <td>$12,450</td>
+                            <td>$11,200</td>
+                            <td>+$1,250</td>
+                            <td><span style="color:#4caf50;">↑ 11.2%</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Total Orders</strong></td>
+                            <td>248</td>
+                            <td>215</td>
+                            <td>+33</td>
+                            <td><span style="color:#4caf50;">↑ 15.3%</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Avg Order Value</strong></td>
+                            <td>$50.20</td>
+                            <td>$52.09</td>
+                            <td>-$1.89</td>
+                            <td><span style="color:#f44336;">↓ 3.6%</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>New Customers</strong></td>
+                            <td>42</td>
+                            <td>28</td>
+                            <td>+14</td>
+                            <td><span style="color:#4caf50;">↑ 50%</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Customer Satisfaction</strong></td>
+                            <td>92%</td>
+                            <td>89%</td>
+                            <td>+3%</td>
+                            <td><span style="color:#4caf50;">↑ 3.4%</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,41 @@
       .sidebar-inner h2 { color:#ff6b6b; }
       .main-content { margin-left:260px; padding:32px; }
       .card-surface { background: #fff; border-radius:8px; padding:18px; box-shadow:0 6px 18px rgba(11,23,32,0.06); }
+      
+      /* Sidebar Link Effects */
+      .nav-link {
+        position: relative;
+        padding: 10px 12px !important;
+        margin-bottom: 4px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+      }
+      .nav-link::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 3px;
+        background-color: #ff6b6b;
+        border-radius: 0 3px 3px 0;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .nav-link:hover {
+        background-color: rgba(255, 107, 107, 0.1);
+        color: #fff !important;
+      }
+      .nav-link:active,
+      .nav-link.active {
+        background-color: rgba(255, 107, 107, 0.2);
+        color: #fff !important;
+      }
+      .nav-link:hover::before,
+      .nav-link:active::before,
+      .nav-link.active::before {
+        opacity: 1;
+      }
     </style>
     {% block head %}{% endblock %}
   </head>
@@ -27,12 +62,13 @@
             </div>
           </div>
           <nav class="nav flex-column">
-            <a class="nav-link text-white-50" href="#">Dashboard</a>
-            <a class="nav-link text-white-50" href="#">Orders</a>
-            <a class="nav-link text-white-50" href="#">Menu</a>
-            <a class="nav-link text-white-50" href="#">Customers</a>
-            <a class="nav-link text-white-50" href="#">Reports</a>
-            <a class="nav-link text-white-50" href="#">Settings</a>
+            <a class="nav-link text-white-50" href="/admin-client/dashboard">Dashboard</a>
+            <a class="nav-link text-white-50" href="/admin-client/orders">Orders</a>
+            <a class="nav-link text-white-50" href="/admin-client/menu">Menu</a>
+            <a class="nav-link text-white-50" href="/admin-client/customers">Customers</a>
+            <a class="nav-link text-white-50" href="/admin-client/reports">Reports</a>
+            <a class="nav-link text-white-50" href="/admin-client/ai-training" style="color:#ffd700 !important; font-weight:600; background:rgba(255,215,0,0.1);">⚡ AI Training</a>
+            <a class="nav-link text-white-50" href="/admin-client/settings">Settings</a>
           </nav>
         </div>
       </aside>

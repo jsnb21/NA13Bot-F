@@ -52,5 +52,46 @@ def admin_client():
     cfg = load_config()
     return render_template('admin-client.html', cfg=cfg)
 
+@app.route('/admin-client/dashboard')
+def dashboard():
+    cfg = load_config()
+    return render_template('dashboard.html', cfg=cfg)
+
+@app.route('/admin-client/orders')
+def orders():
+    cfg = load_config()
+    return render_template('orders.html', cfg=cfg)
+
+@app.route('/admin-client/menu')
+def menu():
+    cfg = load_config()
+    return render_template('menu.html', cfg=cfg)
+
+@app.route('/admin-client/customers')
+def customers():
+    cfg = load_config()
+    return render_template('customers.html', cfg=cfg)
+
+@app.route('/admin-client/reports')
+def reports():
+    cfg = load_config()
+    return render_template('reports.html', cfg=cfg)
+
+@app.route('/admin-client/settings')
+def settings():
+    cfg = load_config()
+    return render_template('settings.html', cfg=cfg)
+
+@app.route('/admin-client/ai-training', methods=['GET', 'POST'])
+def ai_training():
+    cfg = load_config()
+    if request.method == 'POST':
+        # Handle file uploads for AI training
+        if 'training_files' in request.files:
+            files = request.files.getlist('training_files')
+            # Process uploaded files here
+            pass
+    return render_template('ai-training.html', cfg=cfg)
+
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)
