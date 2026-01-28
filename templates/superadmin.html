@@ -1,15 +1,159 @@
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Super Admin Page</title>
-  </head>
-  <body>
-    <h1>Super Admin (Input Layer)</h1>
-    <form method="post">
-      <label for="config">Configuration</label><br>
-      <textarea id="config" name="config" rows="6" cols="60">{{ config }}</textarea><br>
-      <button type="submit">Save</button>
-    </form>
-  </body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}Super Admin — Resto Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="mb-4">
+    <h2>Super Admin</h2>
+    <p class="text-muted">Manage tenants, AI governance and platform analytics.</p>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6 mb-4">
+      <div class="card-surface">
+        <h5>Tenant (Restaurant) Management</h5>
+        <p class="text-muted small">Onboard, offboard, manage tiers, tokens and suspensions.</p>
+
+        <form class="row g-2 align-items-center mb-3" method="post" action="#">
+          <div class="col-auto">
+            <input name="name" class="form-control" placeholder="Restaurant name" />
+          </div>
+          <div class="col-auto">
+            <select name="tier" class="form-select">
+              <option>Basic</option>
+              <option>Premium</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary">Create (mock)</button>
+          </div>
+        </form>
+
+        <div style="max-height:260px; overflow:auto">
+          <table class="table table-sm mb-0">
+            <thead class="table-light">
+              <tr><th>Name</th><th>UUID</th><th>Tier</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>La Piazza</td>
+                <td class="text-muted small">e7b1f9a2-3d4c-4a6f-b123-abcdef012345</td>
+                <td>Basic</td>
+                <td><span class="badge bg-success">Active</span></td>
+                <td><button class="btn btn-sm btn-outline-secondary">View</button></td>
+              </tr>
+              <tr>
+                <td>Sushi Corner</td>
+                <td class="text-muted small">c1a2b3c4-d5e6-7f80-1234-56789abcdef0</td>
+                <td>Premium</td>
+                <td><span class="badge bg-success">Active</span></td>
+                <td><button class="btn btn-sm btn-outline-secondary">Revoke Token</button></td>
+              </tr>
+              <tr>
+                <td>Burger Barn</td>
+                <td class="text-muted small">9f8e7d6c-5b4a-3210-fedc-ba9876543210</td>
+                <td>Basic</td>
+                <td><span class="badge bg-secondary">Suspended</span></td>
+                <td><button class="btn btn-sm btn-outline-primary">Reactivate</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+      <div class="card-surface">
+        <h5>AI &amp; API Governance</h5>
+        <p class="text-muted small">Global model control, per-tenant quotas and system prompt templates.</p>
+
+        <div class="mb-3">
+          <label class="form-label small">Global Model Version</label>
+          <div class="d-flex gap-2">
+            <select class="form-select w-50">
+              <option>Gemini 1.5 Flash</option>
+              <option selected>Gemini 2.0</option>
+              <option>Gemini 2.1 (beta)</option>
+            </select>
+            <button class="btn btn-outline-primary">Apply to All</button>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small">Token Quota Management (monthly)</label>
+          <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Restaurant</th><th>Used</th><th>Limit</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>La Piazza</td><td>1,240</td><td>5,000</td><td><button class="btn btn-sm btn-outline-secondary">Adjust</button></td></tr>
+              <tr><td>Sushi Corner</td><td>12,500</td><td>20,000</td><td><button class="btn btn-sm btn-outline-secondary">Adjust</button></td></tr>
+              <tr><td>Burger Barn</td><td>0</td><td>1,000</td><td><button class="btn btn-sm btn-outline-secondary">Adjust</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <label class="form-label small">System Prompt Template</label>
+          <form method="post" action="#">
+            <textarea class="form-control" rows="4">{{ system_prompt or 'You are a helpful restaurant assistant. Ask clarifying questions before confirming reservations.' }}</textarea>
+            <div class="mt-2"><button class="btn btn-primary btn-sm">Save Template</button></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card-surface">
+        <h5>Analytics &amp; Performance Monitoring</h5>
+        <p class="text-muted small mb-3">Mock metrics: success rates, latency, and common failures.</p>
+
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <div>
+              <div style="color:#2b7cff;font-size:1.6rem;font-weight:700">89%</div>
+              <div class="text-muted small">Overall Success Rate</div>
+              <table class="table table-sm mt-2">
+                <thead class="table-light"><tr><th>Restaurant</th><th>Success</th><th>Escalation</th></tr></thead>
+                <tbody>
+                  <tr><td>La Piazza</td><td>92%</td><td>8%</td></tr>
+                  <tr><td>Sushi Corner</td><td>87%</td><td>13%</td></tr>
+                  <tr><td>Burger Barn</td><td>78%</td><td>22%</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <div>
+              <div style="color:#ff6b6b;font-size:1.6rem;font-weight:700">420 ms</div>
+              <div class="text-muted small">Median Latency (p50)</div>
+              <table class="table table-sm mt-2">
+                <thead class="table-light"><tr><th>Region</th><th>p50</th><th>p95</th></tr></thead>
+                <tbody>
+                  <tr><td>US-East</td><td>400ms</td><td>820ms</td></tr>
+                  <tr><td>EU-West</td><td>460ms</td><td>980ms</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <div>
+              <div style="color:#ffa502;font-size:1.6rem;font-weight:700">Top 3</div>
+              <div class="text-muted small">Common Failures</div>
+              <ol class="mt-2">
+                <li>Unable to find availability for requested time (23%)</li>
+                <li>Menu/RAG mismatch — wrong item suggested (14%)</li>
+                <li>Timeouts / partial responses (9%)</li>
+              </ol>
+              <div class="text-muted small">"I don't know" occurrences: 42</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
