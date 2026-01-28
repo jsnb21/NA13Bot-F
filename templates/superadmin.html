@@ -4,58 +4,76 @@
 
 {% block content %}
 <div class="container-fluid">
-  <div class="mb-4">
-    <h2>Super Admin</h2>
-    <p class="text-muted">Manage tenants, AI governance and platform analytics.</p>
+  <div class="mb-5">
+    <h2 class="mb-2">Super Admin Panel</h2>
+    <p class="text-secondary">Manage tenants, AI governance and platform analytics.</p>
   </div>
 
   <div class="row">
     <div class="col-lg-6 mb-4">
       <div class="card-surface">
-        <h5>Tenant (Restaurant) Management</h5>
-        <p class="text-muted small">Onboard, offboard, manage tiers, tokens and suspensions.</p>
+        <h5 class="mb-3">
+          <i class="fas fa-building" style="margin-right: 8px; color: var(--primary-light);"></i>
+          Tenant Management
+        </h5>
+        <p class="text-secondary small">Onboard, offboard, manage tiers, tokens and suspensions.</p>
 
-        <form class="row g-2 align-items-center mb-3" method="post" action="#">
-          <div class="col-auto">
-            <input name="name" class="form-control" placeholder="Restaurant name" />
-          </div>
-          <div class="col-auto">
-            <select name="tier" class="form-select">
-              <option>Basic</option>
-              <option>Premium</option>
-            </select>
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-primary">Create (mock)</button>
+        <form class="mb-4" method="post" action="#">
+          <div class="row g-2">
+            <div class="col-sm-6">
+              <input name="name" class="form-control" placeholder="Restaurant name" />
+            </div>
+            <div class="col-sm-4">
+              <select name="tier" class="form-select">
+                <option>Basic</option>
+                <option>Premium</option>
+              </select>
+            </div>
+            <div class="col-sm-2">
+              <button type="button" class="btn btn-primary w-100" title="Create new tenant">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
           </div>
         </form>
 
-        <div style="max-height:260px; overflow:auto">
+        <div style="max-height: 320px; overflow-y: auto;">
           <table class="table table-sm mb-0">
-            <thead class="table-light">
-              <tr><th>Name</th><th>UUID</th><th>Tier</th><th>Status</th><th></th></tr>
+            <thead>
+              <tr>
+                <th>Restaurant</th>
+                <th>Tier</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
             </thead>
             <tbody>
               <tr>
-                <td>La Piazza</td>
-                <td class="text-muted small">e7b1f9a2-3d4c-4a6f-b123-abcdef012345</td>
-                <td>Basic</td>
+                <td>
+                  <strong>La Piazza</strong>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">e7b1f9a2-3d4c</div>
+                </td>
+                <td><span class="badge bg-light text-dark">Basic</span></td>
                 <td><span class="badge bg-success">Active</span></td>
-                <td><button class="btn btn-sm btn-outline-secondary">View</button></td>
+                <td><button class="btn btn-sm btn-outline-primary">View</button></td>
               </tr>
               <tr>
-                <td>Sushi Corner</td>
-                <td class="text-muted small">c1a2b3c4-d5e6-7f80-1234-56789abcdef0</td>
-                <td>Premium</td>
+                <td>
+                  <strong>Sushi Corner</strong>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">c1a2b3c4-d5e6</div>
+                </td>
+                <td><span class="badge" style="background: var(--secondary); color: #111;">Premium</span></td>
                 <td><span class="badge bg-success">Active</span></td>
-                <td><button class="btn btn-sm btn-outline-secondary">Revoke Token</button></td>
+                <td><button class="btn btn-sm btn-outline-danger">Revoke</button></td>
               </tr>
               <tr>
-                <td>Burger Barn</td>
-                <td class="text-muted small">9f8e7d6c-5b4a-3210-fedc-ba9876543210</td>
-                <td>Basic</td>
+                <td>
+                  <strong>Burger Barn</strong>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">9f8e7d6c-5b4a</div>
+                </td>
+                <td><span class="badge bg-light text-dark">Basic</span></td>
                 <td><span class="badge bg-secondary">Suspended</span></td>
-                <td><button class="btn btn-sm btn-outline-primary">Reactivate</button></td>
+                <td><button class="btn btn-sm btn-outline-success">Reactivate</button></td>
               </tr>
             </tbody>
           </table>
@@ -65,39 +83,67 @@
 
     <div class="col-lg-6 mb-4">
       <div class="card-surface">
-        <h5>AI &amp; API Governance</h5>
-        <p class="text-muted small">Global model control, per-tenant quotas and system prompt templates.</p>
+        <h5 class="mb-3">
+          <i class="fas fa-shield-alt" style="margin-right: 8px; color: var(--secondary);"></i>
+          AI & API Governance
+        </h5>
+        <p class="text-secondary small">Global model control, per-tenant quotas and system prompt templates.</p>
 
-        <div class="mb-3">
-          <label class="form-label small">Global Model Version</label>
+        <div class="mb-4">
+          <label class="form-label small">
+            <i class="fas fa-microchip" style="margin-right: 4px;"></i>
+            Global Model Version
+          </label>
           <div class="d-flex gap-2">
-            <select class="form-select w-50">
+            <select class="form-select">
               <option>Gemini 1.5 Flash</option>
               <option selected>Gemini 2.0</option>
               <option>Gemini 2.1 (beta)</option>
             </select>
-            <button class="btn btn-outline-primary">Apply to All</button>
+            <button class="btn btn-primary">Apply</button>
           </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label small">Token Quota Management (monthly)</label>
+        <div class="mb-4">
+          <label class="form-label small">
+            <i class="fas fa-chart-pie" style="margin-right: 4px;"></i>
+            Token Quota (monthly)
+          </label>
           <table class="table table-sm mb-0">
-            <thead class="table-light"><tr><th>Restaurant</th><th>Used</th><th>Limit</th><th></th></tr></thead>
+            <thead>
+              <tr>
+                <th>Restaurant</th>
+                <th>Used</th>
+                <th>Limit</th>
+              </tr>
+            </thead>
             <tbody>
-              <tr><td>La Piazza</td><td>1,240</td><td>5,000</td><td><button class="btn btn-sm btn-outline-secondary">Adjust</button></td></tr>
-              <tr><td>Sushi Corner</td><td>12,500</td><td>20,000</td><td><button class="btn btn-sm btn-outline-secondary">Adjust</button></td></tr>
-              <tr><td>Burger Barn</td><td>0</td><td>1,000</td><td><button class="btn btn-sm btn-outline-secondary">Adjust</button></td></tr>
+              <tr>
+                <td>La Piazza</td>
+                <td><span style="color: var(--primary-light); font-weight: 600;">1,240</span></td>
+                <td>5,000</td>
+              </tr>
+              <tr>
+                <td>Sushi Corner</td>
+                <td><span style="color: var(--warning); font-weight: 600;">12,500</span></td>
+                <td>20,000</td>
+              </tr>
+              <tr>
+                <td>Burger Barn</td>
+                <td><span style="color: var(--text-secondary); font-weight: 600;">0</span></td>
+                <td>1,000</td>
+              </tr>
             </tbody>
           </table>
         </div>
 
         <div>
-          <label class="form-label small">System Prompt Template</label>
-          <form method="post" action="#">
-            <textarea class="form-control" rows="4">{{ system_prompt or 'You are a helpful restaurant assistant. Ask clarifying questions before confirming reservations.' }}</textarea>
-            <div class="mt-2"><button class="btn btn-primary btn-sm">Save Template</button></div>
-          </form>
+          <label class="form-label small">
+            <i class="fas fa-comments" style="margin-right: 4px;"></i>
+            System Prompt Template
+          </label>
+          <textarea class="form-control" rows="3" style="resize: vertical;">{{ system_prompt or 'You are a helpful restaurant assistant. Ask clarifying questions before confirming reservations.' }}</textarea>
+          <button class="btn btn-primary btn-sm mt-2">Save Template</button>
         </div>
       </div>
     </div>
@@ -106,49 +152,85 @@
   <div class="row">
     <div class="col-12">
       <div class="card-surface">
-        <h5>Analytics &amp; Performance Monitoring</h5>
-        <p class="text-muted small mb-3">Mock metrics: success rates, latency, and common failures.</p>
+        <h5 class="mb-2">
+          <i class="fas fa-chart-line" style="margin-right: 8px; color: var(--success);"></i>
+          Analytics & Performance
+        </h5>
+        <p class="text-secondary small mb-4">Platform metrics: success rates, latency, and common failures.</p>
 
         <div class="row">
           <div class="col-md-4 mb-3">
-            <div>
-              <div style="color:#0b343d;font-size:1.6rem;font-weight:700">89%</div>
-              <div class="text-muted small">Overall Success Rate</div>
-              <table class="table table-sm mt-2">
-                <thead class="table-light"><tr><th>Restaurant</th><th>Success</th><th>Escalation</th></tr></thead>
+            <div style="padding: 16px; background: var(--light); border-radius: 10px;">
+              <div style="color: var(--success); font-size: 2rem; font-weight: 700; margin-bottom: 4px;">89%</div>
+              <div class="text-secondary small">Overall Success Rate</div>
+              <table class="table table-sm mt-3 mb-0">
+                <thead>
+                  <tr><th style="font-size: 0.8rem;">Restaurant</th><th style="font-size: 0.8rem;">Success</th><th style="font-size: 0.8rem;">Escalation</th></tr>
+                </thead>
                 <tbody>
-                  <tr><td>La Piazza</td><td>92%</td><td>8%</td></tr>
-                  <tr><td>Sushi Corner</td><td>87%</td><td>13%</td></tr>
-                  <tr><td>Burger Barn</td><td>78%</td><td>22%</td></tr>
+                  <tr style="font-size: 0.85rem;">
+                    <td>La Piazza</td>
+                    <td><span style="color: var(--success); font-weight: 600;">92%</span></td>
+                    <td>8%</td>
+                  </tr>
+                  <tr style="font-size: 0.85rem;">
+                    <td>Sushi Corner</td>
+                    <td><span style="color: var(--primary-light); font-weight: 600;">87%</span></td>
+                    <td>13%</td>
+                  </tr>
+                  <tr style="font-size: 0.85rem;">
+                    <td>Burger Barn</td>
+                    <td><span style="color: var(--warning); font-weight: 600;">78%</span></td>
+                    <td>22%</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
           <div class="col-md-4 mb-3">
-            <div>
-              <div style="color:#0b343d;font-size:1.6rem;font-weight:700">420 ms</div>
-              <div class="text-muted small">Median Latency (p50)</div>
-              <table class="table table-sm mt-2">
-                <thead class="table-light"><tr><th>Region</th><th>p50</th><th>p95</th></tr></thead>
+            <div style="padding: 16px; background: var(--light); border-radius: 10px;">
+              <div style="color: var(--primary-light); font-size: 2rem; font-weight: 700; margin-bottom: 4px;">420 <span style="font-size: 1rem;">ms</span></div>
+              <div class="text-secondary small">Median Latency (p50)</div>
+              <table class="table table-sm mt-3 mb-0">
+                <thead>
+                  <tr><th style="font-size: 0.8rem;">Region</th><th style="font-size: 0.8rem;">p50</th><th style="font-size: 0.8rem;">p95</th></tr>
+                </thead>
                 <tbody>
-                  <tr><td>US-East</td><td>400ms</td><td>820ms</td></tr>
-                  <tr><td>EU-West</td><td>460ms</td><td>980ms</td></tr>
+                  <tr style="font-size: 0.85rem;">
+                    <td>US-East</td>
+                    <td>400ms</td>
+                    <td>820ms</td>
+                  </tr>
+                  <tr style="font-size: 0.85rem;">
+                    <td>EU-West</td>
+                    <td>460ms</td>
+                    <td>980ms</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
 
           <div class="col-md-4 mb-3">
-            <div>
-              <div style="color:#0b343d;font-size:1.6rem;font-weight:700">Top 3</div>
-              <div class="text-muted small">Common Failures</div>
-              <ol class="mt-2">
-                <li>Unable to find availability for requested time (23%)</li>
-                <li>Menu/RAG mismatch — wrong item suggested (14%)</li>
-                <li>Timeouts / partial responses (9%)</li>
+            <div style="padding: 16px; background: var(--light); border-radius: 10px;">
+              <div style="color: var(--danger); font-size: 2rem; font-weight: 700; margin-bottom: 4px;">Top 3</div>
+              <div class="text-secondary small">Common Failures</div>
+              <ol class="mt-3 mb-0" style="font-size: 0.9rem; padding-left: 20px;">
+                <li style="margin-bottom: 8px;">Unable to find availability
+                  <span style="color: var(--secondary); font-weight: 600;">23%</span>
+                </li>
+                <li style="margin-bottom: 8px;">Menu/RAG mismatch
+                  <span style="color: var(--secondary); font-weight: 600;">14%</span>
+                </li>
+                <li>Timeouts / partial responses
+                  <span style="color: var(--secondary); font-weight: 600;">9%</span>
+                </li>
               </ol>
-              <div class="text-muted small">"I don't know" occurrences: 42</div>
+              <div class="text-secondary small mt-2" style="padding-top: 8px; border-top: 1px solid var(--border);">
+                <i class="fas fa-lightbulb" style="color: var(--warning); margin-right: 4px;"></i>
+                "I don't know" occurrences: <strong>42</strong>
+              </div>
             </div>
           </div>
         </div>
