@@ -1,189 +1,35 @@
 {% extends 'clients/auth_base.html' %}
 
-{% block title %}Login — {{ cfg.get('establishment_name','Resto') }}{% endblock %}
-
-{% block head %}
-<style>
-  :root {
-    --brand-dark: #0b343d;
-    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-    --page-bg: #f8fafc;
-    --input-border: #e2e8f0;
-    --btn-border: rgba(11,52,61,0.12);
-  }
-
-  .auth-page {
-    display: flex;
-    min-height: 90vh;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background-color: var(--page-bg);
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 400px;
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 40px;
-    box-shadow: var(--card-shadow);
-    border: 1px solid rgba(0,0,0,0.05);
-    /* Using your specific color as the top brand anchor */
-    border-top: 6px solid var(--brand-dark);
-  }
-
-  /* Header using #0b343d */
-  .auth-card h4 {
-    color: var(--brand-dark);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-
-  .form-label {
-    color: var(--text-primary);
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-
-  .input-group {
-    background: #ffffff;
-    border: 1.5px solid var(--input-border);
-    border-radius: 12px;
-    transition: all 0.2s ease;
-  }
-
-  .input-group-text {
-    background-color: transparent;
-    border: none;
-    color: var(--text-secondary);
-    padding-left: 16px;
-  }
-
-  .form-control {
-    background: transparent !important;
-    border: none !important;
-    padding: 12px 16px 12px 8px;
-    font-size: 0.95rem;
-    height: 48px;
-  }
-
-  .input-group:focus-within {
-    border-color: var(--brand-dark);
-    box-shadow: 0 0 0 4px rgba(11, 52, 61, 0.1);
-  }
-
-  .btn-login {
-    width: 100%;
-    height: 50px;
-    border-radius: 12px;
-    background: var(--brand-dark);
-    color: white;
-    border: 2px solid var(--btn-border);
-    font-weight: 600;
-    font-size: 1rem;
-    transition: all 0.2s ease;
-    margin-top: 12px;
-  }
-
-  .btn-login:hover {
-    background: #0e4551; /* Slightly lighter version of your color for hover */
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(11, 52, 61, 0.2);
-  }
-
-  .btn-register {
-    width: 100%;
-    height: 48px;
-    border-radius: 12px;
-    background: transparent;
-    color: var(--brand-dark);
-    border: 2px solid var(--brand-dark);
-    font-weight: 700;
-    font-size: 0.95rem;
-    margin-top: 12px;
-    display: inline-block;
-    text-align: center;
-    line-height: 44px;
-    text-decoration: none;
-    transition: all 0.15s ease;
-  }
-
-  .btn-register:hover {
-    background: var(--brand-dark);
-    color: #fff;
-    transform: translateY(-1px);
-  }
-
-  .forgot-link {
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 0.9rem;
-    transition: color 0.2s;
-    display: block;
-    text-align: center;
-    margin: 8px 0 12px;
-  }
-
-  .forgot-link:hover {
-    color: var(--brand-dark);
-  }
-
-  /* Footer using #0b343d */
-  .auth-footer {
-    text-align: center;
-    margin-top: 24px;
-    color: var(--brand-dark);
-    font-size: 0.85rem;
-    font-weight: 500;
-    opacity: 0.8;
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="auth-page">
-  <div class="container-fluid d-flex flex-column align-items-center">
-    
-    <div class="auth-card">
-      <div class="text-center mb-4">
-          <h4 class="mb-1">Welcome Back</h4>
-          <p class="text-secondary small">Please enter your credentials</p>
-      </div>
+<div class="auth-card">
+    <div class="text-center mb-4">
+      <h4 class="fw-bold" style="color: var(--brand-dark)">Welcome Back</h4>
+      <p class="text-secondary small">Login to your Neuronet account</p>
+    </div>
 
-      <form method="POST" action="/login">
+    <form method="POST" action="/login">
         <div class="mb-3">
           <label class="form-label">Email Address</label>
-          <div class="input-group">
-            <span class="input-group-text"><i class="fa-regular fa-envelope"></i></span>
-            <input type="email" name="email" class="form-control" placeholder="sampleaccount@email.com" required>
-          </div>
+          <input type="email" name="email" class="form-control" placeholder="admin@neuronet.ai" required>
         </div>
 
-        <div class="mb-4">
-          <div class="d-flex justify-content-between align-items-center">
-            <label class="form-label">Password</label>
-          </div>
-          <div class="input-group">
-            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-          </div>
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" placeholder="••••••••" required>
         </div>
 
-        <a href="#" class="forgot-link">Forgot Password?</a>
+        <div class="text-end mb-4">
+          <a href="#" class="text-decoration-none small fw-bold" style="color: var(--brand-dark)">Forgot Password?</a>
+        </div>
 
-        <button type="submit" class="btn btn-login">
+        <button type="submit" class="btn w-100 fw-bold py-3 text-white" style="background: var(--brand-dark); border-radius: 12px;">
           Sign In
         </button>
-        <a href="/signup" class="btn-register">Register</a>
-      </form>
-    </div>
+    </form>
 
-    <div class="auth-footer">
-      &copy; 2026 NeuroNet A.I
+    <div class="text-center mt-4">
+      <p class="small text-secondary">Don't have an account?</p>
+      <a href="/signup" class="btn w-100 fw-bold py-2" style="border: 2px solid var(--brand-dark); color: var(--brand-dark); border-radius: 12px;">Create Account</a>
     </div>
-
-  </div>
 </div>
 {% endblock %}

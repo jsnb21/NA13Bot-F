@@ -1,229 +1,92 @@
 {% extends 'clients/auth_base.html' %}
 
-{% block title %}Sign Up — {{ cfg.get('establishment_name','Resto') }}{% endblock %}
-
 {% block head %}
 <style>
-  :root {
-    --brand-dark: #0b343d;
-    --page-bg: #f8fafc;
-    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-    --input-border: #e2e8f0; /* Soft gray border */
-  }
-
-  .auth-page {
-    display: flex;
-    min-height: 90vh;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background-color: var(--page-bg);
-  }
-
-  .auth-card {
-    width: 100%;
-    max-width: 500px;
-    background: #ffffff;
-    border-radius: 20px;
-    padding: 40px;
-    box-shadow: var(--card-shadow);
-    border: 1px solid rgba(0,0,0,0.05);
-    border-top: 6px solid var(--brand-dark);
-  }
-
-  /* --- Improved Input Borders --- */
-  .form-control {
-    border-radius: 12px;
-    padding: 12px 16px;
-    background-color: #ffffff;
-    border: 1.5px solid var(--input-border); /* Visible but soft */
-    font-size: 0.95rem;
-    transition: all 0.2s ease-in-out;
-  }
-
-  /* High-contrast focus state */
-  .form-control:focus {
-    outline: none;
-    border-color: var(--brand-dark); /* Sharp teal border on focus */
-    box-shadow: 0 0 0 4px rgba(11, 52, 61, 0.08); /* Soft brand glow */
-    background-color: #fff;
-  }
-
-  /* Color picker specific tweak */
-  .form-control-color {
-    padding: 6px;
-    height: 50px;
-    cursor: pointer;
-  }
-  /* ------------------------------ */
-
-  .step-indicator {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 30px;
-  }
-
-  .step-dot {
-    height: 6px;
-    flex: 1;
-    margin: 0 4px;
-    background: var(--input-border);
-    border-radius: 10px;
-    transition: all 0.3s ease;
-  }
-
-  .step-dot.active {
-    background: var(--brand-dark);
-  }
-
+  .step-dot { height: 6px; flex: 1; margin: 0 4px; background: var(--input-border); border-radius: 10px; transition: 0.3s; }
+  .step-dot.active { background: var(--brand-dark); }
   .form-step { display: none; }
-  .form-step.active { display: block; animation: fadeIn 0.4s ease; }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .form-label { 
-    font-weight: 600; 
-    font-size: 0.85rem; 
-    color: var(--brand-dark); 
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .btn-next, .btn-submit {
-    background: var(--brand-dark);
-    color: white;
-    padding: 12px 28px;
-    border-radius: 12px;
-    border: none;
-    font-weight: 600;
-    transition: all 0.2s;
-  }
-
-  .btn-next:hover, .btn-submit:hover {
-    filter: brightness(1.2);
-    transform: translateY(-1px);
-  }
-
-  .btn-back {
-    background: transparent;
-    color: #64748b;
-    border: none;
-    font-weight: 600;
-    transition: color 0.2s;
-  }
-
-  .btn-back:hover {
-    color: var(--brand-dark);
-  }
+  .form-step.active { display: block; animation: slideUp 0.4s ease; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="auth-page">
-  <div class="container-fluid d-flex flex-column align-items-center">
-    
-    <div class="auth-card">
-      <div class="text-center mb-4">
-        <h4 class="fw-bold" style="color: var(--brand-dark)">Create Account</h4>
-        <p class="text-secondary small" id="step-text">Step 1: Account Security</p>
-      </div>
-
-      <div class="step-indicator">
-        <div class="step-dot active" id="dot-1"></div>
-        <div class="step-dot" id="dot-2"></div>
-        <div class="step-dot" id="dot-3"></div>
-      </div>
-
-      <form method="POST" action="/signup" enctype="multipart/form-data">
-        
-        <div class="form-step active" id="step-1">
-          <div class="mb-3">
-            <label class="form-label">Email Address</label>
-            <input type="email" name="email" class="form-control" placeholder="admin@example.com" required>
-          </div>
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Password</label>
-              <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Confirm</label>
-              <input type="password" name="confirm_password" class="form-control" placeholder="••••••••" required>
-            </div>
-          </div>
-          <div class="d-flex justify-content-end mt-4">
-            <button type="button" class="btn-next" onclick="nextStep(2)">Next: Branding <i class="fa-solid fa-arrow-right ms-2"></i></button>
-          </div>
-        </div>
-
-        <div class="form-step" id="step-2">
-          <div class="mb-3">
-            <label class="form-label">Restaurant Name</label>
-            <input type="text" name="establishment_name" class="form-control" placeholder="e.g. The Golden Bistro" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Logo Image</label>
-            <input type="file" name="logo_file" class="form-control mb-2" accept="image/*">
-            <div class="text-center text-muted small mb-2">or</div>
-            <input type="url" name="logo_url" class="form-control" placeholder="https://image-link.com/logo.png">
-          </div>
-          <div class="d-flex justify-content-between mt-4">
-            <button type="button" class="btn-back" onclick="nextStep(1)">Back</button>
-            <button type="button" class="btn-next" onclick="nextStep(3)">Next: Appearance</button>
-          </div>
-        </div>
-
-        <div class="form-step" id="step-3">
-          <div class="row">
-            <div class="col-6 mb-3">
-              <label class="form-label">Main Brand Color</label>
-              <input type="color" name="main_color" class="form-control form-control-color w-100" value="#0b343d">
-            </div>
-            <div class="col-6 mb-3">
-              <label class="form-label">Secondary Color</label>
-              <input type="color" name="sub_color" class="form-control form-control-color w-100" value="#fbbf24">
-            </div>
-          </div>
-          <div class="p-3 bg-light rounded-3 small text-secondary mb-4 border">
-            <i class="fa-solid fa-circle-info me-2"></i> These colors will be used for your buttons and links.
-          </div>
-          <div class="d-flex justify-content-between mt-4">
-            <button type="button" class="btn-back" onclick="nextStep(2)">Back</button>
-            <button type="submit" class="btn-submit">Complete Registration</button>
-          </div>
-        </div>
-
-      </form>
+<div class="auth-card">
+    <div class="text-center mb-4">
+      <h4 class="fw-bold" style="color: var(--brand-dark)">Create Account</h4>
+      <p class="text-secondary small" id="step-text">Step 1: Account Security</p>
     </div>
 
-    <div class="mt-4 text-secondary small">
-      Already have an account? <a href="/login" style="color: var(--brand-dark); font-weight: 700; text-decoration: none;">Sign In</a>
+    <div class="d-flex mb-4">
+      <div class="step-dot active" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+      <div class="step-dot" id="dot-3"></div>
     </div>
 
-  </div>
+    <form method="POST" action="/signup" enctype="multipart/form-data">
+      <div class="form-step active" id="step-1">
+        <div class="mb-3">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" class="form-control" placeholder="admin@neuronet.ai" required>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" placeholder="••••••••">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Confirm</label>
+            <input type="password" name="confirm_password" class="form-control" placeholder="••••••••">
+          </div>
+        </div>
+        <button type="button" class="btn w-100 mt-3 py-3 text-white fw-bold" style="background: var(--brand-dark); border-radius:12px;" onclick="nextStep(2)">
+          Continue <i class="fa-solid fa-arrow-right ms-2"></i>
+        </button>
+      </div>
+
+      <div class="form-step" id="step-2">
+        <div class="mb-3">
+          <label class="form-label">Restaurant Name</label>
+          <input type="text" name="establishment_name" class="form-control" placeholder="The Golden Bistro">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Logo Upload</label>
+          <input type="file" name="logo_file" class="form-control">
+        </div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-light flex-grow-1 py-3 fw-bold" onclick="nextStep(1)">Back</button>
+          <button type="button" class="btn text-white flex-grow-1 py-3 fw-bold" style="background: var(--brand-dark)" onclick="nextStep(3)">Next</button>
+        </div>
+      </div>
+
+      <div class="form-step" id="step-3">
+        <div class="row mb-4">
+          <div class="col-6">
+            <label class="form-label">Brand Color</label>
+            <input type="color" name="main_color" class="form-control w-100 p-1" style="height: 50px;" value="#0b343d">
+          </div>
+          <div class="col-6">
+            <label class="form-label">Accent Color</label>
+            <input type="color" name="sub_color" class="form-control w-100 p-1" style="height: 50px;" value="#ffc832">
+          </div>
+        </div>
+        <button type="submit" class="btn w-100 py-3 text-white fw-bold" style="background: var(--brand-dark); border-radius:12px;">
+          Complete Setup
+        </button>
+      </div>
+    </form>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
   function nextStep(step) {
-    // Hide all steps
     document.querySelectorAll('.form-step').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.step-dot').forEach(el => el.classList.remove('active'));
-    
-    // Show current step
     document.getElementById('step-' + step).classList.add('active');
+    for(let i=1; i<=step; i++) document.getElementById('dot-' + i).classList.add('active');
     
-    // Update dots
-    for(let i=1; i<=step; i++) {
-      document.getElementById('dot-' + i).classList.add('active');
-    }
-
-    // Update text
-    const titles = ["Account Security", "Restaurant Branding", "Visual Identity"];
+    const titles = ["Account Security", "Restaurant Branding", "Final Details"];
     document.getElementById('step-text').innerText = "Step " + step + ": " + titles[step-1];
   }
 </script>
