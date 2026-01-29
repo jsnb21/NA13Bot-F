@@ -1,0 +1,17 @@
+.report-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.chart-placeholder {
+    background: #f8f9fa;
+    border-radius: 6px;
+    height: 250px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    margin: 15px 0;
+}

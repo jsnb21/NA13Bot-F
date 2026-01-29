@@ -1,16 +1,10 @@
-{% extends 'base.html' %}
+{% extends 'clients/base.html' %}
 
 {% block title %}Dashboard — Resto Admin{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <style>
-        /* Keep dashboard main numbers and labels readable and fixed color */
-        .dashboard-number { color: #111827; font-size: 2.2rem; font-weight: 700; margin-bottom: 4px; }
-        .dashboard-label { color: #6b7280; font-size: 0.9rem; }
-        .dashboard-meta { font-size: 0.8rem; color: #10b981; margin-top: 12px; }
-        .top-items-count { font-weight: 600; color: #111827; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <div class="mb-5">
         <h2 class="mb-2">{{ cfg.get('establishment_name','Resto') }} — Dashboard</h2>
         <p class="text-secondary">Welcome back! Here's your business overview.</p>

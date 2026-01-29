@@ -1,0 +1,156 @@
+    .ai-header {
+        background: var(--main-color, #0b343d);
+        color: white;
+        padding: 30px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+    .ai-header h2 {
+        margin: 0 0 10px 0;
+        font-size: 2.25rem;
+        color: #ffffff;
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    }
+    .ai-header p {
+        margin: 0;
+        color: rgba(255,255,255,0.92);
+        font-size: 1.05rem;
+    }
+    
+    .upload-section {
+        background: white;
+        border: 2px dashed #0b343d;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .upload-section:hover {
+        border-color: #0f4d5e;
+        background-color: #f8f9ff;
+    }
+    .upload-section.dragover {
+        border-color: #ffd41d;
+        background-color: rgba(255, 212, 29, 0.05);
+    }
+    
+    .upload-icon {
+        font-size: 3rem;
+        margin-bottom: 15px;
+    }
+    
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+    .file-input-wrapper input[type=file] {
+        position: absolute;
+        left: -9999px;
+    }
+    
+    .training-file-item {
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+    .training-file-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .file-info {
+        flex: 1;
+    }
+    .file-name {
+        font-weight: 600;
+        color: #0b343d;
+        margin-bottom: 5px;
+    }
+    .file-meta {
+        font-size: 0.85rem;
+        color: #999;
+    }
+    
+    .training-status {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 10px;
+    }
+    .status-ready {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+    .status-training {
+        background: #fff3e0;
+        color: #e65100;
+    }
+    .status-complete {
+        background: #e3f2fd;
+        color: #1565c0;
+    }
+    
+    .info-box {
+        background: #f0f4ff;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        border-radius: 6px;
+        margin-bottom: 30px;
+    }
+    .info-box h5 {
+        color: #667eea;
+        margin-top: 0;
+    }
+    .info-box ul {
+        margin: 10px 0 0 0;
+        padding-left: 20px;
+    }
+    .info-box li {
+        margin-bottom: 8px;
+        color: #333;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+        margin-bottom: 5px;
+    }
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .code-example {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        margin: 10px 0;
+    }

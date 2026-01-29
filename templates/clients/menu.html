@@ -1,102 +1,10 @@
-{% extends 'base.html' %}
+{% extends 'clients/base.html' %}
 
 {% block title %}Menu Kiosk — Resto Admin{% endblock %}
 
 {% block head %}
-<style>
-    .kiosk-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
-    }
-    .menu-card {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        cursor: pointer;
-    }
-    .menu-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 8px 20px rgba(11, 52, 61, 0.2);
-    }
-    .menu-card-image {
-        width: 100%;
-        height: 200px;
-        background: var(--main-color, #0b343d);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 3rem;
-    }
-    .menu-card-content {
-        padding: 16px;
-    }
-    .menu-card-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #0b343d;
-        margin-bottom: 8px;
-    }
-    .menu-card-description {
-        font-size: 0.85rem;
-        color: #666;
-        margin-bottom: 12px;
-        height: 40px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .menu-card-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .menu-card-price {
-        font-size: 1.3rem;
-        font-weight: bold;
-        color: #ffd41d;
-    }
-    .menu-card-badge {
-        display: inline-block;
-        background: #0b343d;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .kiosk-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-    }
-    .category-tabs {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-    }
-    .category-btn {
-        padding: 8px 16px;
-        border: 2px solid #ddd;
-        background: white;
-        border-radius: 20px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-size: 0.9rem;
-    }
-    .category-btn.active {
-        background: #ffd41d;
-        color: #0b343d;
-        border-color: #ffd41d;
-    }
-    .category-btn:hover {
-        border-color: #ffd41d;
-    }
-</style>
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
 {% endblock %}
 
 {% block content %}
