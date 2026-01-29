@@ -45,7 +45,7 @@ if GOOGLE_API_KEY:
 
 @app.route('/')
 def index():
-    return render_template('clients/chatbot.html')
+    return redirect(url_for('login'))
 
 
 @app.route('/chatbot')
