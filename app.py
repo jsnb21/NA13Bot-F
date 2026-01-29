@@ -133,7 +133,7 @@ def superadmin():
         save_config({'config': cfg})
         return redirect(url_for('superadmin'))
     cfg = load_config()
-    return render_template('superadmin/superadmin.html', config=cfg.get('config', ''))
+    return render_template('superadmin/superadmin.html', cfg=cfg)
 
 
 @app.route('/admin-client', methods=['GET', 'POST'])
@@ -237,8 +237,7 @@ def login():
             ok = verify_user(email, password)
             if ok:
                 session['user'] = email
-                nxt = request.args.get('next') or request.form.get('next') or url_for('admin_client')
-                return redirect(nxt)
+                return redirect(url_for('dashboard'))
             else:
                 error = 'Invalid email or password.'
     return render_template('clients/login.html', cfg=cfg, error=error)
