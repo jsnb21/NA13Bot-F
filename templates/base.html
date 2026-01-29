@@ -9,11 +9,16 @@
     <style>
       * { box-sizing: border-box; }
       
+      {% set _cfg = cfg if cfg is defined else {} %}
       :root {
-        --primary: #1e40af;
-        --primary-light: #3b82f6;
-        --primary-dark: #1e3a8a;
-        --secondary: #f59e0b;
+        --main-color: {{ _cfg.get('main_color', _cfg.get('color_hex', '#1e40af')) }};
+        --sub-color: {{ _cfg.get('sub_color', '#ffd41d') }};
+        --main-foreground: #ffffff;
+        --sub-foreground: #ffffff;
+        --primary: var(--main-color);
+        --primary-light: var(--main-color);
+        --primary-dark: var(--main-color);
+        --secondary: var(--sub-color);
         --success: #10b981;
         --danger: #ef4444;
         --warning: #f59e0b;
@@ -34,13 +39,13 @@
         color: var(--text-primary);
         margin: 0;
       }
-      
       .admin-sidebar { 
         width: 280px;
-        background: linear-gradient(135deg, var(--dark) 0%, #374151 100%);
-        color: #fff;
+        /* solid main color for the sidebar (no gradient) */
+        background: var(--main-color, var(--dark));
+        color: var(--main-foreground);
         min-height: 100vh;
-        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 2px 0 12px rgba(0, 0, 0, 0.12), inset 0 -60px 80px rgba(0,0,0,0.06);
         position: fixed;
         left: 0;
         top: 0;
@@ -65,11 +70,11 @@
         width: 48px;
         height: 48px;
         border-radius: 12px;
-        background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary) 100%);
+        background: var(--main-color, var(--primary));
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: var(--main-foreground);
         font-weight: 700;
         font-size: 1.2rem;
       }
@@ -82,7 +87,7 @@
         margin: 0;
         font-size: 1.1rem;
         font-weight: 700;
-        color: white;
+        color: var(--main-foreground);
       }
       
       .sidebar-brand-text p {
@@ -97,7 +102,7 @@
         margin-bottom: 6px;
         border-radius: 8px;
         transition: all 0.3s ease;
-        color: rgba(255, 255, 255, 0.7) !important;
+        color: var(--main-foreground) !important;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -111,15 +116,16 @@
       }
       
       .nav-link:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        color: white !important;
+        background-color: rgba(255, 255, 255, 0.08);
+        color: var(--main-foreground) !important;
         padding-left: 18px !important;
       }
       
       .nav-link.active {
-        background: linear-gradient(90deg, var(--primary-light) 0%, var(--secondary) 100%);
-        color: white !important;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        /* active indicator should use the sub/accent color */
+        background: var(--sub-color, var(--secondary));
+        color: var(--sub-foreground) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       }
       
       .nav-link.active i {
@@ -163,19 +169,20 @@
       }
       
       .btn-primary {
-        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-dark) 100%);
+        background: var(--sub-color, var(--secondary));
+        color: var(--sub-foreground);
         border: none;
         border-radius: 8px;
         padding: 10px 20px;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       }
       
       .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
-        color: white !important;
-        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        color: var(--sub-foreground) !important;
+        background: var(--sub-color, var(--secondary));
       }
       
       .btn-outline-secondary, .btn-outline-primary {
@@ -226,13 +233,13 @@
         width: 56px;
         height: 56px;
         border-radius: 50%;
-        background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary) 100%);
-        color: #fff;
+        background: var(--sub-color, var(--secondary));
+        color: var(--sub-foreground);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 1.6rem;
-        box-shadow: 0 8px 20px rgba(59,130,246,0.25);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.12);
         z-index: 2000;
         cursor: pointer;
         border: none;
@@ -254,8 +261,8 @@
         flex-direction: column;
       }
       .admin-chat-header {
-        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-        color: #fff;
+        background: var(--main-color, var(--primary));
+        color: var(--main-foreground);
         padding: 12px 14px;
         display:flex;
         align-items:center;
@@ -287,7 +294,7 @@
       }
       .chat-msg.user { text-align:right; }
       .chat-msg .bubble { display:inline-block; padding:8px 12px; border-radius:12px; max-width:80%; }
-      .chat-msg.user .bubble { background: linear-gradient(135deg,var(--primary-light),var(--primary)); color:#fff; }
+      .chat-msg.user .bubble { background: var(--sub-color, var(--primary)); color:var(--sub-foreground); }
       .chat-msg.bot .bubble { background:#f3f4f6; color:var(--text-primary); }
       
       .badge {
@@ -312,15 +319,19 @@
     </style>
     {% block head %}{% endblock %}
   </head>
-  <body>
+  <body{% if _cfg.get('font_family') %} style="font-family: {{ _cfg.get('font_family') }}, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;"{% endif %}>
     <div class="d-flex">
       <aside class="admin-sidebar">
         <div class="sidebar-inner">
           <div class="sidebar-brand">
-            <div class="sidebar-brand-icon">R</div>
+            {% if _cfg.get('logo_url') %}
+              <div class="sidebar-brand-icon" style="background-image: url('{{ _cfg.get('logo_url') }}'); background-size: cover; background-position: center; background-repeat: no-repeat; border-radius: 12px;"></div>
+            {% else %}
+              <div class="sidebar-brand-icon">R</div>
+            {% endif %}
             <div class="sidebar-brand-text">
-              <h2>Resto</h2>
-              <p>Admin Panel</p>
+              <h2>{{ _cfg.get('establishment_name','Resto') }}</h2>
+              <p>{{ _cfg.get('establishment_tagline','Admin Panel') }}</p>
             </div>
           </div>
           <nav class="nav flex-column">
@@ -440,6 +451,27 @@
 
       adminChatSend.addEventListener('click', sendChat);
       adminChatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }});
+    </script>
+    <script>
+      (function(){
+        function hexToRgb(hex){
+          hex = (hex || '').trim().replace('#','');
+          if(hex.length===3) hex = hex.split('').map(h=>h+h).join('');
+          if(!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+          const int = parseInt(hex,16);
+          return {r:(int>>16)&255, g:(int>>8)&255, b:int&255};
+        }
+        function srgbToLinear(c){ c = c/255; return c <= 0.03928 ? c/12.92 : Math.pow((c+0.055)/1.055,2.4); }
+        function luminance(rgb){ return 0.2126*srgbToLinear(rgb.r) + 0.7152*srgbToLinear(rgb.g) + 0.0722*srgbToLinear(rgb.b); }
+        function pickForeground(hex){ const rgb = hexToRgb(hex); if(!rgb) return '#fff'; return luminance(rgb) > 0.5 ? '#111827' : '#fff'; }
+        const styles = getComputedStyle(document.documentElement);
+        const main = styles.getPropertyValue('--main-color').trim() || '#1e40af';
+        const sub = styles.getPropertyValue('--sub-color').trim() || '#ffd41d';
+        const mainFg = pickForeground(main);
+        const subFg = pickForeground(sub);
+        document.documentElement.style.setProperty('--main-foreground', mainFg);
+        document.documentElement.style.setProperty('--sub-foreground', subFg);
+      })();
     </script>
   </body>
 </html>

@@ -14,7 +14,7 @@
     .settings-section h5 {
         color: #0b343d;
         margin-bottom: 20px;
-        border-bottom: 2px solid #ffd41d;
+        border-bottom: 2px solid var(--sub-color, #ffd41d);
         padding-bottom: 10px;
         font-weight: 700;
     }
@@ -45,7 +45,7 @@
         transition: background-color 0.3s;
     }
     .toggle-switch.active {
-        background-color: #0b343d;
+        background-color: var(--sub-color);
     }
     .toggle-slider {
         position: absolute;
@@ -60,6 +60,8 @@
     .toggle-switch.active .toggle-slider {
         left: 28px;
     }
+    .color-wheel { width: 160px; height: 160px; }
+    .color-hex-input { width: 120px; }
 </style>
 {% endblock %}
 
@@ -69,63 +71,81 @@
         <h2>Settings</h2>
     </div>
 
+    <form method="post" id="settingsForm">
     <div class="settings-section">
         <h5>Business Information</h5>
         <div class="mb-3">
             <label for="business_name" class="form-label">Business Name</label>
-            <input type="text" id="business_name" class="form-control" value="Resto Restaurant" />
+            <input name="business_name" type="text" id="business_name" class="form-control" value="{{ cfg.get('business_name','Resto Restaurant') }}" />
         </div>
         <div class="mb-3">
             <label for="business_email" class="form-label">Business Email</label>
-            <input type="email" id="business_email" class="form-control" value="contact@restorestaurant.com" />
+            <input name="business_email" type="email" id="business_email" class="form-control" value="{{ cfg.get('business_email','contact@restorestaurant.com') }}" />
         </div>
         <div class="mb-3">
             <label for="business_phone" class="form-label">Business Phone</label>
-            <input type="tel" id="business_phone" class="form-control" value="555-0123" />
+            <input name="business_phone" type="tel" id="business_phone" class="form-control" value="{{ cfg.get('business_phone','555-0123') }}" />
         </div>
         <div class="mb-3">
             <label for="business_address" class="form-label">Business Address</label>
-            <input type="text" id="business_address" class="form-control" value="123 Main St, City, State 12345" />
+            <input name="business_address" type="text" id="business_address" class="form-control" value="{{ cfg.get('business_address','123 Main St, City, State 12345') }}" />
         </div>
     </div>
-
     <div class="settings-section">
         <h5>Branding & Display</h5>
         <div class="mb-3">
             <label for="establishment_name" class="form-label">Establishment Name</label>
-            <input id="establishment_name" name="establishment_name" type="text" class="form-control" placeholder="Your restaurant name">
+            <input id="establishment_name" name="establishment_name" type="text" class="form-control" placeholder="Your restaurant name" value="{{ cfg.get('establishment_name','') }}">
         </div>
 
         <div class="mb-3">
             <label for="logo_url" class="form-label">Logo URL</label>
-            <input id="logo_url" name="logo_url" type="text" class="form-control" placeholder="https://example.com/logo.png">
+            <input id="logo_url" name="logo_url" type="text" class="form-control" placeholder="https://example.com/logo.png" value="{{ cfg.get('logo_url','') }}">
         </div>
 
         <div class="row mb-3">
             <div class="col-6">
-                <label for="color_hex" class="form-label">Select Color (HEX)</label>
-                <input id="color_hex" name="color_hex" type="text" class="form-control" placeholder="#ff6b6b">
+                <label for="main_color_picker" class="form-label">Main Color</label>
+                <div class="d-flex align-items-center" style="gap:12px;">
+                    <div id="main_color_picker" class="color-wheel"></div>
+                    <div>
+                        <input id="main_color" name="main_color" type="hidden" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
+                        <input id="main_color_hex" class="form-control color-hex-input" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
+                    </div>
+                </div>
             </div>
             <div class="col-6">
+                <label for="sub_color_picker" class="form-label">Accent / Sub Color</label>
+                <div class="d-flex align-items-center" style="gap:12px;">
+                    <div id="sub_color_picker" class="color-wheel"></div>
+                    <div>
+                        <input id="sub_color" name="sub_color" type="hidden" value="{{ cfg.get('sub_color', '#ffd41d') }}">
+                        <input id="sub_color_hex" class="form-control color-hex-input" value="{{ cfg.get('sub_color', '#ffd41d') }}">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-12 mt-3">
                 <label for="font_family" class="form-label">Select Font</label>
                 <select id="font_family" name="font_family" class="form-select">
                     <option value="">-- default --</option>
-                    <option value="Arial">Arial</option>
-                    <option value="Helvetica">Helvetica</option>
-                    <option value="Roboto">Roboto</option>
-                    <option value="Georgia">Georgia</option>
+                    <option value="Arial" {% if cfg.get('font_family','')=='Arial' %}selected{% endif %}>Arial</option>
+                    <option value="Helvetica" {% if cfg.get('font_family','')=='Helvetica' %}selected{% endif %}>Helvetica</option>
+                    <option value="Roboto" {% if cfg.get('font_family','')=='Roboto' %}selected{% endif %}>Roboto</option>
+                    <option value="Georgia" {% if cfg.get('font_family','')=='Georgia' %}selected{% endif %}>Georgia</option>
                 </select>
             </div>
         </div>
 
         <div class="mb-3">
             <label for="menu_text" class="form-label">Menu Text</label>
-            <textarea id="menu_text" name="menu_text" rows="6" class="form-control" placeholder="Enter your menu items and descriptions"></textarea>
+            <textarea id="menu_text" name="menu_text" rows="6" class="form-control" placeholder="Enter your menu items and descriptions">{{ cfg.get('menu_text','') }}</textarea>
         </div>
 
         <div class="mb-3">
             <label for="image_urls" class="form-label">Food Image URLs (one per line)</label>
-            <textarea id="image_urls" name="image_urls" rows="4" class="form-control" placeholder="https://example.com/food1.jpg&#10;https://example.com/food2.jpg"></textarea>
+            <textarea id="image_urls" name="image_urls" rows="4" class="form-control" placeholder="https://example.com/food1.jpg&#10;https://example.com/food2.jpg">{% for u in cfg.get('image_urls',[]) %}{{ u }}
+{% endfor %}</textarea>
         </div>
     </div>
 
@@ -163,13 +183,13 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="open_time" class="form-label">Opening Time</label>
-                    <input type="time" id="open_time" class="form-control" value="10:00" />
+                    <input name="open_time" type="time" id="open_time" class="form-control" value="{{ cfg.get('open_time','10:00') }}" />
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="close_time" class="form-label">Closing Time</label>
-                    <input type="time" id="close_time" class="form-control" value="22:00" />
+                    <input name="close_time" type="time" id="close_time" class="form-control" value="{{ cfg.get('close_time','22:00') }}" />
                 </div>
             </div>
         </div>
@@ -209,7 +229,7 @@
         </div>
         <div class="mb-3">
             <label for="tax_rate" class="form-label">Tax Rate (%)</label>
-            <input type="number" id="tax_rate" class="form-control" value="8.5" step="0.1" />
+            <input name="tax_rate" type="number" id="tax_rate" class="form-control" value="{{ cfg.get('tax_rate',8.5) }}" step="0.1" />
         </div>
     </div>
 
@@ -231,10 +251,73 @@
         </div>
     </div>
 
-    <div class="mb-4">
-        <button class="btn btn-secondary" style="background:#ff6b6b; border:none; margin-right:10px;">Save Settings</button>
-        <button class="btn btn-outline-secondary">Cancel</button>
-    </div>
+        <div class="mb-4">
+                <button type="submit" id="saveSettingsBtn" class="btn btn-secondary" style="background:#ff6b6b; border:none; margin-right:10px;">Save Settings</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">Cancel</button>
+                <span id="saveStatus" style="margin-left:12px; color:#666; display:inline-block;"></span>
+        </div>
+        </form>
+
+        <script>
+        (function(){
+            const form = document.getElementById('settingsForm');
+            const btn = document.getElementById('saveSettingsBtn');
+            const status = document.getElementById('saveStatus');
+
+            form.addEventListener('submit', async function(e){
+                e.preventDefault();
+                btn.disabled = true;
+                const orig = btn.innerHTML;
+                btn.innerHTML = 'Saving...';
+                status.textContent = '';
+                try{
+                    const data = new FormData(form);
+                    const res = await fetch(window.location.pathname, { method: 'POST', body: data });
+                    if(res.ok){
+                        status.textContent = 'Saved — refreshing...';
+                        setTimeout(()=> location.reload(), 600);
+                        return;
+                    }
+                    status.textContent = 'Save failed';
+                }catch(err){
+                    console.error(err);
+                    status.textContent = 'Save error';
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = orig;
+                }
+            });
+        })();
+        </script>
+
+        <!-- iro.js color wheel (modern picker) -->
+        <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5.5.1/dist/iro.min.js"></script>
+        <script>
+        (function(){
+            // main picker
+            try{
+                const mainHidden = document.getElementById('main_color');
+                const mainHex = document.getElementById('main_color_hex');
+                const subHidden = document.getElementById('sub_color');
+                const subHex = document.getElementById('sub_color_hex');
+
+                const mainPicker = new iro.ColorPicker('#main_color_picker', { width: 160, color: mainHidden.value || '#1e40af' });
+                const subPicker = new iro.ColorPicker('#sub_color_picker', { width: 160, color: subHidden.value || '#ffd41d' });
+
+                mainPicker.on('color:change', function(color){
+                    mainHidden.value = color.hexString;
+                    if(mainHex) mainHex.value = color.hexString;
+                });
+                subPicker.on('color:change', function(color){
+                    subHidden.value = color.hexString;
+                    if(subHex) subHex.value = color.hexString;
+                });
+
+                if(mainHex){ mainHex.addEventListener('input', function(e){ try{ mainPicker.color.hexString = e.target.value; }catch{} }); }
+                if(subHex){ subHex.addEventListener('input', function(e){ try{ subPicker.color.hexString = e.target.value; }catch{} }); }
+            }catch(e){ console.warn('color picker init failed', e); }
+        })();
+        </script>
 
     <div class="settings-section" style="border-top:2px solid #f0f0f0; padding-top:20px;">
         <h5 style="color:#f44336;">Danger Zone</h5>
