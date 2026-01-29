@@ -191,5 +191,23 @@ def ai_training():
             pass
     return render_template('clients/ai-training.html', cfg=cfg)
 
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    cfg = load_config()
+    if request.method == 'POST':
+        # Placeholder: authenticate user here (not implemented)
+        return redirect(url_for('admin_client'))
+    return render_template('clients/login.html', cfg=cfg)
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    cfg = load_config()
+    if request.method == 'POST':
+        # Placeholder: create user account here (not implemented)
+        return redirect(url_for('login'))
+    return render_template('clients/signup.html', cfg=cfg)
+
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)

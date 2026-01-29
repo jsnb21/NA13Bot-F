@@ -103,10 +103,14 @@ box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 opacity: 1;
 }
 
-.main-content { 
-margin-left: 280px;
-padding: 40px;
-min-height: 100vh;
+
+.has-sidebar .main-content {
+    margin-left: 280px;
+}
+
+.main-content {
+    padding: 40px;
+    min-height: 100vh;
 }
 
 .card-surface { 

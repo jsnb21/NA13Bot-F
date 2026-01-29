@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% endblock %}
     </head>
-    <body{% if cfg.get('font_family') %} style="font-family: {{ cfg.get('font_family') }}, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;"{% endif %}>
+    <body{% if cfg.get('font_family') %} style="font-family: {{ cfg.get('font_family') }}, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;"{% endif %} class="has-sidebar">
     <div class="d-flex">
       <aside class="admin-sidebar">
         <div class="sidebar-inner">
