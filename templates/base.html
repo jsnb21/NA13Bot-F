@@ -217,6 +217,78 @@
         border-bottom: 1px solid var(--border);
         vertical-align: middle;
       }
+
+      /* Floating admin chatbot help button (global) */
+      .admin-help-btn {
+        position: fixed;
+        right: 22px;
+        bottom: 24px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--secondary) 100%);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        box-shadow: 0 8px 20px rgba(59,130,246,0.25);
+        z-index: 2000;
+        cursor: pointer;
+        border: none;
+      }
+      .admin-help-btn:focus { outline: 3px solid rgba(99,102,241,0.18); }
+
+      .admin-chat-modal {
+        position: fixed;
+        right: 22px;
+        bottom: 92px;
+        width: 360px;
+        max-width: calc(100% - 48px);
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(15,23,42,0.25);
+        overflow: hidden;
+        z-index: 2000;
+        display: none; /* hidden by default */
+        flex-direction: column;
+      }
+      .admin-chat-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: #fff;
+        padding: 12px 14px;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:8px;
+      }
+      .admin-chat-body {
+        padding: 12px;
+        max-height: 340px;
+        overflow-y: auto;
+      }
+      .admin-chat-input {
+        border-top: 1px solid var(--border);
+        padding: 10px;
+        display:flex;
+        gap:8px;
+      }
+      .admin-chat-input textarea {
+        resize:none;
+        border-radius: 8px;
+        border:1px solid var(--border);
+        padding:8px;
+        flex:1;
+        min-height:40px;
+      }
+      .chat-msg {
+        margin-bottom:8px;
+        font-size:0.9rem;
+      }
+      .chat-msg.user { text-align:right; }
+      .chat-msg .bubble { display:inline-block; padding:8px 12px; border-radius:12px; max-width:80%; }
+      .chat-msg.user .bubble { background: linear-gradient(135deg,var(--primary-light),var(--primary)); color:#fff; }
+      .chat-msg.bot .bubble { background:#f3f4f6; color:var(--text-primary); }
       
       .badge {
         border-radius: 6px;
@@ -232,7 +304,6 @@
           transform: translateX(-100%);
           transition: transform 0.3s ease;
         }
-        
         .main-content {
           margin-left: 0;
           padding: 24px;
@@ -299,5 +370,76 @@
       </main>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Admin chatbot floating button + modal (always rendered) -->
+    <button id="adminHelpBtn" class="admin-help-btn" aria-label="Admin help" title="Help">?</button>
+
+    <div id="adminChatModal" class="admin-chat-modal" role="dialog" aria-hidden="true" aria-label="Admin chatbot">
+      <div class="admin-chat-header">
+        <div style="font-weight:700;">Admin Assistant</div>
+        <button id="adminChatClose" class="btn btn-sm btn-light" aria-label="Close chat">✕</button>
+      </div>
+      <div id="adminChatBody" class="admin-chat-body" aria-live="polite">
+        <div class="chat-msg bot"><div class="bubble">Hi — ask me about admin tasks, training, or settings.</div></div>
+      </div>
+      <div class="admin-chat-input">
+        <textarea id="adminChatInput" placeholder="Type a question and press Enter"></textarea>
+        <button id="adminChatSend" class="btn btn-primary">Send</button>
+      </div>
+    </div>
+
+    <script>
+      const adminHelpBtn = document.getElementById('adminHelpBtn');
+      const adminChatModal = document.getElementById('adminChatModal');
+      const adminChatClose = document.getElementById('adminChatClose');
+      const adminChatSend = document.getElementById('adminChatSend');
+      const adminChatInput = document.getElementById('adminChatInput');
+      const adminChatBody = document.getElementById('adminChatBody');
+
+      function openAdminChat(){
+        adminChatModal.style.display = 'flex';
+        adminChatModal.setAttribute('aria-hidden','false');
+        adminChatInput.focus();
+      }
+      function closeAdminChat(){
+        adminChatModal.style.display = 'none';
+        adminChatModal.setAttribute('aria-hidden','true');
+        adminHelpBtn.focus();
+      }
+
+      adminHelpBtn.addEventListener('click', (e)=>{ openAdminChat(); });
+      adminChatClose.addEventListener('click', ()=>{ closeAdminChat(); });
+
+      function appendMessage(who, text){
+        const div = document.createElement('div');
+        div.className = 'chat-msg ' + (who==='user' ? 'user' : 'bot');
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        b.textContent = text;
+        div.appendChild(b);
+        adminChatBody.appendChild(div);
+        adminChatBody.scrollTop = adminChatBody.scrollHeight;
+      }
+
+      async function sendChat(){
+        const text = adminChatInput.value && adminChatInput.value.trim();
+        if(!text) return;
+        appendMessage('user', text);
+        adminChatInput.value = '';
+        // Try a backend endpoint, fallback to canned response
+        try{
+          const res = await fetch('/admin-client/chat', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({message:text})});
+          if(res.ok){
+            const j = await res.json();
+            appendMessage('bot', j.reply || 'Sorry, no reply.');
+            return;
+          }
+        }catch(e){ /* ignore and fallback */ }
+        // Fallback canned responses
+        appendMessage('bot', 'Thanks — a backend is not configured. This is a local demo response.');
+      }
+
+      adminChatSend.addEventListener('click', sendChat);
+      adminChatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }});
+    </script>
   </body>
 </html>
