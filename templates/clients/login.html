@@ -8,6 +8,9 @@
     </div>
 
     <form method="POST" action="/login">
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
         <div class="mb-3">
           <label class="form-label">Email Address</label>
           <input type="email" name="email" class="form-control" placeholder="admin@neuronet.ai" required>

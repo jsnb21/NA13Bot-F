@@ -1,9 +1,33 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
-from tools import save_config, load_config
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from tools import save_config, load_config, add_user, verify_user
 import google.generativeai as genai
 import os
+from werkzeug.utils import secure_filename
+from pathlib import Path
 
+# simple session secret
 app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
+
+# upload dir for logo files
+UPLOAD_DIR = Path(__file__).parent / 'static' / 'uploads'
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+from functools import wraps
+from flask import flash
+
+# allowed logo extensions
+ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXT
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('user'):
+            return redirect(url_for('login', next=request.path))
+        return f(*args, **kwargs)
+    return decorated
 
 # Configure Google AI - check environment variable or config file
 def get_google_api_key():
@@ -113,6 +137,7 @@ def superadmin():
 
 
 @app.route('/admin-client', methods=['GET', 'POST'])
+@login_required
 def admin_client():
     if request.method == 'POST':
         data = {
@@ -129,31 +154,37 @@ def admin_client():
     return render_template('clients/admin-client.html', cfg=cfg)
 
 @app.route('/admin-client/dashboard')
+@login_required
 def dashboard():
     cfg = load_config()
     return render_template('clients/dashboard.html', cfg=cfg)
 
 @app.route('/admin-client/orders')
+@login_required
 def orders():
     cfg = load_config()
     return render_template('clients/orders.html', cfg=cfg)
 
 @app.route('/admin-client/menu')
+@login_required
 def menu():
     cfg = load_config()
     return render_template('clients/menu.html', cfg=cfg)
 
 @app.route('/admin-client/customers')
+@login_required
 def customers():
     cfg = load_config()
     return render_template('clients/customers.html', cfg=cfg)
 
 @app.route('/admin-client/reports')
+@login_required
 def reports():
     cfg = load_config()
     return render_template('clients/reports.html', cfg=cfg)
 
 @app.route('/admin-client/settings', methods=['GET', 'POST'])
+@login_required
 def settings():
     cfg = load_config()
     if request.method == 'POST':
@@ -181,6 +212,7 @@ def settings():
     return render_template('clients/settings.html', cfg=cfg)
 
 @app.route('/admin-client/ai-training', methods=['GET', 'POST'])
+@login_required
 def ai_training():
     cfg = load_config()
     if request.method == 'POST':
@@ -195,19 +227,81 @@ def ai_training():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     cfg = load_config()
+    error = None
     if request.method == 'POST':
-        # Placeholder: authenticate user here (not implemented)
-        return redirect(url_for('admin_client'))
-    return render_template('clients/login.html', cfg=cfg)
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        if not email or not password:
+            error = 'Email and password are required.'
+        else:
+            ok = verify_user(email, password)
+            if ok:
+                session['user'] = email
+                nxt = request.args.get('next') or request.form.get('next') or url_for('admin_client')
+                return redirect(nxt)
+            else:
+                error = 'Invalid email or password.'
+    return render_template('clients/login.html', cfg=cfg, error=error)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     cfg = load_config()
+    error = None
     if request.method == 'POST':
-        # Placeholder: create user account here (not implemented)
-        return redirect(url_for('login'))
-    return render_template('clients/signup.html', cfg=cfg)
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm_password', '')
+        establishment_name = request.form.get('establishment_name', '')
+        main_color = request.form.get('main_color', '')
+        sub_color = request.form.get('sub_color', '')
+
+        # handle logo file upload
+        logo_url = request.form.get('logo_url', '')
+        logo_file = request.files.get('logo_file')
+        if logo_file and logo_file.filename:
+            if allowed_file(logo_file.filename):
+                filename = secure_filename(logo_file.filename)
+                dest = UPLOAD_DIR / filename
+                logo_file.save(str(dest))
+                # set path relative to static
+                logo_url = f'/static/uploads/{filename}'
+            else:
+                error = 'Unsupported logo file type.'
+
+        if not error:
+            if not email or not password:
+                error = 'Email and password are required.'
+            elif password != confirm:
+                error = 'Passwords do not match.'
+            else:
+                meta = {
+                    'establishment_name': establishment_name,
+                    'logo_url': logo_url,
+                    'main_color': main_color,
+                    'sub_color': sub_color
+                }
+                success = add_user(email, password, meta=meta)
+                if not success:
+                    error = 'A user with that email already exists.'
+                if not error:
+                    # merge branding into config
+                    cfg.update({
+                        'establishment_name': establishment_name,
+                        'logo_url': logo_url,
+                        'main_color': main_color,
+                        'sub_color': sub_color
+                    })
+                    save_config(cfg)
+                    return redirect(url_for('login'))
+
+    return render_template('clients/signup.html', cfg=cfg, error=error)
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)

@@ -1,0 +1,11 @@
+{
+  "test_account@example.com": {
+    "password_hash": "scrypt:32768:8:1$i2mHcU9GttDfTUBq$3d73e3d89fa21e0492e5d94c06d230e919060613995d5f07a789fed2e4d222d2d0a1758a0b3e782aef51c7407b3656c2f77da76bb287f394b3e5cd3e79c28eff",
+    "meta": {
+      "establishment_name": "Paldo Contis",
+      "logo_url": "/static/uploads/5.png",
+      "main_color": "#0080ff",
+      "sub_color": "#ffe295"
+    }
+  }
+}
