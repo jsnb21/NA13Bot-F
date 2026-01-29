@@ -1,125 +1,177 @@
-{% extends 'clients/base.html' %}
-{% set show_admin_chatbot = true %}
+{% extends 'clients/auth_base.html' %} {% block title %}Super Admin — Neuronet A.I{% endblock %}
 
 {% block head %}
 <style>
   :root {
-    --main-color: #0b343d;
-    --sub-color: #ffd41d;
+    --brand-dark: #0b343d;
+    --accent-yellow: #ffc832;
+    --success-green: #10b981;
+    --warning-orange: #f59e0b;
+    --card-bg: #ffffff;
+    --header-blur: rgba(255, 255, 255, 0.8);
   }
-  /* hide the sidebar on super admin pages */
-  .admin-sidebar { display: none !important; }
-  .main-content { margin-left: 0 !important; }
-  /* nudge floating help button when sidebar absent */
-  .admin-help-btn { right: 18px !important; }
-  
-  /* Superadmin top navbar styles */
-  .superadmin-topbar {
-    background: var(--main-color);
-    color: var(--main-foreground, #fff);
-    padding: 18px 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-    border-bottom: 1px solid rgba(0,0,0,0.04);
-    margin-bottom: 0;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    z-index: 1040;
-    border-radius: 0;
-  }
-  /* ensure main content doesn't sit under the fixed topbar */
-  .main-content { padding-top: 120px !important; }
-  .superadmin-topbar .title { font-weight: 700; font-size: 1.5rem; }
-  .superadmin-topbar .subtitle { color: rgba(255,255,255,0.9); font-size: 0.95rem; }
-  .superadmin-topbar .actions .btn { background: var(--sub-color); color: #111; border: none; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
 
+  body { background-color: #f1f5f9; }
+
+  /* --- Modern Sticky Topbar --- */
+  .superadmin-nav {
+    background: var(--header-blur);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 0;
+    position: sticky;
+    top: var(--header-height); /* Sits below the main Neuronet header */
+    z-index: 900;
+  }
+
+  /* --- Metric Cards --- */
+  .stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease;
+  }
+  .stat-card:hover { transform: translateY(-4px); }
+  .stat-value { font-size: 1.75rem; font-weight: 800; color: var(--brand-dark); }
+  .stat-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 600; }
+
+  /* --- Surface Styling --- */
+  .surface {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 24px;
+    height: 100%;
+  }
+
+  .table thead th {
+    background: #f8fafc;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    color: #64748b;
+    padding: 12px;
+    border: none;
+  }
+
+  .table tbody td {
+    padding: 16px 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  /* --- Custom Badges --- */
+  .badge-pill {
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-weight: 600;
+    font-size: 0.75rem;
+  }
+  .bg-success-subtle { background: #d1fae5; color: #065f46; }
+  .bg-warning-subtle { background: #fef3c7; color: #92400e; }
+
+  .btn-action {
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: 0.2s;
+  }
 </style>
 {% endblock %}
 
-{% block title %}Super Admin — Resto Admin{% endblock %}
-
 {% block content %}
-<div class="superadmin-topbar">
-  <div class="container-fluid d-flex justify-content-between align-items-center">
+<div class="w-100 px-4">
+  
+  <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
     <div>
-      <div class="title">Super Admin Panel</div>
-      <div class="subtitle">Manage tenants, AI governance and platform analytics.</div>
+      <h3 class="fw-bold mb-0" style="color: var(--brand-dark)">Platform Overview</h3>
+      <p class="text-secondary small">Managing governance for <strong>Neuronet A.I</strong> Ecosystem</p>
     </div>
-    <div class="actions">
-      <button class="btn btn-sm" onclick="location.reload()">Refresh</button>
-      <button class="btn btn-sm ms-2" style="background:var(--sub-color); color:#111;">Create Tenant</button>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-secondary btn-action" onclick="location.reload()">
+        <i class="fas fa-sync-alt me-2"></i>Refresh
+      </button>
+      <button class="btn btn-action text-white" style="background: var(--brand-dark)">
+        <i class="fas fa-plus me-2"></i>Create New Tenant
+      </button>
     </div>
   </div>
-</div>
 
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-lg-6 mb-4">
-      <div class="card-surface">
-        <h5 class="mb-3">
-          <i class="fas fa-building" style="margin-right: 8px; color: var(--primary-light);"></i>
-          Tenant Management
-        </h5>
-        <p class="text-secondary small">Onboard, offboard, manage tiers, tokens and suspensions.</p>
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Total Tenants</div>
+        <div class="stat-value">124</div>
+        <div class="small text-success mt-2"><i class="fas fa-caret-up"></i> +12% this month</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Avg. Latency</div>
+        <div class="stat-value">420<span style="font-size: 1rem">ms</span></div>
+        <div class="small text-muted mt-2">Global p50</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Model Health</div>
+        <div class="stat-value text-success">99.9%</div>
+        <div class="small text-muted mt-2">Gemini 2.0 Stable</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Token Usage</div>
+        <div class="stat-value">1.2M</div>
+        <div class="small text-warning mt-2">82% of monthly cap</div>
+      </div>
+    </div>
+  </div>
 
-        <form class="mb-4" method="post" action="#">
-          <div class="row g-2">
-            <div class="col-sm-6">
-              <input name="name" class="form-control" placeholder="Restaurant name" />
-            </div>
-            <div class="col-sm-4">
-              <select name="tier" class="form-select">
-                <option>Basic</option>
-                <option>Premium</option>
-              </select>
-            </div>
-            <div class="col-sm-2">
-              <button type="button" class="btn btn-primary w-100" title="Create new tenant">
-                <i class="fas fa-plus"></i>
-              </button>
-            </div>
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="surface">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0">Active Tenants</h5>
+          <div class="input-group w-50">
+            <span class="input-group-text bg-light border-0"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control bg-light border-0" placeholder="Search restaurants...">
           </div>
-        </form>
-
-        <div style="max-height: 320px; overflow-y: auto;">
-          <table class="table table-sm mb-0">
+        </div>
+        
+        <div class="table-responsive">
+          <table class="table">
             <thead>
               <tr>
-                <th>Restaurant</th>
-                <th>Tier</th>
+                <th>Restaurant Name</th>
+                <th>Service Tier</th>
                 <th>Status</th>
-                <th>Action</th>
+                <th class="text-end">Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>
-                  <strong>La Piazza</strong>
-                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">e7b1f9a2-3d4c</div>
+                  <div class="fw-bold">Sushi Corner</div>
+                  <div class="text-muted extra-small" style="font-size: 0.7rem;">ID: c1a2b3c4</div>
                 </td>
-                <td><span class="badge bg-light text-dark">Basic</span></td>
-                <td><span class="badge bg-success">Active</span></td>
-                <td><button class="btn btn-sm btn-outline-primary">View</button></td>
+                <td><span class="badge-pill bg-warning-subtle">PREMIUM</span></td>
+                <td><span class="badge-pill bg-success-subtle">ACTIVE</span></td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-light border btn-action">Manage</button>
+                </td>
               </tr>
               <tr>
                 <td>
-                  <strong>Sushi Corner</strong>
-                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">c1a2b3c4-d5e6</div>
+                  <div class="fw-bold">La Piazza</div>
+                  <div class="text-muted" style="font-size: 0.7rem;">ID: e7b1f9a2</div>
                 </td>
-                <td><span class="badge" style="background: var(--secondary); color: #111;">Premium</span></td>
-                <td><span class="badge bg-success">Active</span></td>
-                <td><button class="btn btn-sm btn-outline-danger">Revoke</button></td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Burger Barn</strong>
-                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">9f8e7d6c-5b4a</div>
+                <td><span class="badge-pill bg-light text-dark border">BASIC</span></td>
+                <td><span class="badge-pill bg-success-subtle">ACTIVE</span></td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-light border btn-action">Manage</button>
                 </td>
-                <td><span class="badge bg-light text-dark">Basic</span></td>
-                <td><span class="badge bg-secondary">Suspended</span></td>
-                <td><button class="btn btn-sm btn-outline-success">Reactivate</button></td>
               </tr>
             </tbody>
           </table>
@@ -127,161 +179,51 @@
       </div>
     </div>
 
-    <div class="col-lg-6 mb-4">
-      <div class="card-surface">
-        <h5 class="mb-3">
-          <i class="fas fa-shield-alt" style="margin-right: 8px; color: var(--secondary);"></i>
-          AI & API Governance
-        </h5>
-        <p class="text-secondary small">Global model control, per-tenant quotas and system prompt templates.</p>
-
+    <div class="col-lg-4">
+      <div class="surface">
+        <h5 class="fw-bold mb-3">Model Governance</h5>
+        
         <div class="mb-4">
-          <label class="form-label small">
-            <i class="fas fa-microchip" style="margin-right: 4px;"></i>
-            Global Model Version
-          </label>
-          <div class="d-flex gap-2">
-            <select class="form-select">
-              <option>Gemini 1.5 Flash</option>
-              <option selected>Gemini 2.0</option>
-              <option>Gemini 2.1 (beta)</option>
-            </select>
-            <button class="btn btn-primary">Apply</button>
-          </div>
+          <label class="form-label">Global Model Deployment</label>
+          <select class="form-select mb-2">
+            <option selected>Gemini 2.0 Flash</option>
+            <option>Gemini 1.5 Pro</option>
+          </select>
+          <button class="btn btn-sm text-white w-100" style="background: var(--brand-dark)">Deploy Update</button>
         </div>
 
-        <div class="mb-4">
-          <label class="form-label small">
-            <i class="fas fa-chart-pie" style="margin-right: 4px;"></i>
-            Token Quota (monthly)
-          </label>
-          <table class="table table-sm mb-0">
-            <thead>
-              <tr>
-                <th>Restaurant</th>
-                <th>Used</th>
-                <th>Limit</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>La Piazza</td>
-                <td><span style="color: var(--primary-light); font-weight: 600;">1,240</span></td>
-                <td>5,000</td>
-              </tr>
-              <tr>
-                <td>Sushi Corner</td>
-                <td><span style="color: var(--warning); font-weight: 600;">12,500</span></td>
-                <td>20,000</td>
-              </tr>
-              <tr>
-                <td>Burger Barn</td>
-                <td><span style="color: var(--text-secondary); font-weight: 600;">0</span></td>
-                <td>1,000</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <hr class="my-4">
 
-        <div>
-          <label class="form-label small">
-            <i class="fas fa-comments" style="margin-right: 4px;"></i>
-            System Prompt Template
-          </label>
-          <textarea class="form-control" rows="3" style="resize: vertical;">{{ system_prompt or 'You are a helpful restaurant assistant. Ask clarifying questions before confirming reservations.' }}</textarea>
-          <button class="btn btn-primary btn-sm mt-2">Save Template</button>
-        </div>
+        <h6 class="fw-bold small mb-3">System Prompt Master</h6>
+        <textarea class="form-control mb-3" rows="4" style="font-size: 0.85rem;">{{ system_prompt or 'You are a helpful restaurant assistant powered by Neuronet A.I...' }}</textarea>
+        <button class="btn btn-sm btn-outline-dark w-100 btn-action">Sync All Tenants</button>
       </div>
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-12">
-      <div class="card-surface">
-        <h5 class="mb-2">
-          <i class="fas fa-chart-line" style="margin-right: 8px; color: var(--success);"></i>
-          Analytics & Performance
-        </h5>
-        <p class="text-secondary small mb-4">Platform metrics: success rates, latency, and common failures.</p>
-
-        <div class="row">
-          <div class="col-md-4 mb-3">
-            <div style="padding: 16px; background: var(--light); border-radius: 10px;">
-              <div style="color: var(--success); font-size: 2rem; font-weight: 700; margin-bottom: 4px;">89%</div>
-              <div class="text-secondary small">Overall Success Rate</div>
-              <table class="table table-sm mt-3 mb-0">
-                <thead>
-                  <tr><th style="font-size: 0.8rem;">Restaurant</th><th style="font-size: 0.8rem;">Success</th><th style="font-size: 0.8rem;">Escalation</th></tr>
-                </thead>
-                <tbody>
-                  <tr style="font-size: 0.85rem;">
-                    <td>La Piazza</td>
-                    <td><span style="color: var(--success); font-weight: 600;">92%</span></td>
-                    <td>8%</td>
-                  </tr>
-                  <tr style="font-size: 0.85rem;">
-                    <td>Sushi Corner</td>
-                    <td><span style="color: var(--primary-light); font-weight: 600;">87%</span></td>
-                    <td>13%</td>
-                  </tr>
-                  <tr style="font-size: 0.85rem;">
-                    <td>Burger Barn</td>
-                    <td><span style="color: var(--warning); font-weight: 600;">78%</span></td>
-                    <td>22%</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="col-md-4 mb-3">
-            <div style="padding: 16px; background: var(--light); border-radius: 10px;">
-              <div style="color: var(--primary-light); font-size: 2rem; font-weight: 700; margin-bottom: 4px;">420 <span style="font-size: 1rem;">ms</span></div>
-              <div class="text-secondary small">Median Latency (p50)</div>
-              <table class="table table-sm mt-3 mb-0">
-                <thead>
-                  <tr><th style="font-size: 0.8rem;">Region</th><th style="font-size: 0.8rem;">p50</th><th style="font-size: 0.8rem;">p95</th></tr>
-                </thead>
-                <tbody>
-                  <tr style="font-size: 0.85rem;">
-                    <td>US-East</td>
-                    <td>400ms</td>
-                    <td>820ms</td>
-                  </tr>
-                  <tr style="font-size: 0.85rem;">
-                    <td>EU-West</td>
-                    <td>460ms</td>
-                    <td>980ms</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="col-md-4 mb-3">
-            <div style="padding: 16px; background: var(--light); border-radius: 10px;">
-              <div style="color: var(--danger); font-size: 2rem; font-weight: 700; margin-bottom: 4px;">Top 3</div>
-              <div class="text-secondary small">Common Failures</div>
-              <ol class="mt-3 mb-0" style="font-size: 0.9rem; padding-left: 20px;">
-                <li style="margin-bottom: 8px;">Unable to find availability
-                  <span style="color: var(--secondary); font-weight: 600;">23%</span>
-                </li>
-                <li style="margin-bottom: 8px;">Menu/RAG mismatch
-                  <span style="color: var(--secondary); font-weight: 600;">14%</span>
-                </li>
-                <li>Timeouts / partial responses
-                  <span style="color: var(--secondary); font-weight: 600;">9%</span>
-                </li>
-              </ol>
-              <div class="text-secondary small mt-2" style="padding-top: 8px; border-top: 1px solid var(--border);">
-                <i class="fas fa-lightbulb" style="color: var(--warning); margin-right: 4px;"></i>
-                "I don't know" occurrences: <strong>42</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}
+
+<!-- Additional admin-container snippet added by user -->
+<div class="admin-container mt-5">
+  <div class="mb-5"> 
+    <h2 class="fw-bold" style="color: var(--brand-dark)">Platform Overview</h2>
+    <p class="text-secondary">Managing governance for <strong>Neuronet A.I</strong> Ecosystem</p>
+  </div>
+
+  <div class="row g-4 mb-5">
+    </div>
+
+  <div class="row g-5"> <div class="col-xl-8 col-lg-7">
+      <div class="auth-card shadow-sm border-0 w-100" style="max-width: none;">
+        <div class="p-2">
+           </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-5">
+      <div class="auth-card shadow-sm border-0 w-100" style="max-width: none;">
+        </div>
+    </div>
+  </div>
+</div>

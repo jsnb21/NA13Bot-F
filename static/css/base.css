@@ -291,3 +291,22 @@ font-size: 0.85rem;
     padding: 24px;
 }
 }
+
+/* Admin layout adjustments: wider container, increased line-height, and main padding */
+.admin-container {
+    width: 100%;
+    max-width: 1400px; /* Increased from 680px to allow horizontal breathing room */
+    margin: 0 auto;
+    padding: 0 40px; /* Adds consistent gutter spacing */
+}
+
+/* Increase line-height globally for readability */
+body {
+    line-height: 1.6;
+    color: #334155;
+}
+
+/* Add more vertical padding to the main section */
+main.main-content {
+    padding: calc(var(--header-height) + 48px) 0 var(--footer-height);
+}

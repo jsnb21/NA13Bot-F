@@ -23,6 +23,58 @@
       --dark: {{ cfg.get('dark', '#111827') }};
     }
     </style>
+    <style>
+      :root {
+        --brand-dark: #0b343d;
+        --accent-yellow: #ffc832;
+        --sidebar-width: 260px;
+        --glass-bg: rgba(255, 255, 255, 0.9);
+      }
+
+      body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
+
+      /* Modern Sidebar */
+      .admin-sidebar {
+        width: var(--sidebar-width);
+        background: var(--brand-dark);
+        height: 100vh;
+        position: fixed;
+        padding: 24px 16px;
+        color: white;
+      }
+
+      .nav-link {
+        color: rgba(255,255,255,0.7);
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 4px;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .nav-link:hover, .nav-link.active {
+        background: rgba(255,255,255,0.1);
+        color: var(--accent-yellow);
+      }
+
+      /* Main Content Area */
+      .main-content {
+        margin-left: var(--sidebar-width);
+        padding: 40px;
+        min-height: 100vh;
+      }
+
+      /* Consistent Card Styling */
+      .surface-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      }
+    </style>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% endblock %}
     </head>
