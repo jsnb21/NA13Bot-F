@@ -129,8 +129,8 @@ def admin():
 @app.route('/superadmin', methods=['GET', 'POST'])
 def superadmin():
     if request.method == 'POST':
-        cfg = request.form.get('config', '')
-        save_config({'config': cfg})
+        config_val = request.form.get('config', '')
+        save_config({'config': config_val})
         return redirect(url_for('superadmin'))
     cfg = load_config()
     return render_template('superadmin/superadmin.html', cfg=cfg)
