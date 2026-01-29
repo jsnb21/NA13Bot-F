@@ -1,15 +1,60 @@
 {% extends 'base.html' %}
 {% set show_admin_chatbot = true %}
 
+{% block head %}
+<style>
+  :root {
+    --main-color: #0b343d;
+    --sub-color: #ffd41d;
+  }
+  /* hide the sidebar on super admin pages */
+  .admin-sidebar { display: none !important; }
+  .main-content { margin-left: 0 !important; }
+  /* nudge floating help button when sidebar absent */
+  .admin-help-btn { right: 18px !important; }
+  
+  /* Superadmin top navbar styles */
+  .superadmin-topbar {
+    background: var(--main-color);
+    color: var(--main-foreground, #fff);
+    padding: 18px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    margin-bottom: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 1040;
+    border-radius: 0;
+  }
+  /* ensure main content doesn't sit under the fixed topbar */
+  .main-content { padding-top: 120px !important; }
+  .superadmin-topbar .title { font-weight: 700; font-size: 1.5rem; }
+  .superadmin-topbar .subtitle { color: rgba(255,255,255,0.9); font-size: 0.95rem; }
+  .superadmin-topbar .actions .btn { background: var(--sub-color); color: #111; border: none; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+
+</style>
+{% endblock %}
+
 {% block title %}Super Admin — Resto Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <div class="mb-5">
-    <h2 class="mb-2">Super Admin Panel</h2>
-    <p class="text-secondary">Manage tenants, AI governance and platform analytics.</p>
+<div class="superadmin-topbar">
+  <div class="container-fluid d-flex justify-content-between align-items-center">
+    <div>
+      <div class="title">Super Admin Panel</div>
+      <div class="subtitle">Manage tenants, AI governance and platform analytics.</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-sm" onclick="location.reload()">Refresh</button>
+      <button class="btn btn-sm ms-2" style="background:var(--sub-color); color:#111;">Create Tenant</button>
+    </div>
   </div>
+</div>
 
+<div class="container-fluid">
   <div class="row">
     <div class="col-lg-6 mb-4">
       <div class="card-surface">

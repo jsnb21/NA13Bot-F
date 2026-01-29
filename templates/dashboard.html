@@ -4,6 +4,13 @@
 
 {% block content %}
 <div class="container-fluid">
+    <style>
+        /* Keep dashboard main numbers and labels readable and fixed color */
+        .dashboard-number { color: #111827; font-size: 2.2rem; font-weight: 700; margin-bottom: 4px; }
+        .dashboard-label { color: #6b7280; font-size: 0.9rem; }
+        .dashboard-meta { font-size: 0.8rem; color: #10b981; margin-top: 12px; }
+        .top-items-count { font-weight: 600; color: #111827; }
+    </style>
     <div class="mb-5">
         <h2 class="mb-2">{{ cfg.get('establishment_name','Resto') }} — Dashboard</h2>
         <p class="text-secondary">Welcome back! Here's your business overview.</p>
@@ -14,14 +21,14 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div style="color: var(--primary-light); font-size: 2.2rem; font-weight: 700; margin-bottom: 4px;">248</div>
-                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Total Orders</div>
+                        <div class="dashboard-number">248</div>
+                        <div class="dashboard-label">Total Orders</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-shopping-cart" style="color: var(--primary-light); font-size: 1.4rem;"></i>
                     </div>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--success); margin-top: 12px;">
+                    <div class="dashboard-meta">
                     <i class="fas fa-arrow-up"></i> 12% from last week
                 </div>
             </div>
@@ -31,14 +38,14 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div style="color: var(--secondary); font-size: 2.2rem; font-weight: 700; margin-bottom: 4px;">$4,289</div>
-                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Revenue</div>
+                        <div class="dashboard-number">$4,289</div>
+                        <div class="dashboard-label">Revenue</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(245, 158, 11, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-dollar-sign" style="color: var(--secondary); font-size: 1.4rem;"></i>
                     </div>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--success); margin-top: 12px;">
+                    <div class="dashboard-meta">
                     <i class="fas fa-arrow-up"></i> 8% from last week
                 </div>
             </div>
@@ -48,14 +55,14 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div style="color: var(--primary); font-size: 2.2rem; font-weight: 700; margin-bottom: 4px;">156</div>
-                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Active Customers</div>
+                        <div class="dashboard-number">156</div>
+                        <div class="dashboard-label">Active Customers</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(30, 64, 175, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-users" style="color: var(--primary); font-size: 1.4rem;"></i>
                     </div>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--success); margin-top: 12px;">
+                    <div class="dashboard-meta">
                     <i class="fas fa-arrow-up"></i> 5% from last week
                 </div>
             </div>
@@ -65,14 +72,14 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div style="color: var(--success); font-size: 2.2rem; font-weight: 700; margin-bottom: 4px;">92%</div>
-                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Satisfaction Rate</div>
+                        <div class="dashboard-number">92%</div>
+                        <div class="dashboard-label">Satisfaction Rate</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-smile" style="color: var(--success); font-size: 1.4rem;"></i>
                     </div>
                 </div>
-                <div style="font-size: 0.8rem; color: var(--success); margin-top: 12px;">
+                    <div class="dashboard-meta">
                     <i class="fas fa-arrow-up"></i> 3% from last week
                 </div>
             </div>
@@ -139,7 +146,7 @@
                             </div>
                             <span>Margherita Pizza</span>
                         </div>
-                        <span style="font-weight: 600; color: var(--primary-light);">48</span>
+                        <span class="top-items-count">48</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border);">
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -148,7 +155,7 @@
                             </div>
                             <span>Caesar Salad</span>
                         </div>
-                        <span style="font-weight: 600; color: var(--success);">32</span>
+                        <span class="top-items-count">32</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border);">
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -157,7 +164,7 @@
                             </div>
                             <span>Garlic Bread</span>
                         </div>
-                        <span style="font-weight: 600; color: var(--secondary);">28</span>
+                        <span class="top-items-count">28</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0;">
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -166,7 +173,7 @@
                             </div>
                             <span>Tiramisu</span>
                         </div>
-                        <span style="font-weight: 600; color: var(--danger);">24</span>
+                        <span class="top-items-count">24</span>
                     </div>
                 </div>
             </div>

@@ -62,6 +62,23 @@
     }
     .color-wheel { width: 160px; height: 160px; }
     .color-hex-input { width: 120px; }
+    .sticky-save-bar {
+        position: fixed;
+        bottom: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255,255,255,0.98);
+        border-radius: 10px;
+        padding: 12px 16px;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+        display: none;
+        z-index: 3000;
+        align-items: center;
+        gap: 12px;
+    }
+    .sticky-save-bar.show { display: flex; }
+    .sticky-save-bar .btn-save { background:#ff6b6b; color:#fff; border:none; }
+    .sticky-save-bar .btn-cancel { background:transparent; border:1px solid #d1d5db; }
 </style>
 {% endblock %}
 
@@ -252,9 +269,17 @@
     </div>
 
         <div class="mb-4">
-                <button type="submit" id="saveSettingsBtn" class="btn btn-secondary" style="background:#ff6b6b; border:none; margin-right:10px;">Save Settings</button>
-                <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">Cancel</button>
-                <span id="saveStatus" style="margin-left:12px; color:#666; display:inline-block;"></span>
+            <button type="submit" id="saveSettingsBtn" class="btn btn-secondary" style="background:#ff6b6b; border:none; margin-right:10px;">Save Settings</button>
+            <button type="button" class="btn btn-outline-secondary" onclick="window.location.reload()">Cancel</button>
+            <span id="saveStatus" style="margin-left:12px; color:#666; display:inline-block;"></span>
+        </div>
+
+        <!-- Sticky save bar shown when form changes -->
+        <div id="stickySaveBar" class="sticky-save-bar" role="region" aria-live="polite">
+            <div style="font-weight:600;">Unsaved changes</div>
+            <div style="flex:1"></div>
+            <button id="stickyCancel" type="button" class="btn btn-cancel">Cancel</button>
+            <button id="stickySave" type="button" class="btn btn-save ms-2">Save Settings</button>
         </div>
         </form>
 
@@ -287,6 +312,53 @@
                     btn.innerHTML = orig;
                 }
             });
+            // sticky save bar logic
+            (function(){
+                const form = document.getElementById('settingsForm');
+                const sticky = document.getElementById('stickySaveBar');
+                const stickySave = document.getElementById('stickySave');
+                const stickyCancel = document.getElementById('stickyCancel');
+                const saveBtn = document.getElementById('saveSettingsBtn');
+
+                function formToObj(f){
+                    const o = {};
+                    new FormData(f).forEach((v,k)=>{ o[k]=v; });
+                    return o;
+                }
+                const initial = formToObj(form);
+
+                function isDirty(){
+                    const cur = formToObj(form);
+                    const keys = new Set([...Object.keys(initial), ...Object.keys(cur)]);
+                    for(const k of keys){ if((initial[k]||'') !== (cur[k]||'')) return true; }
+                    return false;
+                }
+
+                function updateSticky(){
+                    if(isDirty()) sticky.classList.add('show'); else sticky.classList.remove('show');
+                }
+
+                // listen for changes
+                form.addEventListener('input', updateSticky);
+                form.addEventListener('change', updateSticky);
+
+                stickySave.addEventListener('click', ()=>{ saveBtn.click(); });
+
+                stickyCancel.addEventListener('click', ()=>{
+                    // restore initial values
+                    for(const name in initial){
+                        const el = form.elements[name];
+                        if(!el) continue;
+                        try{ el.value = initial[name]; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+                    }
+                    // also trigger change update for color hex fields if present
+                    const mainHex = document.getElementById('main_color_hex');
+                    const subHex = document.getElementById('sub_color_hex');
+                    if(mainHex){ mainHex.value = initial['main_color'] || ''; mainHex.dispatchEvent(new Event('input',{bubbles:true})); }
+                    if(subHex){ subHex.value = initial['sub_color'] || ''; subHex.dispatchEvent(new Event('input',{bubbles:true})); }
+                    updateSticky();
+                });
+            })();
         })();
         </script>
 
@@ -306,11 +378,23 @@
 
                 mainPicker.on('color:change', function(color){
                     mainHidden.value = color.hexString;
-                    if(mainHex) mainHex.value = color.hexString;
+                    mainHidden.dispatchEvent(new Event('input',{bubbles:true}));
+                    mainHidden.dispatchEvent(new Event('change',{bubbles:true}));
+                    if(mainHex){
+                        mainHex.value = color.hexString;
+                        mainHex.dispatchEvent(new Event('input',{bubbles:true}));
+                        mainHex.dispatchEvent(new Event('change',{bubbles:true}));
+                    }
                 });
                 subPicker.on('color:change', function(color){
                     subHidden.value = color.hexString;
-                    if(subHex) subHex.value = color.hexString;
+                    subHidden.dispatchEvent(new Event('input',{bubbles:true}));
+                    subHidden.dispatchEvent(new Event('change',{bubbles:true}));
+                    if(subHex){
+                        subHex.value = color.hexString;
+                        subHex.dispatchEvent(new Event('input',{bubbles:true}));
+                        subHex.dispatchEvent(new Event('change',{bubbles:true}));
+                    }
                 });
 
                 if(mainHex){ mainHex.addEventListener('input', function(e){ try{ mainPicker.color.hexString = e.target.value; }catch{} }); }
