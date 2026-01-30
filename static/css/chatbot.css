@@ -46,3 +46,46 @@ body{margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:
 @media(max-height:600px){
 .phone{height:64vh;min-height:380px}
 }
+
+/* Remove the old chatbubble styles and replace with: */
+.typing-indicator {
+  padding: 0 14px;
+  margin-bottom: 12px;
+}
+
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  display: inline-block;
+  border-radius: 50%;
+  animation: bounce 1s infinite;
+}
+
+.typing-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
