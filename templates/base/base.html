@@ -25,8 +25,9 @@
     </style>
     <style>
       :root {
-        --brand-dark: #0b343d;
-        --accent-yellow: #ffc832;
+        /* Map legacy names to configurable colors so existing templates keep working */
+        --brand-dark: var(--main-color);
+        --accent-yellow: var(--sub-color);
         --sidebar-width: 260px;
         --glass-bg: rgba(255, 255, 255, 0.9);
       }
@@ -105,10 +106,6 @@
             <a class="nav-link {% if request.path == '/admin-client/menu' %}active{% endif %}" href="/admin-client/menu">
               <i class="fas fa-utensils"></i>
               <span>Menu</span>
-            </a>
-            <a class="nav-link {% if request.path == '/admin-client/customers' %}active{% endif %}" href="/admin-client/customers">
-              <i class="fas fa-users"></i>
-              <span>Customers</span>
             </a>
             <a class="nav-link {% if request.path == '/admin-client/reports' %}active{% endif %}" href="/admin-client/reports">
               <i class="fas fa-chart-bar"></i>
