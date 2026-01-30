@@ -1,0 +1,29 @@
+{
+  "test_account@example.com": {
+    "password_hash": "scrypt:32768:8:1$i2mHcU9GttDfTUBq$3d73e3d89fa21e0492e5d94c06d230e919060613995d5f07a789fed2e4d222d2d0a1758a0b3e782aef51c7407b3656c2f77da76bb287f394b3e5cd3e79c28eff",
+    "meta": {
+      "establishment_name": "Paldo Contis",
+      "logo_url": "/static/uploads/5.png",
+      "main_color": "#0080ff",
+      "sub_color": "#ffe295"
+    }
+  },
+  "test_account@example2.com": {
+    "password_hash": "scrypt:32768:8:1$ti5rMTZKqJOaW7tx$3fe987850b9ba0f25efb78606e6a3e1c436fce2b63b09904df9fd5081af61a03899aa23c9be315dda0bb73c7d2ea0aeff7af0a39a1c869d82155b1e296e93385",
+    "meta": {
+      "establishment_name": "Restaurant NAMe",
+      "logo_url": "/static/uploads/Blue_and_White_Modern_Birthday_Greetings_Instagram_Post_1.png",
+      "main_color": "#301828",
+      "sub_color": "#3737fb"
+    }
+  },
+  "verceles_paldo@test.com": {
+    "password_hash": "scrypt:32768:8:1$v9HHkAo3EaeXT8BR$19fea7d7a09a9172db32850a69d53d71a3d7250ee2ced977f27a377255521dbcf21e9d114f415af44ee098db4324eec1dec9d30321c65f9c85569fb46acf91a3",
+    "meta": {
+      "establishment_name": "VERCELES PALDO",
+      "logo_url": "/static/uploads/WIN_20241014_14_22_34_Pro.jpg",
+      "main_color": "#0b343d",
+      "sub_color": "#ffc832"
+    }
+  }
+}

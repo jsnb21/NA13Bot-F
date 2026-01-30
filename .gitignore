@@ -9,6 +9,7 @@ dist/
 
 # Virtual environments
 nai3botfvenv/
+NAI3BOT-F/
 venv/
 env/
 .venv/

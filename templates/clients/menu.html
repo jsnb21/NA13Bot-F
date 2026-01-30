@@ -1,4 +1,4 @@
-{% extends 'clients/base.html' %}
+{% extends 'base/base.html' %}
 
 {% block title %}Menu Kiosk — Resto Admin{% endblock %}
 
@@ -11,7 +11,6 @@
 <div class="container-fluid">
     <div class="kiosk-header">
         <h2>{{ cfg.get('establishment_name','Resto') }} — Menu Kiosk</h2>
-        <button class="btn btn-secondary" style="background:#ffd41d; border:none; color:#0b343d; font-weight:600;">+ Add Item</button>
     </div>
 
     <div class="category-tabs">
@@ -24,6 +23,33 @@
     </div>
 
     <div class="kiosk-grid">
+        <form method="post" enctype="multipart/form-data" class="menu-card pdf-menu-card" id="menuPdfForm">
+            <div class="menu-card-image pdf-upload-hero" id="menuPdfUploadZone">
+                <div class="pdf-hero-content">
+                    <div class="pdf-hero-icon"><i class="fas fa-file-upload"></i></div>
+                    <div class="pdf-hero-title">Upload Menu PDF</div>
+                    <div class="pdf-hero-sub">Click or drag file here</div>
+                </div>
+            </div>
+            <div class="menu-card-content">
+                <div class="menu-card-title">Menu PDF</div>
+                <div class="menu-card-description">Upload your kiosk menu (PDF only)</div>
+                <div class="menu-card-footer">
+                    <span class="menu-card-price" style="color: rgb(70, 70, 70)">Upload</span>
+                    {% if cfg.get('menu_pdf_url') %}
+                    <a class="menu-card-badge" href="{{ cfg.get('menu_pdf_url') }}" target="_blank">View Current</a>
+                    {% else %}
+                    <span class="menu-card-badge">No File</span>
+                    {% endif %}
+                </div>
+                <input type="file" id="menu_pdf" name="menu_pdf" accept=".pdf" class="form-control">
+                <div class="pdf-file-list" id="menuPdfFileList"></div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-secondary" style="background:#ffd41d; border:none; color:#0b343d; font-weight:600;">Save PDF</button>
+                </div>
+            </div>
+        </form>
+
         <div class="menu-card">
             <div class="menu-card-image">🍕</div>
             <div class="menu-card-content">
@@ -127,4 +153,55 @@
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        const zone = document.getElementById('menuPdfUploadZone');
+        const input = document.getElementById('menu_pdf');
+        const list = document.getElementById('menuPdfFileList');
+        const existingName = "{{ cfg.get('menu_pdf_name','') }}";
+
+        const renderFile = (fileName) => {
+            list.innerHTML = '';
+            if (!fileName) return;
+            const item = document.createElement('div');
+            item.className = 'pdf-file-item';
+            item.innerHTML = `
+                <div class="pdf-file-name">
+                    <i class="fas fa-file-pdf pdf-file-icon"></i>
+                    <span>${fileName}</span>
+                </div>
+            `;
+            list.appendChild(item);
+        };
+
+        if (existingName) renderFile(existingName);
+
+        zone.addEventListener('click', () => input.click());
+
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('dragover');
+        });
+
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.toLowerCase().endsWith('.pdf')) {
+                input.files = e.dataTransfer.files;
+                renderFile(file.name);
+            }
+        });
+
+        input.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            renderFile(file ? file.name : '');
+        });
+    })();
+</script>
 {% endblock %}

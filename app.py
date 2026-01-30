@@ -4,6 +4,34 @@ import google.generativeai as genai
 import os
 
 app = Flask(__name__)
+<<<<<<< Updated upstream
+=======
+app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
+
+# upload dir for logo files
+UPLOAD_DIR = Path(__file__).parent / 'static' / 'uploads'
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+from functools import wraps
+from flask import flash
+
+# allowed logo extensions
+ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+ALLOWED_PDF = {'pdf'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXT
+
+def allowed_pdf(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_PDF
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('user'):
+            return redirect(url_for('login', next=request.path))
+        return f(*args, **kwargs)
+    return decorated
+>>>>>>> Stashed changes
 
 # Configure Google AI - check environment variable or config file
 def get_google_api_key():
@@ -105,8 +133,13 @@ def admin():
 @app.route('/superadmin', methods=['GET', 'POST'])
 def superadmin():
     if request.method == 'POST':
-        config_val = request.form.get('config', '')
-        save_config({'config': config_val})
+        cfg = load_config()
+        cfg.update({
+            'global_model': request.form.get('global_model', cfg.get('global_model', 'Gemini 2.0 Flash')),
+            'system_prompt': request.form.get('system_prompt', cfg.get('system_prompt', '')),
+            'enable_gpt52_codex_all_clients': True if request.form.get('enable_gpt52_codex_all_clients') == 'on' else False
+        })
+        save_config(cfg)
         return redirect(url_for('superadmin'))
     cfg = load_config()
     return render_template('superadmin/superadmin.html', cfg=cfg)
@@ -115,6 +148,7 @@ def superadmin():
 @app.route('/admin-client', methods=['GET', 'POST'])
 def admin_client():
     if request.method == 'POST':
+        cfg = load_config()
         data = {
             'establishment_name': request.form.get('establishment_name', ''),
             'logo_url': request.form.get('logo_url', ''),
@@ -123,7 +157,17 @@ def admin_client():
             'menu_text': request.form.get('menu_text', ''),
             'image_urls': [u.strip() for u in request.form.get('image_urls', '').splitlines() if u.strip()]
         }
-        save_config(data)
+
+        pdf_file = request.files.get('pdf_file')
+        if pdf_file and pdf_file.filename and allowed_pdf(pdf_file.filename):
+            filename = secure_filename(pdf_file.filename)
+            dest = UPLOAD_DIR / filename
+            pdf_file.save(str(dest))
+            data['menu_pdf_url'] = f'/static/uploads/{filename}'
+            data['menu_pdf_name'] = filename
+
+        cfg.update(data)
+        save_config(cfg)
         return redirect(url_for('admin_client'))
     cfg = load_config()
     return render_template('clients/admin-client.html', cfg=cfg)
@@ -138,9 +182,26 @@ def orders():
     cfg = load_config()
     return render_template('clients/orders.html', cfg=cfg)
 
+<<<<<<< Updated upstream
 @app.route('/admin-client/menu')
+=======
+@app.route('/admin-client/menu', methods=['GET', 'POST'])
+@login_required
+>>>>>>> Stashed changes
 def menu():
     cfg = load_config()
+    if request.method == 'POST':
+        pdf_file = request.files.get('menu_pdf')
+        if pdf_file and pdf_file.filename and allowed_pdf(pdf_file.filename):
+            filename = secure_filename(pdf_file.filename)
+            dest = UPLOAD_DIR / filename
+            pdf_file.save(str(dest))
+            cfg.update({
+                'menu_pdf_url': f'/static/uploads/{filename}',
+                'menu_pdf_name': filename
+            })
+            save_config(cfg)
+        return redirect(url_for('menu'))
     return render_template('clients/menu.html', cfg=cfg)
 
 @app.route('/admin-client/customers')
@@ -191,5 +252,87 @@ def ai_training():
             pass
     return render_template('clients/ai-training.html', cfg=cfg)
 
+<<<<<<< Updated upstream
+=======
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    cfg = load_config()
+    error = None
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        if not email or not password:
+            error = 'Email and password are required.'
+        else:
+            ok = verify_user(email, password)
+            if ok:
+                session['user'] = email
+                return redirect(url_for('dashboard'))
+            else:
+                error = 'Invalid email or password.'
+    return render_template('auth/login.html', cfg=cfg, error=error)
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    cfg = load_config()
+    error = None
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm_password', '')
+        establishment_name = request.form.get('establishment_name', '')
+        main_color = request.form.get('main_color', '')
+        sub_color = request.form.get('sub_color', '')
+
+        # handle logo file upload
+        logo_url = request.form.get('logo_url', '')
+        logo_file = request.files.get('logo_file')
+        if logo_file and logo_file.filename:
+            if allowed_file(logo_file.filename):
+                filename = secure_filename(logo_file.filename)
+                dest = UPLOAD_DIR / filename
+                logo_file.save(str(dest))
+                # set path relative to static
+                logo_url = f'/static/uploads/{filename}'
+            else:
+                error = 'Unsupported logo file type.'
+
+        if not error:
+            if not email or not password:
+                error = 'Email and password are required.'
+            elif password != confirm:
+                error = 'Passwords do not match.'
+            else:
+                meta = {
+                    'establishment_name': establishment_name,
+                    'logo_url': logo_url,
+                    'main_color': main_color,
+                    'sub_color': sub_color
+                }
+                success = add_user(email, password, meta=meta)
+                if not success:
+                    error = 'A user with that email already exists.'
+                if not error:
+                    # merge branding into config
+                    cfg.update({
+                        'establishment_name': establishment_name,
+                        'logo_url': logo_url,
+                        'main_color': main_color,
+                        'sub_color': sub_color
+                    })
+                    save_config(cfg)
+                    return redirect(url_for('login'))
+
+    return render_template('auth/signup.html', cfg=cfg, error=error)
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('login'))
+
+>>>>>>> Stashed changes
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)

@@ -1,7 +1,94 @@
-{% extends 'clients/base.html' %}
+{% extends 'base/base.html' %}
 {% set show_admin_chatbot = true %}
 
 {% block title %}Admin Configuration — Resto{% endblock %}
+
+{% block head %}
+<style>
+  .pdf-upload-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 32px;
+    text-align: center;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .pdf-upload-zone:hover {
+    border-color: #0b343d;
+    background: rgba(11, 52, 61, 0.02);
+  }
+
+  .pdf-upload-zone.dragover {
+    border-color: #0b343d;
+    background: rgba(11, 52, 61, 0.08);
+    box-shadow: 0 0 0 3px rgba(11, 52, 61, 0.1);
+  }
+
+  .pdf-upload-icon {
+    font-size: 2.5rem;
+    color: #0b343d;
+    margin-bottom: 12px;
+  }
+
+  .pdf-upload-text {
+    color: #1f2937;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .pdf-upload-hint {
+    color: #64748b;
+    font-size: 0.85rem;
+  }
+
+  #pdf_file {
+    display: none;
+  }
+
+  .pdf-file-list {
+    margin-top: 16px;
+  }
+
+  .pdf-file-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pdf-file-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #1f2937;
+    font-weight: 500;
+  }
+
+  .pdf-file-icon {
+    color: #ef4444;
+    font-size: 1.2rem;
+  }
+
+  .btn-remove-pdf {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s;
+  }
+
+  .btn-remove-pdf:hover {
+    color: #ef4444;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -9,7 +96,7 @@
         <div class="col-md-5">
             <div class="card-surface">
                 <h3>Admin Dashboard</h3>
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="establishment_name" class="form-label">Establishment Name</label>
                         <input id="establishment_name" name="establishment_name" type="text" class="form-control" value="{{ cfg.get('establishment_name','') }}">
@@ -49,6 +136,20 @@
 {% endfor %}</textarea>
                     </div>
 
+                    <div class="mb-4">
+                        <label class="form-label">Kiosk Menu PDF</label>
+                        <div class="pdf-upload-zone" id="pdfUploadZone">
+                            <div class="pdf-upload-icon">
+                                <i class="fas fa-file-pdf"></i>
+                            </div>
+                            <div class="pdf-upload-text">Drag & Drop PDF File</div>
+                            <div class="pdf-upload-hint">or click to browse (Max 10MB)</div>
+                        </div>
+                        <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" class="form-control">
+                        <div class="pdf-file-list" id="pdfFileList"></div>
+                        <input type="hidden" id="pdf_filename" name="pdf_filename" value="{{ cfg.get('menu_pdf_name','') }}">
+                    </div>
+
                     <button type="submit" class="btn btn-secondary" style="background:#ffd41d; border:none; color:#0b343d; font-weight:600;">SAVE CONFIGURATION</button>
                 </form>
             </div>
@@ -62,4 +163,63 @@
         </div>
     </div>
 </div>
+
+<script>
+  (function () {
+    const zone = document.getElementById('pdfUploadZone');
+    const fileInput = document.getElementById('pdf_file');
+    const list = document.getElementById('pdfFileList');
+    const existing = document.getElementById('pdf_filename');
+
+    const renderFile = (fileName) => {
+      list.innerHTML = '';
+      if (!fileName) return;
+      const item = document.createElement('div');
+      item.className = 'pdf-file-item';
+      item.innerHTML = `
+        <div class="pdf-file-name">
+          <i class="fas fa-file-pdf pdf-file-icon"></i>
+          <span>${fileName}</span>
+        </div>
+        <button type="button" class="btn-remove-pdf" aria-label="Remove">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      item.querySelector('.btn-remove-pdf').addEventListener('click', () => {
+        fileInput.value = '';
+        existing.value = '';
+        list.innerHTML = '';
+      });
+      list.appendChild(item);
+    };
+
+    renderFile(existing.value);
+
+    zone.addEventListener('click', () => fileInput.click());
+
+    zone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      zone.classList.add('dragover');
+    });
+
+    zone.addEventListener('dragleave', () => {
+      zone.classList.remove('dragover');
+    });
+
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.toLowerCase().endsWith('.pdf')) {
+        fileInput.files = e.dataTransfer.files;
+        renderFile(file.name);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      renderFile(file ? file.name : '');
+    });
+  })();
+</script>
 {% endblock %}
