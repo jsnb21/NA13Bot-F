@@ -1,127 +1,150 @@
-{% extends 'clients/base.html' %}
+{% extends 'base/base.html' %}
 
-{% block title %}Menu Kiosk — Resto Admin{% endblock %}
+{% block title %}Menu Kiosk — Neuronet A.I{% endblock %}
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
+<style>
+  /* Modern Grid Layout */
+  .kiosk-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 30px;
+  }
+
+  /* The New Upload Card */
+  .upload-menu-card {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    background: rgba(248, 250, 252, 0.5);
+    transition: all 0.2s ease;
+    text-align: center;
+    min-height: 320px;
+    cursor: pointer;
+  }
+
+  .upload-menu-card:hover {
+    border-color: var(--brand-dark);
+    background: #fff;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  }
+
+  .upload-icon-wrap {
+    width: 64px;
+    height: 64px;
+    background: rgba(11, 52, 61, 0.05);
+    color: var(--brand-dark);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+  }
+
+  /* Standard Menu Card Modernization */
+  .menu-card {
+    background: white;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+
+  .menu-card:hover { transform: translateY(-5px); }
+
+  .menu-card-image-box {
+    height: 160px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+  }
+
+  .menu-card-body { padding: 20px; }
+  .menu-card-title { font-weight: 700; color: var(--brand-dark); margin-bottom: 8px; }
+  .menu-card-price { font-weight: 800; color: var(--brand-dark); font-size: 1.1rem; }
+  
+  .category-btn {
+    border: 1px solid var(--border);
+    background: white;
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-right: 8px;
+    transition: 0.2s;
+  }
+
+  .category-btn.active {
+    background: var(--brand-dark);
+    color: white;
+    border-color: var(--brand-dark);
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="kiosk-header">
-        <h2>{{ cfg.get('establishment_name','Resto') }} — Menu Kiosk</h2>
-        <button class="btn btn-secondary" style="background:#ffd41d; border:none; color:#0b343d; font-weight:600;">+ Add Item</button>
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold" style="color: var(--brand-dark)">Menu Kiosk</h2>
+            <p class="text-secondary mb-0">Manage digital menu items and AI training documents</p>
+        </div>
+        <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;">
+            <i class="fas fa-plus me-2"></i>Add Manual Item
+        </button>
     </div>
 
-    <div class="category-tabs">
+    <div class="category-tabs mb-4">
         <button class="category-btn active">All Items</button>
         <button class="category-btn">Appetizers</button>
         <button class="category-btn">Main Course</button>
         <button class="category-btn">Desserts</button>
-        <button class="category-btn">Beverages</button>
-        <button class="category-btn">Specials</button>
     </div>
 
     <div class="kiosk-grid">
+        <div class="upload-menu-card" onclick="document.getElementById('menuUpload').click()">
+            <input type="file" id="menuUpload" hidden accept=".pdf">
+            <div class="upload-icon-wrap">
+                <i class="fa-solid fa-file-pdf"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Sync PDF Menu</h5>
+            <p class="text-secondary small mb-4">Drag and drop your menu PDF here to automatically train the AI and update items.</p>
+            <span class="btn btn-sm btn-outline-dark px-3 fw-bold" style="border-radius: 8px;">Browse Files</span>
+        </div>
+
         <div class="menu-card">
-            <div class="menu-card-image">🍕</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Margherita Pizza</div>
-                <div class="menu-card-description">Fresh tomato, mozzarella, and basil on crispy crust</div>
-                <div class="menu-card-footer">
+            <div class="menu-card-image-box">🍕</div>
+            <div class="menu-card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h5 class="menu-card-title">Margherita Pizza</h5>
+                    <span class="badge bg-success-subtle text-success small">Live</span>
+                </div>
+                <p class="text-secondary small">Fresh tomato, mozzarella, and basil on crispy crust</p>
+                <div class="d-flex justify-content-between align-items-center mt-3">
                     <span class="menu-card-price">₱12.99</span>
-                    <span class="menu-card-badge">Popular</span>
+                    <button class="btn btn-sm btn-light border"><i class="fa-solid fa-pen"></i></button>
                 </div>
             </div>
         </div>
 
         <div class="menu-card">
-            <div class="menu-card-image">🍔</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Classic Burger</div>
-                <div class="menu-card-description">Juicy beef patty with lettuce, tomato, and special sauce</div>
-                <div class="menu-card-footer">
+            <div class="menu-card-image-box">🍔</div>
+            <div class="menu-card-body">
+                <h5 class="menu-card-title">Classic Burger</h5>
+                <p class="text-secondary small">Juicy beef patty with lettuce and special sauce</p>
+                <div class="d-flex justify-content-between align-items-center mt-3">
                     <span class="menu-card-price">₱11.50</span>
-                    <span class="menu-card-badge">Popular</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image">🥗</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Caesar Salad</div>
-                <div class="menu-card-description">Crisp romaine, croutons, parmesan, and creamy caesar dressing</div>
-                <div class="menu-card-footer">
-                    <span class="menu-card-price">₱9.99</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image">🍝</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Spaghetti Carbonara</div>
-                <div class="menu-card-description">Creamy pasta with bacon, eggs, and parmesan cheese</div>
-                <div class="menu-card-footer">
-                    <span class="menu-card-price">₱14.50</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image">🍖</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Grilled Steak</div>
-                <div class="menu-card-description">Tender ribeye steak with garlic butter and herbs</div>
-                <div class="menu-card-footer">
-                    <span class="menu-card-price">₱22.99</span>
-                    <span class="menu-card-badge">Premium</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image">🍗</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Crispy Fried Chicken</div>
-                <div class="menu-card-description">Golden fried chicken served with coleslaw and fries</div>
-                <div class="menu-card-footer">
-                    <span class="menu-card-price">₱13.99</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image">🥘</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Seafood Paella</div>
-                <div class="menu-card-description">Rice with shrimp, mussels, and saffron sauce</div>
-                <div class="menu-card-footer">
-                    <span class="menu-card-price">₱18.50</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image">🍰</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Chocolate Cake</div>
-                <div class="menu-card-description">Rich chocolate cake with ganache frosting</div>
-                <div class="menu-card-footer">
-                    <span class="menu-card-price">₱7.50</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image">🍨</div>
-            <div class="menu-card-content">
-                <div class="menu-card-title">Tiramisu</div>
-                <div class="menu-card-description">Classic Italian dessert with coffee and mascarpone</div>
-                <div class="menu-card-footer">
-                    <span class="menu-card-price">₱6.99</span>
+                    <button class="btn btn-sm btn-light border"><i class="fa-solid fa-pen"></i></button>
                 </div>
             </div>
         </div>

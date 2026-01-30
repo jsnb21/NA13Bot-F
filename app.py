@@ -240,7 +240,7 @@ def login():
                 return redirect(url_for('dashboard'))
             else:
                 error = 'Invalid email or password.'
-    return render_template('clients/login.html', cfg=cfg, error=error)
+    return render_template('auth/login.html', cfg=cfg, error=error)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -294,7 +294,7 @@ def signup():
                     save_config(cfg)
                     return redirect(url_for('login'))
 
-    return render_template('clients/signup.html', cfg=cfg, error=error)
+    return render_template('auth/signup.html', cfg=cfg, error=error)
 
 
 @app.route('/logout')
