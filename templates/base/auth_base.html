@@ -50,12 +50,12 @@
       .auth-topbar .brand .logo {
         width: 32px;
         height: 32px;
-        background: var(--accent-yellow);
         border-radius: 8px;
+        overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--brand-dark);
+        background: transparent;
       }
       
       /* --- Layout --- */
@@ -112,7 +112,9 @@
   <body>
     <header class="auth-topbar">
       <a href="/" class="brand">
-        <div class="logo"><i class="fa-solid fa-microchip"></i></div>
+        <div class="logo">
+          <img src="{{ url_for('static', filename='img/neuronet_ai.png') }}" alt="Neuronet" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </div>
         <span>Neuronet A.I</span>
       </a>
       <div class="right-tools">

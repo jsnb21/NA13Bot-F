@@ -7,5 +7,14 @@
       "main_color": "#0080ff",
       "sub_color": "#ffe295"
     }
+  },
+  "test_account@example2.com": {
+    "password_hash": "scrypt:32768:8:1$ti5rMTZKqJOaW7tx$3fe987850b9ba0f25efb78606e6a3e1c436fce2b63b09904df9fd5081af61a03899aa23c9be315dda0bb73c7d2ea0aeff7af0a39a1c869d82155b1e296e93385",
+    "meta": {
+      "establishment_name": "Restaurant NAMe",
+      "logo_url": "/static/uploads/Blue_and_White_Modern_Birthday_Greetings_Instagram_Post_1.png",
+      "main_color": "#301828",
+      "sub_color": "#3737fb"
+    }
   }
 }
