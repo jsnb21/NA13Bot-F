@@ -1,17 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from tools import save_config, load_config, add_user, verify_user
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+from tools import save_config, load_config
 import google.generativeai as genai
 import os
-from werkzeug.utils import secure_filename
-from pathlib import Path
 
-# simple session secret
 app = Flask(__name__)
-<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
-=======
->>>>>>> main
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 
 # upload dir for logo files
@@ -22,20 +16,14 @@ from flask import flash
 
 # allowed logo extensions
 ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
-<<<<<<< HEAD
 ALLOWED_PDF = {'pdf'}
-=======
->>>>>>> main
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXT
 
-<<<<<<< HEAD
 def allowed_pdf(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_PDF
 
-=======
->>>>>>> main
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -43,10 +31,7 @@ def login_required(f):
             return redirect(url_for('login', next=request.path))
         return f(*args, **kwargs)
     return decorated
-<<<<<<< HEAD
 >>>>>>> Stashed changes
-=======
->>>>>>> main
 
 # Configure Google AI - check environment variable or config file
 def get_google_api_key():
@@ -64,7 +49,7 @@ if GOOGLE_API_KEY:
 
 @app.route('/')
 def index():
-    return redirect(url_for('login'))
+    return render_template('clients/chatbot.html')
 
 
 @app.route('/chatbot')
@@ -161,7 +146,6 @@ def superadmin():
 
 
 @app.route('/admin-client', methods=['GET', 'POST'])
-@login_required
 def admin_client():
     if request.method == 'POST':
         cfg = load_config()
@@ -189,27 +173,21 @@ def admin_client():
     return render_template('clients/admin-client.html', cfg=cfg)
 
 @app.route('/admin-client/dashboard')
-@login_required
 def dashboard():
     cfg = load_config()
     return render_template('clients/dashboard.html', cfg=cfg)
 
 @app.route('/admin-client/orders')
-@login_required
 def orders():
     cfg = load_config()
     return render_template('clients/orders.html', cfg=cfg)
 
 <<<<<<< Updated upstream
 @app.route('/admin-client/menu')
-<<<<<<< HEAD
 =======
 @app.route('/admin-client/menu', methods=['GET', 'POST'])
 @login_required
 >>>>>>> Stashed changes
-=======
-@login_required
->>>>>>> main
 def menu():
     cfg = load_config()
     if request.method == 'POST':
@@ -227,19 +205,16 @@ def menu():
     return render_template('clients/menu.html', cfg=cfg)
 
 @app.route('/admin-client/customers')
-@login_required
 def customers():
     cfg = load_config()
     return render_template('clients/customers.html', cfg=cfg)
 
 @app.route('/admin-client/reports')
-@login_required
 def reports():
     cfg = load_config()
     return render_template('clients/reports.html', cfg=cfg)
 
 @app.route('/admin-client/settings', methods=['GET', 'POST'])
-@login_required
 def settings():
     cfg = load_config()
     if request.method == 'POST':
@@ -267,7 +242,6 @@ def settings():
     return render_template('clients/settings.html', cfg=cfg)
 
 @app.route('/admin-client/ai-training', methods=['GET', 'POST'])
-@login_required
 def ai_training():
     cfg = load_config()
     if request.method == 'POST':
@@ -278,11 +252,8 @@ def ai_training():
             pass
     return render_template('clients/ai-training.html', cfg=cfg)
 
-<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
-=======
->>>>>>> main
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -300,11 +271,7 @@ def login():
                 return redirect(url_for('dashboard'))
             else:
                 error = 'Invalid email or password.'
-<<<<<<< HEAD
     return render_template('auth/login.html', cfg=cfg, error=error)
-=======
-    return render_template('clients/login.html', cfg=cfg, error=error)
->>>>>>> main
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -358,11 +325,7 @@ def signup():
                     save_config(cfg)
                     return redirect(url_for('login'))
 
-<<<<<<< HEAD
     return render_template('auth/signup.html', cfg=cfg, error=error)
-=======
-    return render_template('clients/signup.html', cfg=cfg, error=error)
->>>>>>> main
 
 
 @app.route('/logout')
@@ -370,9 +333,6 @@ def logout():
     session.pop('user', None)
     return redirect(url_for('login'))
 
-<<<<<<< HEAD
 >>>>>>> Stashed changes
-=======
->>>>>>> main
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)

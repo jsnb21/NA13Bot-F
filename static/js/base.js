@@ -1,4 +1,3 @@
-(function(){
 const adminHelpBtn = document.getElementById('adminHelpBtn');
 const adminChatModal = document.getElementById('adminChatModal');
 const adminChatClose = document.getElementById('adminChatClose');
@@ -7,53 +6,50 @@ const adminChatInput = document.getElementById('adminChatInput');
 const adminChatBody = document.getElementById('adminChatBody');
 
 function openAdminChat(){
-    if(!adminChatModal) return;
-    adminChatModal.style.display = 'flex';
-    adminChatModal.setAttribute('aria-hidden','false');
-    if(adminChatInput) adminChatInput.focus();
+adminChatModal.style.display = 'flex';
+adminChatModal.setAttribute('aria-hidden','false');
+adminChatInput.focus();
 }
 function closeAdminChat(){
-    if(!adminChatModal) return;
-    adminChatModal.style.display = 'none';
-    adminChatModal.setAttribute('aria-hidden','true');
-    if(adminHelpBtn) adminHelpBtn.focus();
+adminChatModal.style.display = 'none';
+adminChatModal.setAttribute('aria-hidden','true');
+adminHelpBtn.focus();
 }
 
-if(adminHelpBtn) adminHelpBtn.addEventListener('click', (e)=>{ openAdminChat(); });
-if(adminChatClose) adminChatClose.addEventListener('click', ()=>{ closeAdminChat(); });
+adminHelpBtn.addEventListener('click', (e)=>{ openAdminChat(); });
+adminChatClose.addEventListener('click', ()=>{ closeAdminChat(); });
 
 function appendMessage(who, text){
-    if(!adminChatBody) return;
-    const div = document.createElement('div');
-    div.className = 'chat-msg ' + (who==='user' ? 'user' : 'bot');
-    const b = document.createElement('div');
-    b.className = 'bubble';
-    b.textContent = text;
-    div.appendChild(b);
-    adminChatBody.appendChild(div);
-    adminChatBody.scrollTop = adminChatBody.scrollHeight;
+const div = document.createElement('div');
+div.className = 'chat-msg ' + (who==='user' ? 'user' : 'bot');
+const b = document.createElement('div');
+b.className = 'bubble';
+b.textContent = text;
+div.appendChild(b);
+adminChatBody.appendChild(div);
+adminChatBody.scrollTop = adminChatBody.scrollHeight;
 }
 
 async function sendChat(){
-    if(!adminChatInput) return;
-    const text = adminChatInput.value && adminChatInput.value.trim();
-    if(!text) return;
-    appendMessage('user', text);
-    adminChatInput.value = '';
-    try{
-        const res = await fetch('/admin-client/chat', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({message:text})});
-        if(res.ok){
-            const j = await res.json();
-            appendMessage('bot', j.reply || 'Sorry, no reply.');
-            return;
-        }
-    }catch(e){ /* ignore and fallback */ }
-    appendMessage('bot', 'Thanks — a backend is not configured. This is a local demo response.');
+const text = adminChatInput.value && adminChatInput.value.trim();
+if(!text) return;
+appendMessage('user', text);
+adminChatInput.value = '';
+// Try a backend endpoint, fallback to canned response
+try{
+    const res = await fetch('/admin-client/chat', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({message:text})});
+    if(res.ok){
+    const j = await res.json();
+    appendMessage('bot', j.reply || 'Sorry, no reply.');
+    return;
+    }
+}catch(e){ /* ignore and fallback */ }
+// Fallback canned responses
+appendMessage('bot', 'Thanks — a backend is not configured. This is a local demo response.');
 }
 
-if(adminChatSend) adminChatSend.addEventListener('click', sendChat);
-if(adminChatInput) adminChatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }});
-})();
+adminChatSend.addEventListener('click', sendChat);
+adminChatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }});
 (function(){
 function hexToRgb(hex){
     hex = (hex || '').trim().replace('#','');
