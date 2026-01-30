@@ -22,13 +22,24 @@ body{margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:
 /* Desktop preview hidden on small screens */
 .desktop-preview{display:none}
 
-/* Larger screens: show preview side-by-side */
+/* Larger screens: make chat take 80% of the viewport and center it */
 @media(min-width:900px){
-body{padding:20px}
-.chat-shell{align-items:stretch}
-.phone{height:720px}
-.desktop-preview{display:block;flex:1;padding:22px}
-.menu-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(15,23,42,0.06);height:100%}
+	body{padding:20px}
+	.chat-shell{
+		align-items:stretch;
+		width:80vw;
+		max-width: none;
+		margin: 0 auto;
+		justify-content: center;
+	}
+	/* Expand the phone mock to fill most of the available width on desktop */
+	.phone{
+		height:90vh;
+		min-height:560px;
+		width:100%;
+		max-width:none;
+	}
+	.desktop-preview{display:none}
 }
 
 /* Very small screens: reduce vertical height so composer stays visible */

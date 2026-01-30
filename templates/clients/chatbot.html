@@ -10,23 +10,25 @@
   <body>
     <div class="chat-shell">
       <div class="phone" id="phone">
-        <div class="header" id="resto-name">Resto Name</div>
+        <div class="header" id="resto-name">Resto Name - A.I Chatbot</div>
         <div class="messages" id="messages">
           <div class="bubble bot">Welcome! How can I help?</div>
           <div class="bubble user">I'd like to order.</div>
         </div>
+        <div class="quick-actions d-flex gap-2 p-2" style="padding:12px;">
+          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="menu">View Menu</button>
+          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="order">Place Order</button>
+          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="hours">Opening Hours</button>
+          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="support">Contact Support</button>
+        </div>
+
         <div class="composer">
           <input id="txt" placeholder="Type message...">
           <button id="send">➤</button>
         </div>
       </div>
 
-      <div class="desktop-preview">
-        <div class="menu-card">
-          <h4 id="preview-title">Chatbot Preview</h4>
-          <p id="preview-menu">Menu and dynamic styling will apply here.</p>
-        </div>
-      </div>
+      <!-- desktop preview removed per request -->
     </div>
 
     <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>

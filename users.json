@@ -16,6 +16,7 @@
       "main_color": "#301828",
       "sub_color": "#3737fb"
     }
+<<<<<<< HEAD
   },
   "verceles_paldo@test.com": {
     "password_hash": "scrypt:32768:8:1$v9HHkAo3EaeXT8BR$19fea7d7a09a9172db32850a69d53d71a3d7250ee2ced977f27a377255521dbcf21e9d114f415af44ee098db4324eec1dec9d30321c65f9c85569fb46acf91a3",
@@ -25,5 +26,7 @@
       "main_color": "#0b343d",
       "sub_color": "#ffc832"
     }
+=======
+>>>>>>> main
   }
 }
