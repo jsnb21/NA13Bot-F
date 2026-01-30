@@ -1,14 +1,9 @@
-<<<<<<< Updated upstream
 {% extends 'clients/base.html' %}
 {% set show_admin_chatbot = true %}
-=======
-{% extends 'base/auth_base.html' %} {% block title %}Super Admin — Neuronet A.I{% endblock %}
->>>>>>> Stashed changes
 
 {% block head %}
 <style>
   :root {
-<<<<<<< Updated upstream
     --main-color: #0b343d;
     --sub-color: #ffd41d;
   }
@@ -33,34 +28,6 @@
     width: 100%;
     z-index: 1040;
     border-radius: 0;
-=======
-    --brand-dark: #0b343d;
-    --accent-yellow: #ffc832;
-    --success-green: #10b981;
-    --warning-orange: #f59e0b;
-    --error-red: #ef4444;
-    --card-bg: #ffffff;
-    --header-blur: rgba(255, 255, 255, 0.8);
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 10px 13px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
-  }
-
-  body { 
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    min-height: 100vh;
-  }
-
-  /* --- Modern Sticky Topbar --- */
-  .superadmin-nav {
-    background: var(--header-blur);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    padding: 12px 0;
-    position: sticky;
-    top: var(--header-height);
-    z-index: 900;
->>>>>>> Stashed changes
   }
   /* ensure main content doesn't sit under the fixed topbar */
   .main-content { padding-top: 120px !important; }
@@ -68,363 +35,12 @@
   .superadmin-topbar .subtitle { color: rgba(255,255,255,0.9); font-size: 0.95rem; }
   .superadmin-topbar .actions .btn { background: var(--sub-color); color: #111; border: none; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
 
-<<<<<<< Updated upstream
-=======
-  /* --- Header Section --- */
-  .admin-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 24px;
-    margin-bottom: 32px;
-    margin-top: 8px;
-  }
-
-  .admin-header-content h3 {
-    color: var(--brand-dark);
-    font-size: 1.75rem;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-
-  .admin-header-content p {
-    color: #64748b;
-    font-size: 0.95rem;
-  }
-
-  .admin-header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  /* --- Metric Cards with Enhanced Design --- */
-  .stat-card {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    transition: all 0.3s ease;
-    box-shadow: var(--shadow-sm);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--brand-dark), var(--accent-yellow));
-  }
-
-  .stat-card:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-lg);
-    border-color: rgba(0, 0, 0, 0.1);
-  }
-
-  .stat-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 16px;
-  }
-
-  .stat-label { 
-    font-size: 0.75rem; 
-    text-transform: uppercase; 
-    letter-spacing: 0.6px; 
-    color: #94a3b8; 
-    font-weight: 700;
-    display: block;
-  }
-
-  .stat-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.4rem;
-  }
-
-  .stat-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-  .stat-icon.yellow { background: rgba(245, 158, 11, 0.1); color: var(--accent-yellow); }
-  .stat-icon.green { background: rgba(16, 185, 129, 0.1); color: var(--success-green); }
-  .stat-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-
-  .stat-value { 
-    font-size: 2rem; 
-    font-weight: 800; 
-    color: var(--brand-dark);
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .stat-change {
-    font-size: 0.8rem;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .stat-change.positive { color: var(--success-green); }
-  .stat-change.warning { color: var(--warning-orange); }
-
-  /* --- Surface Styling --- */
-  .surface {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    padding: 28px;
-    height: 100%;
-    box-shadow: var(--shadow-sm);
-  }
-
-  .surface-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #f1f5f9;
-  }
-
-  .surface-header h5 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--brand-dark);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .surface-header-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-  }
-
-  .search-box {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 8px 12px;
-    max-width: 300px;
-  }
-
-  .search-box input {
-    background: transparent;
-    border: none;
-    outline: none;
-    font-size: 0.9rem;
-    flex: 1;
-  }
-
-  .table {
-    margin-bottom: 0;
-  }
-
-  .table thead th {
-    background: transparent;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 1px;
-    color: #94a3b8;
-    padding: 12px;
-    border: none;
-    border-bottom: 2px solid #f1f5f9;
-    font-weight: 700;
-  }
-
-  .table tbody td {
-    padding: 16px 12px;
-    vertical-align: middle;
-    border-bottom: 1px solid #f1f5f9;
-    color: #1f2937;
-  }
-
-  .table tbody tr:hover {
-    background: #f8fafc;
-  }
-
-  /* --- Custom Badges --- */
-  .badge-pill {
-    padding: 6px 14px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .bg-success-subtle { 
-    background: rgba(16, 185, 129, 0.1); 
-    color: #047857;
-  }
-
-  .bg-warning-subtle { 
-    background: rgba(245, 158, 11, 0.1); 
-    color: #92400e;
-  }
-
-  .bg-danger-subtle {
-    background: rgba(239, 68, 68, 0.1);
-    color: #991b1b;
-  }
-
-  .bg-info-subtle {
-    background: rgba(59, 130, 246, 0.1);
-    color: #1e40af;
-  }
-
-  /* --- Button Styles --- */
-  .btn-action {
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: all 0.2s ease;
-    padding: 10px 16px;
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .btn-action:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-
-  .btn-primary-action {
-    background: var(--brand-dark);
-    color: white;
-  }
-
-  .btn-primary-action:hover {
-    background: #0a2a30;
-    color: white;
-  }
-
-  .btn-secondary-action {
-    background: white;
-    color: var(--brand-dark);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-  }
-
-  .btn-secondary-action:hover {
-    background: #f8fafc;
-    border-color: rgba(0, 0, 0, 0.15);
-  }
-
-  .btn-icon {
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: #f1f5f9;
-    color: #64748b;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .btn-icon:hover {
-    background: #e2e8f0;
-    color: var(--brand-dark);
-  }
-
-  /* --- Form Elements --- */
-  .form-label {
-    font-weight: 600;
-    color: var(--brand-dark);
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-  }
-
-  .form-control, .form-select {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px 12px;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-  }
-
-  .form-control:focus, .form-select:focus {
-    border-color: var(--brand-dark);
-    box-shadow: 0 0 0 3px rgba(11, 52, 61, 0.1);
-  }
-
-  .form-control::placeholder {
-    color: #cbd5e1;
-  }
-
-  .textarea-code {
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 0.8rem;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-  }
-
-  /* --- Divider --- */
-  .divider-subtle {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
-    border: none;
-    margin: 24px 0;
-  }
-
-  /* --- Grid & Spacing --- */
-  .row { --bs-gutter-x: 20px; --bs-gutter-y: 20px; }
-
-  @media (max-width: 768px) {
-    .admin-header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    
-    .admin-header-actions {
-      width: 100%;
-    }
-
-    .admin-header-actions .btn-action {
-      flex: 1;
-    }
-
-    .surface-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 16px;
-    }
-
-    .search-box {
-      max-width: 100%;
-    }
-  }
->>>>>>> Stashed changes
 </style>
 {% endblock %}
 
 {% block title %}Super Admin — Resto Admin{% endblock %}
 
 {% block content %}
-<<<<<<< Updated upstream
 <div class="superadmin-topbar">
   <div class="container-fluid d-flex justify-content-between align-items-center">
     <div>
@@ -434,29 +50,10 @@
     <div class="actions">
       <button class="btn btn-sm" onclick="location.reload()">Refresh</button>
       <button class="btn btn-sm ms-2" style="background:var(--sub-color); color:#111;">Create Tenant</button>
-=======
-<div class="w-100 px-4">
-  
-  <div class="admin-header">
-    <div class="admin-header-content">
-      <h3>Platform Overview</h3>
-      <p>Managing governance for <strong>Neuronet A.I</strong> Ecosystem</p>
-    </div>
-    <div class="admin-header-actions">
-      <button class="btn-action btn-secondary-action" onclick="location.reload()">
-        <i class="fas fa-sync-alt"></i>
-        <span>Refresh</span>
-      </button>
-      <button class="btn-action btn-primary-action">
-        <i class="fas fa-plus"></i>
-        <span>Create New Tenant</span>
-      </button>
->>>>>>> Stashed changes
     </div>
   </div>
 </div>
 
-<<<<<<< Updated upstream
 <div class="container-fluid">
   <div class="row">
     <div class="col-lg-6 mb-4">
@@ -483,72 +80,6 @@
                 <i class="fas fa-plus"></i>
               </button>
             </div>
-=======
-  <div class="row g-4 mb-4">
-    <div class="col-md-3">
-      <div class="stat-card">
-        <div class="stat-card-header">
-          <div class="stat-label">Total Tenants</div>
-          <div class="stat-icon blue">
-            <i class="fas fa-building"></i>
-          </div>
-        </div>
-        <div class="stat-value">124</div>
-        <div class="stat-change positive"><i class="fas fa-arrow-up"></i> +12% this month</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="stat-card">
-        <div class="stat-card-header">
-          <div class="stat-label">Avg. Latency</div>
-          <div class="stat-icon yellow">
-            <i class="fas fa-clock"></i>
-          </div>
-        </div>
-        <div class="stat-value">420<span style="font-size: 1rem; font-weight: 400; color: #94a3b8;">ms</span></div>
-        <div class="stat-change positive"><i class="fas fa-arrow-up"></i> Global p50</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="stat-card">
-        <div class="stat-card-header">
-          <div class="stat-label">Model Health</div>
-          <div class="stat-icon green">
-            <i class="fas fa-heartbeat"></i>
-          </div>
-        </div>
-        <div class="stat-value" style="color: var(--success-green);">99.9%</div>
-        <div class="stat-change positive"><i class="fas fa-circle" style="font-size: 0.5rem;"></i> Gemini 2.0 Stable</div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="stat-card">
-        <div class="stat-card-header">
-          <div class="stat-label">Token Usage</div>
-          <div class="stat-icon purple">
-            <i class="fas fa-zap"></i>
-          </div>
-        </div>
-        <div class="stat-value">1.2M</div>
-        <div class="stat-change warning"><i class="fas fa-arrow-up"></i> 82% of monthly cap</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="row g-4 mb-5">
-    <div class="col-lg-8">
-      <div class="surface">
-        <div class="surface-header">
-          <h5>
-            <div class="surface-header-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-              <i class="fas fa-list"></i>
-            </div>
-            Active Tenants
-          </h5>
-          <div class="search-box">
-            <i class="fas fa-search" style="color: #94a3b8;"></i>
-            <input type="text" placeholder="Search tenants...">
->>>>>>> Stashed changes
           </div>
         </form>
 
@@ -556,13 +87,8 @@
           <table class="table table-sm mb-0">
             <thead>
               <tr>
-<<<<<<< Updated upstream
                 <th>Restaurant</th>
                 <th>Tier</th>
-=======
-                <th>Tenant Name</th>
-                <th>Service Tier</th>
->>>>>>> Stashed changes
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -570,19 +96,8 @@
             <tbody>
               <tr>
                 <td>
-<<<<<<< Updated upstream
                   <strong>La Piazza</strong>
                   <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">e7b1f9a2-3d4c</div>
-=======
-                  <div class="fw-bold">Sushi Corner</div>
-                  <div class="text-muted" style="font-size: 0.75rem;">ID: c1a2b3c4</div>
-                </td>
-                <td><span class="badge-pill bg-warning-subtle">PREMIUM</span></td>
-                <td><span class="badge-pill bg-success-subtle">ACTIVE</span></td>
-                <td class="text-end">
-                  <button class="btn-icon" title="Manage"><i class="fas fa-cog"></i></button>
-                  <button class="btn-icon" title="More"><i class="fas fa-ellipsis-h"></i></button>
->>>>>>> Stashed changes
                 </td>
                 <td><span class="badge bg-light text-dark">Basic</span></td>
                 <td><span class="badge bg-success">Active</span></td>
@@ -590,7 +105,6 @@
               </tr>
               <tr>
                 <td>
-<<<<<<< Updated upstream
                   <strong>Sushi Corner</strong>
                   <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">c1a2b3c4-d5e6</div>
                 </td>
@@ -602,40 +116,6 @@
                 <td>
                   <strong>Burger Barn</strong>
                   <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">9f8e7d6c-5b4a</div>
-=======
-                  <div class="fw-bold">La Piazza</div>
-                  <div class="text-muted" style="font-size: 0.75rem;">ID: e7b1f9a2</div>
-                </td>
-                <td><span class="badge-pill bg-info-subtle">BASIC</span></td>
-                <td><span class="badge-pill bg-success-subtle">ACTIVE</span></td>
-                <td class="text-end">
-                  <button class="btn-icon" title="Manage"><i class="fas fa-cog"></i></button>
-                  <button class="btn-icon" title="More"><i class="fas fa-ellipsis-h"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="fw-bold">Tokyo Ramen House</div>
-                  <div class="text-muted" style="font-size: 0.75rem;">ID: a5d2e8f1</div>
-                </td>
-                <td><span class="badge-pill bg-warning-subtle">PREMIUM</span></td>
-                <td><span class="badge-pill bg-success-subtle">ACTIVE</span></td>
-                <td class="text-end">
-                  <button class="btn-icon" title="Manage"><i class="fas fa-cog"></i></button>
-                  <button class="btn-icon" title="More"><i class="fas fa-ellipsis-h"></i></button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="fw-bold">The Greek Kitchen</div>
-                  <div class="text-muted" style="font-size: 0.75rem;">ID: b3g7h2k9</div>
-                </td>
-                <td><span class="badge-pill bg-info-subtle">BASIC</span></td>
-                <td><span class="badge-pill bg-danger-subtle">INACTIVE</span></td>
-                <td class="text-end">
-                  <button class="btn-icon" title="Manage"><i class="fas fa-cog"></i></button>
-                  <button class="btn-icon" title="More"><i class="fas fa-ellipsis-h"></i></button>
->>>>>>> Stashed changes
                 </td>
                 <td><span class="badge bg-light text-dark">Basic</span></td>
                 <td><span class="badge bg-secondary">Suspended</span></td>
@@ -647,7 +127,6 @@
       </div>
     </div>
 
-<<<<<<< Updated upstream
     <div class="col-lg-6 mb-4">
       <div class="card-surface">
         <h5 class="mb-3">
@@ -669,34 +148,8 @@
             </select>
             <button class="btn btn-primary">Apply</button>
           </div>
-=======
-    <div class="col-lg-4">
-      <div class="surface">
-        <div class="surface-header">
-          <h5>
-            <div class="surface-header-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
-              <i class="fas fa-brain"></i>
-            </div>
-            Model Governance
-          </h5>
->>>>>>> Stashed changes
         </div>
-        <form method="post">
-          <div class="mb-4">
-            <label class="form-label">Global Model Deployment</label>
-            <select name="global_model" class="form-select form-control mb-3">
-              {% set gm = cfg.get('global_model', 'Gemini 2.0 Flash') %}
-              <option value="Gemini 2.0 Flash" {% if gm == 'Gemini 2.0 Flash' %}selected{% endif %}>Gemini 2.0 Flash</option>
-              <option value="Gemini 1.5 Pro" {% if gm == 'Gemini 1.5 Pro' %}selected{% endif %}>Gemini 1.5 Pro</option>
-              <option value="Gemini 1.0 Pro" {% if gm == 'Gemini 1.0 Pro' %}selected{% endif %}>Gemini 1.0 Pro</option>
-            </select>
-            <button class="btn-action btn-primary-action w-100" type="submit">
-              <i class="fas fa-rocket"></i>
-              Deploy Update
-            </button>
-          </div>
 
-<<<<<<< Updated upstream
         <div class="mb-4">
           <label class="form-label small">
             <i class="fas fa-chart-pie" style="margin-right: 4px;"></i>
@@ -738,27 +191,6 @@
           <textarea class="form-control" rows="3" style="resize: vertical;">{{ system_prompt or 'You are a helpful restaurant assistant. Ask clarifying questions before confirming reservations.' }}</textarea>
           <button class="btn btn-primary btn-sm mt-2">Save Template</button>
         </div>
-=======
-          <hr class="divider-subtle">
-
-          <div class="mb-4">
-            <label class="form-label">System Prompt Master</label>
-            <textarea name="system_prompt" class="form-control textarea-code mb-3" rows="5" placeholder="Enter system prompt...">{{ cfg.get('system_prompt', 'You are a helpful restaurant assistant powered by Neuronet A.I...') }}</textarea>
-            <button class="btn-action btn-secondary-action w-100" type="submit">
-              <i class="fas fa-sync"></i>
-              Sync All Tenants
-            </button>
-          </div>
-
-          <div class="mb-2">
-            <label class="form-label">Model Access</label>
-            <div class="d-flex align-items-center gap-2">
-              <input class="form-check-input" type="checkbox" id="enable_gpt52_codex_all_clients" name="enable_gpt52_codex_all_clients" {% if cfg.get('enable_gpt52_codex_all_clients') %}checked{% endif %}>
-              <label class="form-check-label" for="enable_gpt52_codex_all_clients">Enable GPT-5.2-Codex for all clients</label>
-            </div>
-          </div>
-        </form>
->>>>>>> Stashed changes
       </div>
     </div>
   </div>
@@ -852,8 +284,4 @@
     </div>
   </div>
 </div>
-<<<<<<< Updated upstream
 {% endblock %}
-=======
-{% endblock %}
->>>>>>> Stashed changes
