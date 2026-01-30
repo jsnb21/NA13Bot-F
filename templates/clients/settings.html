@@ -13,7 +13,7 @@
         <h2>Settings</h2>
     </div>
 
-    <form method="post" id="settingsForm">
+    <form method="post" enctype="multipart/form-data" id="settingsForm">
     <div class="settings-section">
         <h5>Business Information</h5>
         <div class="mb-3">
@@ -82,6 +82,20 @@
         <div class="mb-3">
             <label for="menu_text" class="form-label">Menu Text</label>
             <textarea id="menu_text" name="menu_text" rows="6" class="form-control" placeholder="Enter your menu items and descriptions">{{ cfg.get('menu_text','') }}</textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="chatbot_avatar_url" class="form-label">Chatbot Avatar URL</label>
+            <div class="d-flex align-items-center" style="gap:12px;">
+                <input id="chatbot_avatar_url" name="chatbot_avatar_url" type="text" class="form-control" placeholder="/static/uploads/bot-avatar.png" value="{{ cfg.get('chatbot_avatar','/static/img/bot-avatar.png') }}">
+                <label class="btn btn-outline-secondary mb-0" style="padding:6px 10px;">
+                    Upload
+                    <input name="chatbot_avatar_file" type="file" accept="image/*" style="display:none;" />
+                </label>
+            </div>
+            <div class="mt-2">
+                <img src="{{ cfg.get('chatbot_avatar','/static/img/bot-avatar.png') }}" alt="Chatbot avatar" style="width:48px;height:48px;border-radius:8px;border:1px solid var(--border);">
+            </div>
         </div>
 
         <div class="mb-3">

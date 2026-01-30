@@ -54,7 +54,8 @@ def index():
 @app.route('/chatbot')
 def chatbot_route():
     # explicit route for /chatbot for convenience
-    return render_template('clients/chatbot.html')
+    cfg = load_config()
+    return render_template('clients/chatbot.html', cfg=cfg)
 
 
 @app.route('/admin', methods=['GET', 'POST'])
@@ -143,6 +144,20 @@ def settings():
             'tax_rate': request.form.get('tax_rate', cfg.get('tax_rate', ''))
         }
         # merge with existing config to avoid wiping other keys
+        # handle chatbot avatar upload (optional)
+        avatar_url = request.form.get('chatbot_avatar_url', cfg.get('chatbot_avatar',''))
+        avatar_file = request.files.get('chatbot_avatar_file')
+        if avatar_file and avatar_file.filename:
+            if allowed_file(avatar_file.filename):
+                filename = secure_filename(avatar_file.filename)
+                dest = UPLOAD_DIR / filename
+                avatar_file.save(str(dest))
+                avatar_url = f'/static/uploads/{filename}'
+            else:
+                flash('Unsupported avatar file type.')
+
+        data['chatbot_avatar'] = avatar_url
+
         cfg.update(data)
         save_config(cfg)
         return redirect(url_for('settings'))
