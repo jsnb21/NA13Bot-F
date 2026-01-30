@@ -38,17 +38,23 @@ document.getElementById('send').addEventListener('click', async () => {
     const v = txt.value.trim();
     if (!v) return;
 
-    postMessage(v, 'user');
-    txt.value = '';
-    txt.disabled = true;
+    try {
+        postMessage(v, 'user');
+        txt.value = '';
+        txt.disabled = true;
 
-    showTyping();
-    const reply = await sendToAI(v);
-    hideTyping();
+        showTyping();
+        const reply = await sendToAI(v);
+        hideTyping();
 
-    postMessage(reply, 'bot');
-    txt.disabled = false;
-    txt.focus();
+        postMessage(reply, 'bot');
+    } catch (e) {
+        console.error('Error:', e);
+        postMessage('An error occurred. Please try again.', 'bot');
+    } finally {
+        txt.disabled = false;
+        txt.focus();
+    }
 });
 
 function applyConfig(cfg) {
@@ -68,7 +74,7 @@ function applyConfig(cfg) {
     if (cfg.font_family) document.body.style.fontFamily = cfg.font_family + ', Arial, sans-serif';
 }
 
-function postMessage(text, from = 'user') {
+function addMessage(text, from = 'user') {
     const container = document.getElementById('messages');
     const row = document.createElement('div');
     row.className = 'message-row ' + (from === 'user' ? 'user' : 'bot');
@@ -89,13 +95,9 @@ function postMessage(text, from = 'user') {
     bubble.className = 'bubble ' + (from === 'user' ? 'user' : 'bot');
     bubble.textContent = text;
 
-    if (from === 'user') {
-        row.appendChild(bubble);
-        row.appendChild(img);
-    } else {
-        row.appendChild(img);
-        row.appendChild(bubble);
-    }
+    // For both user and bot: img first, bubble second (flex-direction: row-reverse handles the rest)
+    row.appendChild(img);
+    row.appendChild(bubble);
 
     container.appendChild(row);
     container.scrollTop = container.scrollHeight;

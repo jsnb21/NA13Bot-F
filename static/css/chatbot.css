@@ -12,8 +12,8 @@ body{margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:
 .phone .messages{flex:1;padding:14px 14px 110px 14px;overflow:auto;display:flex;flex-direction:column;gap:12px}
 
 .bubble{max-width:78%;padding:10px 14px;border-radius:14px;display:inline-block;font-size:clamp(.9rem,1.8vw,1rem)}
-.bubble.user{align-self:flex-end;background:var(--bubble-dark);border-bottom-right-radius:6px}
-.bubble.bot{align-self:flex-start;background:#f1f5f9;border-bottom-left-radius:6px}
+.bubble.user{background:var(--bubble-dark);border-bottom-right-radius:6px;color:#fff}
+.bubble.bot{background:#f1f5f9;border-bottom-left-radius:6px;color:#222}
 
 .composer{display:flex;padding:10px;border-top:1px solid #eef2f7;background:#fff}
 .composer input{flex:1;border:1px solid #e6eefc;padding:10px 12px;border-radius:999px;font-size:1rem}
@@ -52,26 +52,25 @@ body{margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:
 .message-row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
-.message-row.bot { justify-content: flex-start; }
-.message-row.user { justify-content: flex-end; flex-direction: row-reverse; }
+.message-row.bot { 
+  justify-content: flex-start; 
+}
+.message-row.user { 
+  /* "flex-start" aligns to the RIGHT because of row-reverse */
+  justify-content: flex-start; 
+  flex-direction: row-reverse; 
+}
 
 .avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   object-fit: cover;
-  flex: 0 0 40px;
+  flex-shrink: 0;
 }
-
-.bubble {
-  max-width: 72%;
-  padding: 10px 14px;
-  border-radius: 12px;
-}
-.bubble.bot { background: #f1f3f5; color: #222; }
 
 /* Remove the old chatbubble styles and replace with: */
 .typing-indicator {
