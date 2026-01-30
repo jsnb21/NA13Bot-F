@@ -12,7 +12,19 @@ class GeminiChatbot:
         if not self.api_key:
             return 'Google API key not configured.'
         try:
-            model = genai.GenerativeModel('models/gemini-2.5-flash')
+            generation_config = {
+                'temperature': 0.7,
+                'max_output_tokens': 150,
+                'top_p': 0.9,
+                'top_k': 40
+            }
+            
+            # Create or retrieve chat session          
+            model = genai.GenerativeModel(
+                'gemini-2.5-flash',
+                system_instruction=system_prompt,
+                generation_config=generation_config
+            )
             response = model.generate_content(f"{system_prompt}\n\n Customer: {user_message} \n Assistant:")
             return response.text
         except Exception as e:

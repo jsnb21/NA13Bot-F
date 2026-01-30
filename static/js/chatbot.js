@@ -6,6 +6,34 @@ try{
 }catch(e){return {}}
 }
 
+// Chat message sending with typing indicator
+document.getElementById('send').addEventListener('click', async ()=>{
+const txt = document.getElementById('txt');
+const v = txt.value.trim();
+if(!v) return;
+postMessage(v,'user');
+txt.value='';
+txt.disabled = true;
+
+// Show typing indicator
+const typingDiv = document.createElement('div');
+typingDiv.className = 'bubble bot typing-indicator';
+typingDiv.textContent = '...';
+typingDiv.id = 'typing';
+document.getElementById('messages').appendChild(typingDiv);
+document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+
+// Get AI response
+const reply = await sendToAI(v);
+
+// Remove typing indicator
+document.getElementById('typing')?.remove();
+
+postMessage(reply, 'bot');
+txt.disabled = false;
+txt.focus();
+});
+
 function applyConfig(cfg){
 if(!cfg) return;
 const root = document.documentElement;
