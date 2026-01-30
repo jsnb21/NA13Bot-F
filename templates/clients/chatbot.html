@@ -10,7 +10,10 @@
   <body>
     <div class="chat-shell">
       <div class="phone" id="phone">
-        <div class="header" id="resto-name">Resto Name - A.I Chatbot</div>
+        <div class="header" id="resto-name">
+          <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Resto logo" style="height:24px;width:auto;margin-right:8px;vertical-align:middle;">
+          <span id="resto-name-text">Resto Name - A.I Chatbot</span>
+        </div>
         <div class="messages" id="messages">
           <div class="bubble bot">Welcome! How can I help?</div>
           <div class="bubble user">I'd like to order.</div>

@@ -14,7 +14,12 @@ if(cfg.menu_text){
     const pm = document.getElementById('preview-menu');
     if(pm) pm.textContent = cfg.menu_text;
 }
-if(cfg.establishment_name) document.getElementById('resto-name').textContent = cfg.establishment_name;
+if(cfg.establishment_name){
+    const nameE1 = document.getElementById('resto-name-text');
+    if(nameE1) {
+        nameE1.textContent = cfg.establishment_name + ' - A.I Chatbot';
+    }
+}
 if(cfg.font_family) document.body.style.fontFamily = cfg.font_family + ', Arial, sans-serif';
 }
 

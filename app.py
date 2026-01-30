@@ -4,11 +4,13 @@ import google.generativeai as genai
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
+from chatbot.routes import chatbot_bp
 
 # simple session secret
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 
+app.register_blueprint(chatbot_bp)
 # upload dir for logo files
 UPLOAD_DIR = Path(__file__).parent / 'static' / 'uploads'
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -37,7 +39,8 @@ def get_google_api_key():
         return key
     # Then check config file
     cfg = load_config()
-    return cfg.get('google_api_key', '')
+    return cfg.get('GOOGLE_API_KEY', '')
+
 
 GOOGLE_API_KEY = get_google_api_key()
 if GOOGLE_API_KEY:
@@ -53,72 +56,6 @@ def chatbot_route():
     # explicit route for /chatbot for convenience
     return render_template('clients/chatbot.html')
 
-
-@app.route('/api/config', methods=['GET'])
-def api_config():
-    """Return the current admin config as JSON for the chatbot to consume."""
-    cfg = load_config()
-    return jsonify(cfg)
-
-@app.route('/api/models', methods=['GET'])
-def api_models():
-    """List available Gemini models."""
-    api_key = get_google_api_key()
-    if not api_key:
-        return jsonify({'error': 'No API key configured'}), 400
-    try:
-        genai.configure(api_key=api_key)
-        models = genai.list_models()
-        model_list = [m.name for m in models if 'generateContent' in m.supported_generation_methods]
-        return jsonify({'models': model_list})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/chat', methods=['POST'])
-def api_chat():
-    """Handle chat messages and return AI responses."""
-    data = request.get_json()
-    user_message = data.get('message', '')
-    
-    if not user_message:
-        return jsonify({'error': 'No message provided'}), 400
-    
-    # Get fresh API key in case it was just configured
-    api_key = get_google_api_key()
-    if not api_key:
-        return jsonify({'response': 'AI is not configured. Please add your Google API key in the settings.'}), 200
-    
-    # Configure with the current key
-    genai.configure(api_key=api_key)
-    
-    try:
-        # Load config to get restaurant context
-        cfg = load_config()
-        establishment_name = cfg.get('establishment_name', 'our restaurant')
-        menu_text = cfg.get('menu_text', 'No menu available')
-        
-        # Create context-aware prompt
-        system_prompt = f"""You are a helpful AI assistant for {establishment_name}, a restaurant chatbot.
-You help customers with:
-- Taking orders
-- Answering questions about the menu
-- Providing information about the restaurant
-
-Menu:
-{menu_text}
-
-Respond in a friendly, helpful manner. Keep responses concise and focused on helping the customer."""
-        
-        # Initialize Gemini model (free tier compatible)
-        model = genai.GenerativeModel('models/gemini-2.5-flash')
-        
-        # Generate response
-        response = model.generate_content(f"{system_prompt}\n\nCustomer: {user_message}\nAssistant:")
-        
-        return jsonify({'response': response.text})
-    
-    except Exception as e:
-        return jsonify({'response': f'Sorry, I encountered an error: {str(e)}'}), 500
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():

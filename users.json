@@ -16,5 +16,14 @@
       "main_color": "#301828",
       "sub_color": "#3737fb"
     }
+  },
+  "verceles_paldo@test.com": {
+    "password_hash": "scrypt:32768:8:1$kE12SAnuheAQMmfI$576c29399e1f3989c9c601812718847706dffafe2a1772ebc7396938f0f11bb2b79b17bb569fd0938dd04b1f08437239ddf04b0c75c47b80a930210b129239ed",
+    "meta": {
+      "establishment_name": "Restaurant",
+      "logo_url": "",
+      "main_color": "#0b343d",
+      "sub_color": "#ffc832"
+    }
   }
 }
