@@ -47,6 +47,32 @@ body{margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:
 .phone{height:64vh;min-height:380px}
 }
 
+
+/* ChatBot Avatar*/
+.message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.message-row.bot { justify-content: flex-start; }
+.message-row.user { justify-content: flex-end; flex-direction: row-reverse; }
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 40px;
+}
+
+.bubble {
+  max-width: 72%;
+  padding: 10px 14px;
+  border-radius: 12px;
+}
+.bubble.bot { background: #f1f3f5; color: #222; }
+
 /* Remove the old chatbubble styles and replace with: */
 .typing-indicator {
   padding: 0 14px;
