@@ -3,35 +3,50 @@ try{
     const res = await fetch('/api/config');
     if(!res.ok) return {};
     return await res.json();
-}catch(e){return {}}
+}
+catch(e){return {}}
 }
 
-// Chat message sending with typing indicator
-document.getElementById('send').addEventListener('click', async ()=>{
-const txt = document.getElementById('txt');
-const v = txt.value.trim();
-if(!v) return;
-postMessage(v,'user');
-txt.value='';
-txt.disabled = true;
+function showTyping() {
+  const el = document.getElementById('typing-indicator');
+    const messages = document.getElementById('messages');
+    if (el && messages) {
+        messages.appendChild(el);
+        el.style.display = 'block';
+        messages.scrollTop = messages.scrollHeight;
+    }
+}
 
-// Show typing indicator
-const typingDiv = document.createElement('div');
-typingDiv.className = 'bubble bot typing-indicator';
-typingDiv.textContent = '...';
-typingDiv.id = 'typing';
-document.getElementById('messages').appendChild(typingDiv);
-document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+function hideTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) {
+    el.style.display = 'none';
+  }
+}
 
-// Get AI response
-const reply = await sendToAI(v);
 
-// Remove typing indicator
-document.getElementById('typing')?.remove();
+// Replace BOTH existing 'send' click handlers with this single one:
+document.getElementById('send').addEventListener('click', async ()=> {
+  const txt = document.getElementById('txt');
+  const v = txt.value.trim();
+  if(!v) return;
 
-postMessage(reply, 'bot');
-txt.disabled = false;
-txt.focus();
+  postMessage(v, 'user');
+  txt.value = '';
+  txt.disabled = true;
+
+  // Show typing indicator
+  showTyping();
+
+  // Get AI response
+  const reply = await sendToAI(v);
+
+  // Hide typing indicator
+  hideTyping();
+
+  postMessage(reply, 'bot');
+  txt.disabled = false;
+  txt.focus();
 });
 
 function applyConfig(cfg){
@@ -72,20 +87,6 @@ try{
     return 'Sorry, I encountered an error. Please try again.';
 }
 }
-
-document.getElementById('send').addEventListener('click', async ()=>{
-const txt = document.getElementById('txt');
-const v = txt.value.trim();
-if(!v) return;
-postMessage(v,'user');
-txt.value='';
-txt.disabled = true;
-// Get AI response
-const reply = await sendToAI(v);
-postMessage(reply, 'bot');
-txt.disabled = false;
-txt.focus();
-});
 
 document.getElementById('txt').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('send').click(); } });
 

@@ -47,26 +47,45 @@ body{margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:
 .phone{height:64vh;min-height:380px}
 }
 
-.message-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 10px;
+/* Remove the old chatbubble styles and replace with: */
+.typing-indicator {
+  padding: 0 14px;
+  margin-bottom: 12px;
 }
-.message-row.bot { justify-content: flex-start; }
-.message-row.user { justify-content: flex-end; flex-direction: row-reverse; }
 
-.avatar {
-  width: 40px;
-  height: 40px;
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  display: inline-block;
   border-radius: 50%;
-  object-fit: cover;
-  flex: 0 0 40px;
+  animation: bounce 1s infinite;
 }
 
-.bubble {
-  max-width: 72%;
-  padding: 10px 14px;
-  border-radius: 12px;
+.typing-dots span:nth-child(1) {
+  animation-delay: 0s;
 }
-.bubble.bot { background: #f1f3f5; color: #222; }
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}

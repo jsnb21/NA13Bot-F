@@ -14,7 +14,7 @@ class GeminiChatbot:
         try:
             generation_config = {
                 'temperature': 0.7,
-                'max_output_tokens': 150,
+                'max_output_tokens': 500,
                 'top_p': 0.9,
                 'top_k': 40
             }
