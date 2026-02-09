@@ -99,16 +99,48 @@
             <h2 class="fw-bold" style="color: var(--brand-dark)">Menu Kiosk</h2>
             <p class="text-secondary mb-0">Manage digital menu items and AI training documents</p>
         </div>
-        <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;">
-            <i class="fas fa-plus me-2"></i>Add Manual Item
-        </button>
+    <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" onclick="document.getElementById('menuAddForm').classList.toggle('d-none')">
+      <i class="fas fa-plus me-2"></i>Add Manual Item
+    </button>
     </div>
 
+  <div id="menuAddForm" class="card-surface mb-4 d-none">
+    <form method="POST" action="/admin-client/menu/add" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Item Name</label>
+        <input type="text" name="name" class="form-control" placeholder="Margherita Pizza" required>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Category</label>
+        <input type="text" name="category" class="form-control" placeholder="Main Course">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Price (PHP)</label>
+        <input type="text" name="price" class="form-control" placeholder="12.99">
+      </div>
+      <div class="col-md-8">
+        <label class="form-label">Description</label>
+        <input type="text" name="description" class="form-control" placeholder="Fresh tomato, mozzarella, and basil on crispy crust">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="Live" selected>Live</option>
+          <option value="Draft">Draft</option>
+        </select>
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-dark" style="background: var(--brand-dark);">Save Item</button>
+        <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('menuAddForm').classList.add('d-none')">Cancel</button>
+      </div>
+    </form>
+  </div>
+
     <div class="category-tabs mb-4">
-        <button class="category-btn active">All Items</button>
-        <button class="category-btn">Appetizers</button>
-        <button class="category-btn">Main Course</button>
-        <button class="category-btn">Desserts</button>
+      <button class="category-btn active">All Items</button>
+      <button class="category-btn">Appetizers</button>
+      <button class="category-btn">Main Course</button>
+      <button class="category-btn">Desserts</button>
     </div>
 
     <div class="kiosk-grid">
@@ -122,32 +154,24 @@
             <span class="btn btn-sm btn-outline-dark px-3 fw-bold" style="border-radius: 8px;">Browse Files</span>
         </div>
 
+        {% for item in cfg.get('menu_items', []) %}
         <div class="menu-card">
-            <div class="menu-card-image-box">🍕</div>
-            <div class="menu-card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <h5 class="menu-card-title">Margherita Pizza</h5>
-                    <span class="badge bg-success-subtle text-success small">Live</span>
-                </div>
-                <p class="text-secondary small">Fresh tomato, mozzarella, and basil on crispy crust</p>
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <span class="menu-card-price">₱12.99</span>
-                    <button class="btn btn-sm btn-light border"><i class="fa-solid fa-pen"></i></button>
-                </div>
+          <div class="menu-card-image-box">🍽️</div>
+          <div class="menu-card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <h5 class="menu-card-title">{{ item.get('name','') }}</h5>
+              {% if item.get('status','') %}
+              <span class="badge bg-success-subtle text-success small">{{ item.get('status') }}</span>
+              {% endif %}
             </div>
-        </div>
-
-        <div class="menu-card">
-            <div class="menu-card-image-box">🍔</div>
-            <div class="menu-card-body">
-                <h5 class="menu-card-title">Classic Burger</h5>
-                <p class="text-secondary small">Juicy beef patty with lettuce and special sauce</p>
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <span class="menu-card-price">₱11.50</span>
-                    <button class="btn btn-sm btn-light border"><i class="fa-solid fa-pen"></i></button>
-                </div>
+            <p class="text-secondary small">{{ item.get('description','') }}</p>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <span class="menu-card-price">₱{{ item.get('price','') }}</span>
+              <button class="btn btn-sm btn-light border" type="button" disabled><i class="fa-solid fa-pen"></i></button>
             </div>
+          </div>
         </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}

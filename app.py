@@ -126,7 +126,25 @@ def api_chat():
         # Load config to get restaurant context
         cfg = load_config()
         establishment_name = cfg.get('establishment_name', 'our restaurant')
-        menu_text = cfg.get('menu_text', 'No menu available')
+        menu_text = cfg.get('menu_text', '')
+        menu_items = cfg.get('menu_items', [])
+        if menu_items:
+            lines = []
+            for item in menu_items:
+                name = item.get('name', '').strip()
+                desc = item.get('description', '').strip()
+                price = item.get('price', '').strip()
+                if not name:
+                    continue
+                line = name
+                if desc:
+                    line += f" — {desc}"
+                if price:
+                    line += f" (₱{price})"
+                lines.append(line)
+            menu_text = "\n".join(lines) if lines else menu_text
+        if not menu_text:
+            menu_text = 'No menu available'
         
         # Create context-aware prompt
         system_prompt = f"""You are a helpful AI assistant for {establishment_name}, a restaurant chatbot.
@@ -201,6 +219,32 @@ def orders():
 def menu():
     cfg = load_config()
     return render_template('clients/menu.html', cfg=cfg)
+
+
+@app.route('/admin-client/menu/add', methods=['POST'])
+@login_required
+def menu_add_item():
+    cfg = load_config()
+    name = request.form.get('name', '').strip()
+    description = request.form.get('description', '').strip()
+    price = request.form.get('price', '').strip()
+    category = request.form.get('category', '').strip() or 'Uncategorized'
+    status = request.form.get('status', '').strip() or 'Live'
+
+    if not name:
+        return redirect(url_for('menu'))
+
+    items = cfg.get('menu_items', [])
+    items.append({
+        'name': name,
+        'description': description,
+        'price': price,
+        'category': category,
+        'status': status
+    })
+    cfg['menu_items'] = items
+    save_config(cfg)
+    return redirect(url_for('menu'))
 
 @app.route('/admin-client/customers')
 @login_required
