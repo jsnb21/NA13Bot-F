@@ -48,22 +48,40 @@
         <div class="row mb-3">
             <div class="col-6">
                 <label for="main_color_picker" class="form-label">Main Color</label>
-                <div class="d-flex align-items-center" style="gap:12px;">
-                    <div id="main_color_picker" class="color-wheel"></div>
-                    <div>
-                        <input id="main_color" name="main_color" type="hidden" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
-                        <input id="main_color_hex" class="form-control color-hex-input" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
+                <div class="color-picker" data-default="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
+                    <div class="color-header">
+                        <div class="color-preview-wrap">
+                            <div class="color-preview" data-role="preview"></div>
+                            <input id="main_color_hex" class="color-hex" data-role="hex" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}" aria-label="Main color hex">
+                        </div>
+                        <input id="main_color" name="main_color" type="hidden" data-role="value" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
                     </div>
+                    <div class="slider-label"><span>Hue</span><span data-role="hue-value">0</span></div>
+                    <input type="range" min="0" max="360" value="200" class="color-slider" data-role="hue">
+                    <div class="slider-label"><span>Saturation</span><span data-role="sat-value">70</span></div>
+                    <input type="range" min="0" max="100" value="70" class="color-slider" data-role="sat">
+                    <div class="slider-label"><span>Lightness</span><span data-role="light-value">40</span></div>
+                    <input type="range" min="0" max="100" value="40" class="color-slider" data-role="light">
+                    <div class="color-swatches" data-role="swatches"></div>
                 </div>
             </div>
             <div class="col-6">
                 <label for="sub_color_picker" class="form-label">Accent / Sub Color</label>
-                <div class="d-flex align-items-center" style="gap:12px;">
-                    <div id="sub_color_picker" class="color-wheel"></div>
-                    <div>
-                        <input id="sub_color" name="sub_color" type="hidden" value="{{ cfg.get('sub_color', '#ffd41d') }}">
-                        <input id="sub_color_hex" class="form-control color-hex-input" value="{{ cfg.get('sub_color', '#ffd41d') }}">
+                <div class="color-picker" data-default="{{ cfg.get('sub_color', '#ffd41d') }}">
+                    <div class="color-header">
+                        <div class="color-preview-wrap">
+                            <div class="color-preview" data-role="preview"></div>
+                            <input id="sub_color_hex" class="color-hex" data-role="hex" value="{{ cfg.get('sub_color', '#ffd41d') }}" aria-label="Accent color hex">
+                        </div>
+                        <input id="sub_color" name="sub_color" type="hidden" data-role="value" value="{{ cfg.get('sub_color', '#ffd41d') }}">
                     </div>
+                    <div class="slider-label"><span>Hue</span><span data-role="hue-value">50</span></div>
+                    <input type="range" min="0" max="360" value="50" class="color-slider" data-role="hue">
+                    <div class="slider-label"><span>Saturation</span><span data-role="sat-value">90</span></div>
+                    <input type="range" min="0" max="100" value="90" class="color-slider" data-role="sat">
+                    <div class="slider-label"><span>Lightness</span><span data-role="light-value">60</span></div>
+                    <input type="range" min="0" max="100" value="60" class="color-slider" data-role="light">
+                    <div class="color-swatches" data-role="swatches"></div>
                 </div>
             </div>
             
@@ -207,8 +225,6 @@
             <button id="stickySave" type="button" class="btn btn-save ms-2">Save Settings</button>
         </div>
         </form>
-        <!-- iro.js color wheel (modern picker) -->
-        <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5.5.1/dist/iro.min.js"></script>
         <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 
     <div class="settings-section" style="border-top:2px solid #f0f0f0; padding-top:20px;">

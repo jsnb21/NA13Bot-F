@@ -25,5 +25,14 @@
       "main_color": "#000000",
       "sub_color": "#ffffff"
     }
+  },
+  "example@mail.com": {
+    "password_hash": "",
+    "meta": {
+      "establishment_name": "wowerz",
+      "logo_url": "/static/uploads/STEAM_SleepingCat.png",
+      "main_color": "#3c0b0b",
+      "sub_color": "#c27070"
+    }
   }
 }
