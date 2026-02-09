@@ -32,8 +32,26 @@ def api_chat():
     
     cfg = load_config()
     establishment_name = cfg.get('establishment_name', 'our restaurant')
-    menu_text = cfg.get('menu_text', 'No menu available')
-    
+    menu_text = cfg.get('menu_text', '')
+    menu_items = cfg.get('menu_items', [])
+    if menu_items:
+        lines = []
+        for item in menu_items:
+            name = (item.get('name') or '').strip()
+            desc = (item.get('description') or '').strip()
+            price = (item.get('price') or '').strip()
+            if not name:
+                continue
+            line = name
+            if desc:
+                line += f" — {desc}"
+            if price:
+                line += f" (₱{price})"
+            lines.append(line)
+        menu_text = "\n".join(lines) if lines else menu_text
+    if not menu_text:
+        menu_text = 'No menu available'
+
     system_prompt = build_system_prompt(establishment_name, menu_text)
     response = ai.get_response(user_message, system_prompt)
     
