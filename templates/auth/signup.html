@@ -32,16 +32,7 @@
           <label class="form-label">Email Address</label>
           <input type="email" name="email" class="form-control" placeholder="admin@neuronet.ai" required>
         </div>
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="form-label">Password</label>
-            <input type="password" name="password" class="form-control" placeholder="••••••••">
-          </div>
-          <div class="col-md-6 mb-3">
-            <label class="form-label">Confirm</label>
-            <input type="password" name="confirm_password" class="form-control" placeholder="••••••••">
-          </div>
-        </div>
+        <div class="text-secondary small mb-3">We'll verify this email with a one-time code.</div>
         <button type="button" class="btn w-100 mt-3 py-3 text-white fw-bold" style="background: var(--brand-dark); border-radius:12px;" onclick="nextStep(2)">
           Continue <i class="fa-solid fa-arrow-right ms-2"></i>
         </button>
@@ -74,7 +65,7 @@
           </div>
         </div>
         <button type="submit" class="btn w-100 py-3 text-white fw-bold" style="background: var(--brand-dark); border-radius:12px;">
-          Complete Setup
+          Send OTP
         </button>
       </div>
     </form>

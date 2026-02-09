@@ -16,5 +16,14 @@
       "main_color": "#301828",
       "sub_color": "#3737fb"
     }
+  },
+  "jamesscottbaronia@gmail.com": {
+    "password_hash": "",
+    "meta": {
+      "establishment_name": "BAERONIA",
+      "logo_url": "/static/uploads/SleepingCat.png",
+      "main_color": "#000000",
+      "sub_color": "#ffffff"
+    }
   }
 }

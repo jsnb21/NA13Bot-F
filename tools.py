@@ -27,12 +27,15 @@ def save_users(data: dict):
     return True
 
 
-def add_user(email: str, password: str, meta: dict = None):
+def add_user(email: str, password: str = None, meta: dict = None):
     users = load_users()
     if email in users:
         return False
+    password_hash = ''
+    if password:
+        password_hash = generate_password_hash(password)
     users[email] = {
-        'password_hash': generate_password_hash(password),
+        'password_hash': password_hash,
         'meta': meta or {}
     }
     save_users(users)
@@ -44,4 +47,17 @@ def verify_user(email: str, password: str):
     u = users.get(email)
     if not u:
         return False
-    return check_password_hash(u.get('password_hash',''), password)
+    password_hash = u.get('password_hash', '')
+    if not password_hash:
+        return False
+    return check_password_hash(password_hash, password)
+
+
+def user_exists(email: str) -> bool:
+    users = load_users()
+    return email in users
+
+
+def get_user(email: str):
+    users = load_users()
+    return users.get(email)

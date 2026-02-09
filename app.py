@@ -1,9 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from tools import save_config, load_config, add_user, verify_user
+from tools import save_config, load_config, add_user, user_exists
 import google.generativeai as genai
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
+import time
+import secrets
 
 # simple session secret
 app = Flask(__name__)
@@ -17,6 +19,7 @@ from flask import flash
 
 # allowed logo extensions
 ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+OTP_TTL_SECONDS = 300
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXT
@@ -28,6 +31,34 @@ def login_required(f):
             return redirect(url_for('login', next=request.path))
         return f(*args, **kwargs)
     return decorated
+
+
+def generate_otp_code():
+    return f"{secrets.randbelow(1000000):06d}"
+
+
+def set_otp(email: str, purpose: str):
+    code = generate_otp_code()
+    session['otp'] = {
+        'email': email,
+        'code': code,
+        'purpose': purpose,
+        'expires_at': time.time() + OTP_TTL_SECONDS
+    }
+    return code
+
+
+def verify_otp(email: str, code: str, purpose: str):
+    otp = session.get('otp')
+    if not otp:
+        return False, 'No OTP request found.'
+    if otp.get('email') != email or otp.get('purpose') != purpose:
+        return False, 'OTP request does not match.'
+    if time.time() > otp.get('expires_at', 0):
+        return False, 'OTP has expired.'
+    if otp.get('code') != code:
+        return False, 'Invalid OTP.'
+    return True, None
 
 # Configure Google AI - check environment variable or config file
 def get_google_api_key():
@@ -230,17 +261,28 @@ def login():
     error = None
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-        if not email or not password:
-            error = 'Email and password are required.'
+        if not email:
+            error = 'Email is required.'
+        elif not user_exists(email):
+            error = 'No account found with that email.'
         else:
-            ok = verify_user(email, password)
-            if ok:
-                session['user'] = email
-                return redirect(url_for('dashboard'))
-            else:
-                error = 'Invalid email or password.'
+            otp_code = set_otp(email, 'login')
+            return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', otp_hint=otp_code)
     return render_template('auth/login.html', cfg=cfg, error=error)
+
+
+@app.route('/login/verify', methods=['POST'])
+def login_verify():
+    cfg = load_config()
+    email = request.form.get('email', '').strip().lower()
+    code = request.form.get('otp', '').strip()
+    ok, error = verify_otp(email, code, 'login')
+    if ok:
+        session.pop('otp', None)
+        session['user'] = email
+        return redirect(url_for('dashboard'))
+    otp_code = session.get('otp', {}).get('code')
+    return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', error=error, otp_hint=otp_code)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -249,8 +291,6 @@ def signup():
     error = None
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-        confirm = request.form.get('confirm_password', '')
         establishment_name = request.form.get('establishment_name', '')
         main_color = request.form.get('main_color', '')
         sub_color = request.form.get('sub_color', '')
@@ -269,32 +309,60 @@ def signup():
                 error = 'Unsupported logo file type.'
 
         if not error:
-            if not email or not password:
-                error = 'Email and password are required.'
-            elif password != confirm:
-                error = 'Passwords do not match.'
+            if not email:
+                error = 'Email is required.'
+            elif user_exists(email):
+                error = 'A user with that email already exists.'
             else:
-                meta = {
+                session['pending_signup'] = {
+                    'email': email,
                     'establishment_name': establishment_name,
                     'logo_url': logo_url,
                     'main_color': main_color,
                     'sub_color': sub_color
                 }
-                success = add_user(email, password, meta=meta)
-                if not success:
-                    error = 'A user with that email already exists.'
-                if not error:
-                    # merge branding into config
-                    cfg.update({
-                        'establishment_name': establishment_name,
-                        'logo_url': logo_url,
-                        'main_color': main_color,
-                        'sub_color': sub_color
-                    })
-                    save_config(cfg)
-                    return redirect(url_for('login'))
+                otp_code = set_otp(email, 'signup')
+                return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='signup', otp_hint=otp_code)
 
     return render_template('auth/signup.html', cfg=cfg, error=error)
+
+
+@app.route('/signup/verify', methods=['POST'])
+def signup_verify():
+    cfg = load_config()
+    pending = session.get('pending_signup') or {}
+    email = request.form.get('email', '').strip().lower()
+    if not pending or pending.get('email') != email:
+        error = 'Signup session not found. Please start again.'
+        return render_template('auth/signup.html', cfg=cfg, error=error)
+
+    code = request.form.get('otp', '').strip()
+    ok, error = verify_otp(email, code, 'signup')
+    if not ok:
+        otp_code = session.get('otp', {}).get('code')
+        return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='signup', error=error, otp_hint=otp_code)
+
+    meta = {
+        'establishment_name': pending.get('establishment_name', ''),
+        'logo_url': pending.get('logo_url', ''),
+        'main_color': pending.get('main_color', ''),
+        'sub_color': pending.get('sub_color', '')
+    }
+    success = add_user(email, password=None, meta=meta)
+    if not success:
+        error = 'A user with that email already exists.'
+        return render_template('auth/signup.html', cfg=cfg, error=error)
+
+    cfg.update({
+        'establishment_name': pending.get('establishment_name', ''),
+        'logo_url': pending.get('logo_url', ''),
+        'main_color': pending.get('main_color', ''),
+        'sub_color': pending.get('sub_color', '')
+    })
+    save_config(cfg)
+    session.pop('pending_signup', None)
+    session.pop('otp', None)
+    return redirect(url_for('login'))
 
 
 @app.route('/logout')

@@ -1,0 +1,34 @@
+{% extends 'base/auth_base.html' %}
+
+{% block content %}
+<div class="auth-card">
+    <div class="text-center mb-4">
+      <h4 class="fw-bold" style="color: var(--brand-dark)">Verify One-Time Code</h4>
+      <p class="text-secondary small">Enter the code sent to {{ email }}</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    {% if otp_hint %}
+    <div class="alert alert-info">Dev OTP: <strong>{{ otp_hint }}</strong></div>
+    {% endif %}
+
+    <form method="POST" action="{% if purpose == 'login' %}/login/verify{% else %}/signup/verify{% endif %}">
+        <input type="hidden" name="email" value="{{ email }}">
+        <div class="mb-3">
+          <label class="form-label">One-Time Code</label>
+          <input type="text" name="otp" class="form-control" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" required>
+        </div>
+
+        <button type="submit" class="btn w-100 fw-bold py-3 text-white" style="background: var(--brand-dark); border-radius: 12px;">
+          Verify OTP
+        </button>
+    </form>
+
+    <div class="text-center mt-3">
+      <a href="{% if purpose == 'login' %}/login{% else %}/signup{% endif %}" class="text-decoration-none small fw-bold" style="color: var(--brand-dark)">Start over</a>
+    </div>
+</div>
+{% endblock %}
