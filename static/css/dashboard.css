@@ -1,4 +1,5 @@
 /* Keep dashboard main numbers and labels readable and fixed color */
+.container-fluid > .mb-5 { margin-top: 16px; }
 .dashboard-number { color: #111827; font-size: 2.2rem; font-weight: 700; margin-bottom: 4px; }
 .dashboard-label { color: #6b7280; font-size: 0.9rem; }
 .dashboard-meta { font-size: 0.8rem; color: #10b981; margin-top: 12px; }

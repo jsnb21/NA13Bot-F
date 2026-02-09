@@ -14,7 +14,7 @@
 }
 .container-fluid h2 {
     font-weight: 700;
-    color: #0b343d;
+    color: var(--brand-dark);
 }
 .setting-row {
     display: flex;

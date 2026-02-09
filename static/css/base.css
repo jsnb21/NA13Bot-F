@@ -109,8 +109,46 @@ opacity: 1;
 }
 
 .main-content {
-    padding: 40px;
+    padding: 56px 40px 40px;
     min-height: 100vh;
+}
+
+.main-content .container-fluid > :first-child {
+    margin-top: 16px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.page-title {
+    font-weight: 700;
+    color: var(--brand-dark);
+    margin-bottom: 4px;
+}
+
+.page-subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 0;
+}
+
+.page-action-btn {
+    background: var(--brand-dark);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.page-action-btn:hover {
+    color: #fff;
+    opacity: 0.92;
 }
 
 .card-surface { 

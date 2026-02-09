@@ -8,9 +8,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="mb-4">
-        <h2>Settings</h2>
+<div class="container-fluid px-4">
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Settings</h2>
+            <p class="page-subtitle">Manage branding, hours, and notifications.</p>
+        </div>
+        <button class="page-action-btn" type="button" onclick="document.getElementById('saveSettingsBtn').click()">Save Changes</button>
     </div>
 
     <form method="post" id="settingsForm">

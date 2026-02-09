@@ -3,11 +3,13 @@
 {% block title %}Orders — Resto Admin{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="mb-4">
-        <div style="display:flex; justify-content:flex-start; align-items:center; gap:10px;">
-            <h2 class="mb-0">Orders</h2>
+<div class="container-fluid px-4">
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Orders</h2>
+            <p class="page-subtitle">Track and manage customer orders.</p>
         </div>
+        <button class="page-action-btn" type="button">Export Orders</button>
     </div>
 
     <div class="card-surface mb-4 text-center" style="height: calc(100vh - 140px); display:flex; flex-direction:column;">
