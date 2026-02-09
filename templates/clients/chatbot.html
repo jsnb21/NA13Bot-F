@@ -10,10 +10,27 @@
   <body>
     <div class="chat-shell">
       <div class="phone" id="phone">
-        <div class="header" id="resto-name">Resto Name - A.I Chatbot</div>
+        <div class="header" id="resto-name">
+          <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Resto logo" style="height:24px;width:auto;margin-right:8px;vertical-align:middle;">
+          <span id="resto-name-text">Resto Name - A.I Chatbot</span>
+        </div>
         <div class="messages" id="messages">
-          <div class="bubble bot">Welcome! How can I help?</div>
+          <div class="message-row bot">
+            <img src="{{ cfg.get('chatbot_avatar', '/static/img/bot-avatar.png')}}" alt="Bot" class="avatar">
+            <div class="bubble bot">Welcome! How can I help?</div>
+          </div>
+          
           <div class="bubble user">I'd like to order.</div>
+          
+          <div class="typing-indicator" id="typing-indicator" style="display:none;">
+            <div class="bubble bot">
+              <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="quick-actions d-flex gap-2 p-2" style="padding:12px;">
           <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="menu">View Menu</button>

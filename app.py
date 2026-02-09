@@ -6,11 +6,13 @@ from werkzeug.utils import secure_filename
 from pathlib import Path
 import time
 import secrets
+from chatbot.routes import chatbot_bp
 
 # simple session secret
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 
+app.register_blueprint(chatbot_bp)
 # upload dir for logo files
 UPLOAD_DIR = Path(__file__).parent / 'static' / 'uploads'
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -68,7 +70,8 @@ def get_google_api_key():
         return key
     # Then check config file
     cfg = load_config()
-    return cfg.get('google_api_key', '')
+    return cfg.get('google_api_key', '') or cfg.get('GOOGLE_API_KEY', '')
+
 
 GOOGLE_API_KEY = get_google_api_key()
 if GOOGLE_API_KEY:
@@ -82,14 +85,8 @@ def index():
 @app.route('/chatbot')
 def chatbot_route():
     # explicit route for /chatbot for convenience
-    return render_template('clients/chatbot.html')
-
-
-@app.route('/api/config', methods=['GET'])
-def api_config():
-    """Return the current admin config as JSON for the chatbot to consume."""
     cfg = load_config()
-    return jsonify(cfg)
+    return render_template('clients/chatbot.html', cfg=cfg)
 
 @app.route('/api/models', methods=['GET'])
 def api_models():
@@ -281,6 +278,20 @@ def settings():
             'tax_rate': request.form.get('tax_rate', cfg.get('tax_rate', ''))
         }
         # merge with existing config to avoid wiping other keys
+        # handle chatbot avatar upload (optional)
+        avatar_url = request.form.get('chatbot_avatar_url', cfg.get('chatbot_avatar',''))
+        avatar_file = request.files.get('chatbot_avatar_file')
+        if avatar_file and avatar_file.filename:
+            if allowed_file(avatar_file.filename):
+                filename = secure_filename(avatar_file.filename)
+                dest = UPLOAD_DIR / filename
+                avatar_file.save(str(dest))
+                avatar_url = f'/static/uploads/{filename}'
+            else:
+                flash('Unsupported avatar file type.')
+
+        data['chatbot_avatar'] = avatar_url
+
         cfg.update(data)
         save_config(cfg)
         return redirect(url_for('settings'))
