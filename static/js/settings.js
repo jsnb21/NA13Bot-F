@@ -76,6 +76,26 @@
 })();
 
 (function(){
+    document.querySelectorAll('[data-section-toggle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const section = btn.closest('[data-collapsible]');
+            if (!section) return;
+            section.classList.toggle('is-collapsed');
+            btn.textContent = section.classList.contains('is-collapsed') ? 'Show' : 'Hide';
+        });
+    });
+
+    document.querySelectorAll('[data-color-toggle]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const picker = btn.closest('.color-picker');
+            if (!picker) return;
+            picker.classList.toggle('is-collapsed');
+            btn.textContent = picker.classList.contains('is-collapsed') ? 'Show' : 'Hide';
+        });
+    });
+})();
+
+(function(){
     function clamp(value, min, max) {
         return Math.min(Math.max(value, min), max);
     }
@@ -174,17 +194,18 @@
     }
 
     function initPicker(picker) {
-        const preview = picker.querySelector('[data-role="preview"]');
+        const body = picker.querySelector('.color-picker-body') || picker;
+        const preview = body.querySelector('[data-role="preview"]');
         const hexInput = picker.querySelector('[data-role="hex"]');
         const valueInput = picker.querySelector('[data-role="value"]');
-        const hue = picker.querySelector('[data-role="hue"]');
-        const sat = picker.querySelector('[data-role="sat"]');
-        const light = picker.querySelector('[data-role="light"]');
-        const hueValue = picker.querySelector('[data-role="hue-value"]');
-        const satValue = picker.querySelector('[data-role="sat-value"]');
-        const lightValue = picker.querySelector('[data-role="light-value"]');
-        const swatches = picker.querySelector('[data-role="swatches"]');
-        const defaultHex = normalizeHex(picker.getAttribute('data-default')) || '#0b343d';
+        const hue = body.querySelector('[data-role="hue"]');
+        const sat = body.querySelector('[data-role="sat"]');
+        const light = body.querySelector('[data-role="light"]');
+        const hueValue = body.querySelector('[data-role="hue-value"]');
+        const satValue = body.querySelector('[data-role="sat-value"]');
+        const lightValue = body.querySelector('[data-role="light-value"]');
+        const swatches = body.querySelector('[data-role="swatches"]');
+        const defaultHex = normalizeHex(body.getAttribute('data-default')) || '#0b343d';
 
         const applyHex = (hex) => {
             preview.style.background = hex;
@@ -236,4 +257,54 @@
     }
 
     document.querySelectorAll('.color-picker').forEach(initPicker);
+})();
+
+(function(){
+    const items = document.querySelectorAll('.editable-item');
+    items.forEach(item => {
+        const editBtn = item.querySelector('[data-edit]');
+        const inputs = item.querySelectorAll('[data-input]');
+        const display = item.querySelector('[data-display]');
+        const emptyLabel = item.getAttribute('data-empty') || 'Not set';
+
+        function getDisplayValue() {
+            if (!inputs.length) return '';
+            const input = inputs[0];
+            if (input.tagName === 'SELECT') {
+                const option = input.options[input.selectedIndex];
+                return option ? option.textContent.trim() : '';
+            }
+            return (input.value || '').trim();
+        }
+
+        function syncDisplay() {
+            if (!display) return;
+            const value = getDisplayValue();
+            display.textContent = value || emptyLabel;
+        }
+
+        function setEditing(isEditing) {
+            item.classList.toggle('is-editing', isEditing);
+            inputs.forEach(input => {
+                input.disabled = !isEditing;
+                if (isEditing) input.focus();
+            });
+            if (editBtn) editBtn.textContent = isEditing ? 'Done' : 'Edit';
+            if (!isEditing) syncDisplay();
+        }
+
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                setEditing(!item.classList.contains('is-editing'));
+            });
+        }
+
+        inputs.forEach(input => {
+            input.addEventListener('input', syncDisplay);
+            input.addEventListener('change', syncDisplay);
+        });
+
+        inputs.forEach(input => { input.disabled = true; });
+        syncDisplay();
+    });
 })();

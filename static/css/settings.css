@@ -12,6 +12,67 @@
     padding-bottom: 10px;
     font-weight: 700;
 }
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.section-body {
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+.settings-section.is-collapsed .section-body {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+.section-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.section-toggle:hover { border-color: var(--brand-dark); color: var(--brand-dark); }
+.editable-item {
+    padding: 10px 0 6px;
+    border-bottom: 1px dashed #eef1f4;
+}
+.editable-item:last-child { border-bottom: none; }
+.editable-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.edit-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.edit-btn:hover { border-color: var(--brand-dark); color: var(--brand-dark); }
+.display-value {
+    padding: 8px 0 2px;
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: pre-wrap;
+}
+.editable-input {
+    display: none;
+}
+.editable-item.is-editing .display-value {
+    display: none;
+}
+.editable-item.is-editing .editable-input {
+    display: block;
+}
 .container-fluid h2 {
     font-weight: 700;
     color: var(--brand-dark);
@@ -60,6 +121,21 @@
     padding: 12px;
     background: #fff;
     box-shadow: 0 10px 24px rgba(11, 52, 61, 0.08);
+}
+.color-picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.color-picker-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.color-picker.is-collapsed .color-picker-body {
+    display: none;
 }
 .color-header {
     display: flex;
