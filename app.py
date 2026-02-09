@@ -1,12 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from tools import save_config, load_config, add_user, user_exists
-import google.generativeai as genai
+from tools import save_config, load_config, add_user, verify_user
+from config import init_db
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
 import time
 import secrets
 from chatbot.routes import chatbot_bp
+
+# after app is created, before routes
+init_db()
 
 # simple session secret
 app = Flask(__name__)
@@ -71,11 +74,6 @@ def get_google_api_key():
     # Then check config file
     cfg = load_config()
     return cfg.get('google_api_key', '') or cfg.get('GOOGLE_API_KEY', '')
-
-
-GOOGLE_API_KEY = get_google_api_key()
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
 
 @app.route('/')
 def index():

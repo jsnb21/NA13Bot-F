@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+
 CFG_PATH = Path(__file__).parent / 'config.json'
 USERS_PATH = Path(__file__).parent / 'users.json'
 
