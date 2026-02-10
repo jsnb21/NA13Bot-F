@@ -37,6 +37,7 @@ def api_chat():
     establishment_name = cfg.get('establishment_name', 'our restaurant')
     menu_text = cfg.get('menu_text', '')
     menu_items = cfg.get('menu_items', [])
+    currency_symbol = cfg.get('currency_symbol', '₱')
     if menu_items:
         lines = []
         for item in menu_items:
@@ -49,7 +50,7 @@ def api_chat():
             if desc:
                 line += f" — {desc}"
             if price:
-                line += f" (₱{price})"
+                line += f" ({currency_symbol}{price})"
             lines.append(line)
         menu_text = "\n".join(lines) if lines else menu_text
     if not menu_text:

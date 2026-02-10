@@ -414,6 +414,7 @@ def api_chat():
         establishment_name = cfg.get('establishment_name', 'our restaurant')
         menu_text = cfg.get('menu_text', '')
         menu_items = cfg.get('menu_items', [])
+        currency_symbol = cfg.get('currency_symbol', '₱')
         if menu_items:
             lines = []
             for item in menu_items:
@@ -426,7 +427,7 @@ def api_chat():
                 if desc:
                     line += f" — {desc}"
                 if price:
-                    line += f" (₱{price})"
+                    line += f" ({currency_symbol}{price})"
                 lines.append(line)
             menu_text = "\n".join(lines) if lines else menu_text
         if not menu_text:
@@ -552,6 +553,37 @@ def menu_add_item():
     return redirect(url_for('menu'))
 
 
+@app.route('/admin-client/menu/update', methods=['POST'])
+@login_required
+def menu_update_item():
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
+    index_raw = request.form.get('item_index', '').strip()
+    try:
+        index = int(index_raw)
+    except ValueError:
+        return redirect(url_for('menu'))
+
+    items = cfg.get('menu_items', [])
+    if index < 0 or index >= len(items):
+        return redirect(url_for('menu'))
+
+    name = request.form.get('name', '').strip()
+    if not name:
+        return redirect(url_for('menu'))
+
+    items[index] = {
+        'name': name,
+        'description': request.form.get('description', '').strip(),
+        'price': request.form.get('price', '').strip(),
+        'category': request.form.get('category', '').strip() or 'Uncategorized',
+        'status': request.form.get('status', '').strip() or 'Live'
+    }
+    cfg['menu_items'] = items
+    save_config(cfg, restaurant_id)
+    return redirect(url_for('menu'))
+
+
 @app.route('/admin-client/menu/upload', methods=['POST'])
 @login_required
 def menu_upload_menu_file():
@@ -612,6 +644,28 @@ def settings():
     cfg = load_config(restaurant_id)
     if request.method == 'POST':
         # collect branding & display fields and merge into existing config
+        currency_choice = request.form.get('currency_choice', '').strip()
+        currency_code = cfg.get('currency_code', 'PHP')
+        currency_symbol = cfg.get('currency_symbol', '₱')
+        currency_map = {
+            'PHP': '₱',
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'AUD': 'A$',
+            'CAD': 'C$',
+            'SGD': 'S$',
+            'INR': '₹'
+        }
+        if currency_choice:
+            if '|' in currency_choice:
+                parts = currency_choice.split('|', 1)
+                currency_code = (parts[0] or '').strip() or currency_code
+                currency_symbol = (parts[1] or '').strip() or currency_symbol
+            else:
+                currency_code = currency_choice
+                currency_symbol = currency_map.get(currency_choice, currency_symbol)
         data = {
             'establishment_name': request.form.get('establishment_name', cfg.get('establishment_name', '')),
             'logo_url': request.form.get('logo_url', cfg.get('logo_url', '')),
@@ -626,7 +680,9 @@ def settings():
             'business_address': request.form.get('business_address', cfg.get('business_address', '')),
             'open_time': request.form.get('open_time', cfg.get('open_time', '')),
             'close_time': request.form.get('close_time', cfg.get('close_time', '')),
-            'tax_rate': request.form.get('tax_rate', cfg.get('tax_rate', ''))
+            'tax_rate': request.form.get('tax_rate', cfg.get('tax_rate', '')),
+            'currency_code': currency_code,
+            'currency_symbol': currency_symbol
         }
         # merge with existing config to avoid wiping other keys
         # handle chatbot avatar upload (optional)

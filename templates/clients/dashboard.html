@@ -35,7 +35,7 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div class="dashboard-number">₱4,289</div>
+                        <div class="dashboard-number">{{ cfg.get('currency_symbol','₱') }}4,289</div>
                         <div class="dashboard-label">Revenue</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(245, 158, 11, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -105,21 +105,21 @@
                             <tr>
                                 <td><strong>#ORD-2024-001</strong></td>
                                 <td>John Doe</td>
-                                <td><strong>₱45.99</strong></td>
+                                <td><strong>{{ cfg.get('currency_symbol','₱') }}45.99</strong></td>
                                 <td><span class="badge bg-success">Completed</span></td>
                                 <td>2 min ago</td>
                             </tr>
                             <tr>
                                 <td><strong>#ORD-2024-002</strong></td>
                                 <td>Jane Smith</td>
-                                <td><strong>₱38.50</strong></td>
+                                <td><strong>{{ cfg.get('currency_symbol','₱') }}38.50</strong></td>
                                 <td><span class="badge" style="background: var(--secondary);">In Progress</span></td>
                                 <td>5 min ago</td>
                             </tr>
                             <tr>
                                 <td><strong>#ORD-2024-003</strong></td>
                                 <td>Mike Johnson</td>
-                                <td><strong>₱62.25</strong></td>
+                                <td><strong>{{ cfg.get('currency_symbol','₱') }}62.25</strong></td>
                                 <td><span class="badge bg-success">Completed</span></td>
                                 <td>12 min ago</td>
                             </tr>

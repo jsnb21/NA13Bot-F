@@ -145,6 +145,27 @@
                     </select>
                 </div>
             </div>
+
+            <div class="col-12 mt-3">
+                <div class="editable-item" data-empty="Default">
+                    <div class="editable-header">
+                        <label for="currency_choice" class="form-label">Currency</label>
+                        <button type="button" class="edit-btn" data-edit>Edit</button>
+                    </div>
+                    <div class="display-value" data-display>{{ cfg.get('currency_code','PHP') }} ({{ cfg.get('currency_symbol','₱') }})</div>
+                    <select id="currency_choice" name="currency_choice" class="form-select editable-input" data-input disabled>
+                        <option value="PHP|₱" {% if cfg.get('currency_code','PHP')=='PHP' %}selected{% endif %}>PHP (₱)</option>
+                        <option value="USD|$" {% if cfg.get('currency_code','')=='USD' %}selected{% endif %}>USD ($)</option>
+                        <option value="EUR|€" {% if cfg.get('currency_code','')=='EUR' %}selected{% endif %}>EUR (€)</option>
+                        <option value="GBP|£" {% if cfg.get('currency_code','')=='GBP' %}selected{% endif %}>GBP (£)</option>
+                        <option value="JPY|¥" {% if cfg.get('currency_code','')=='JPY' %}selected{% endif %}>JPY (¥)</option>
+                        <option value="AUD|A$" {% if cfg.get('currency_code','')=='AUD' %}selected{% endif %}>AUD (A$)</option>
+                        <option value="CAD|C$" {% if cfg.get('currency_code','')=='CAD' %}selected{% endif %}>CAD (C$)</option>
+                        <option value="SGD|S$" {% if cfg.get('currency_code','')=='SGD' %}selected{% endif %}>SGD (S$)</option>
+                        <option value="INR|₹" {% if cfg.get('currency_code','')=='INR' %}selected{% endif %}>INR (₹)</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
 

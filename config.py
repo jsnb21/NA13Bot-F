@@ -94,6 +94,8 @@ def init_db():
                       font_family       TEXT,
                       font_color        TEXT,
                       menu_text         TEXT,
+                      currency_code     TEXT,
+                      currency_symbol   TEXT,
                       chatbot_avatar    TEXT,
                                             chatbot_avatar_uploaded_by TEXT,
                                             chatbot_avatar_uploaded_at TIMESTAMPTZ,
@@ -140,6 +142,14 @@ def init_db():
             )
             cur.execute(
                 sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS chatbot_avatar_uploaded_at TIMESTAMPTZ")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS currency_code TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS currency_symbol TEXT")
                 .format(sql.Identifier(schema))
             )
             cur.execute(
