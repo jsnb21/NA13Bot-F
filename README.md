@@ -199,6 +199,11 @@ npm run dev
 
 ## Development Notes
 
+PostgreSQL connection details are documented in [docs/postgres.md](docs/postgres.md).
+
+- When `DATABASE_URL` is set, it takes precedence over all other settings.
+- If you use `config.json`, make sure it is in the project root next to `config.py`.
+
 - **Gemini API Key**: Set `GEMINI_API_KEY` env var or in `.env` (backend/) before running
 - **Database**: Defaults to SQLite (`resto.db`); set `DATABASE_URL` for Postgres
 - **CORS**: Vite dev proxy handles `/super-admin`, `/resto-admin`, `/client-api` → Flask
