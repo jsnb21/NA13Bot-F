@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, session
 from tools import load_config
 from chatbot.ai import GeminiChatbot
 from chatbot.prompts import build_system_prompt
-from training import build_training_context
+from chatbot.training import build_training_context
 
 chatbot_bp = Blueprint('chatbot', __name__, url_prefix = '/api')
 ai =GeminiChatbot()

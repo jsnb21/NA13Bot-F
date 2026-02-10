@@ -17,7 +17,7 @@ import secrets
 import uuid
 from datetime import datetime, timezone
 from chatbot.routes import chatbot_bp
-from training import build_training_context
+from chatbot.training import build_training_context
 import google.genai as genai
 
 # after app is created, before routes
