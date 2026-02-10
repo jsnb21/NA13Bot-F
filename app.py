@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from tools import save_config, load_config, add_user, verify_user
+from tools import save_config, load_config, add_user, verify_user, user_exists
 from config import init_db
 import os
 from werkzeug.utils import secure_filename
@@ -7,6 +7,7 @@ from pathlib import Path
 import time
 import secrets
 from chatbot.routes import chatbot_bp
+import google.genai as genai
 
 # after app is created, before routes
 init_db()
@@ -93,9 +94,13 @@ def api_models():
     if not api_key:
         return jsonify({'error': 'No API key configured'}), 400
     try:
-        genai.configure(api_key=api_key)
-        models = genai.list_models()
-        model_list = [m.name for m in models if 'generateContent' in m.supported_generation_methods]
+        client = genai.Client(api_key=api_key)
+        models = client.models.list()
+        model_list = []
+        for m in models:
+            methods = getattr(m, 'supported_generation_methods', None)
+            if not methods or 'generateContent' in methods:
+                model_list.append(m.name)
         return jsonify({'models': model_list})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -114,8 +119,7 @@ def api_chat():
     if not api_key:
         return jsonify({'response': 'AI is not configured. Please add your Google API key in the settings.'}), 200
     
-    # Configure with the current key
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
     
     try:
         # Load config to get restaurant context
@@ -153,11 +157,21 @@ Menu:
 
 Respond in a friendly, helpful manner. Keep responses concise and focused on helping the customer."""
         
-        # Initialize Gemini model (free tier compatible)
-        model = genai.GenerativeModel('models/gemini-2.5-flash')
-        
-        # Generate response
-        response = model.generate_content(f"{system_prompt}\n\nCustomer: {user_message}\nAssistant:")
+        generation_config = {
+            'temperature': 0.7,
+            'max_output_tokens': 500,
+            'top_p': 0.9,
+            'top_k': 40
+        }
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                {"role": "system", "parts": [{"text": system_prompt}]},
+                {"role": "user", "parts": [{"text": user_message}]}
+            ],
+            generation_config=generation_config
+        )
         
         return jsonify({'response': response.text})
     

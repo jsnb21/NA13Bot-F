@@ -1,8 +1,13 @@
 import os
-from tools import load_config
 import json
 from pathlib import Path
 import psycopg
+from psycopg import sql
+
+try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
 
 CFG_PATH = Path(__file__).parent / 'config.json'
 
@@ -12,33 +17,69 @@ def load_config():
     return {}
 
 def get_connection():
+    # Load .env if python-dotenv is available
+    if load_dotenv is not None:
+        load_dotenv()
+
     # Prefer DATABASE_URL if set
     db_url = os.environ.get("DATABASE_URL")
     if db_url:
         return psycopg.connect(db_url)
 
     cfg = load_config().get("db", {})
+    # Env vars take precedence over config.json
+    env_host = os.environ.get("DB_HOST")
+    env_port = os.environ.get("DB_PORT")
+    env_name = os.environ.get("DB_NAME")
+    env_user = os.environ.get("DB_USER")
+    env_password = os.environ.get("DB_PASSWORD")
+
+    host = env_host or cfg.get("host", "localhost")
+    port = int(env_port) if env_port else cfg.get("port", 5432)
+    name = env_name or cfg.get("name")
+    user = env_user or cfg.get("user")
+    password = env_password or cfg.get("password")
+
     return psycopg.connect(
-        host=cfg.get("host", "localhost"),
-        port=cfg.get("port", 5432),
-        dbname=cfg.get("name"),
-        user=cfg.get("user"),
-        password=cfg.get("password")
+        host=host,
+        port=port,
+        dbname=name,
+        user=user,
+        password=password
     )
+
+def get_db_schema():
+    cfg = load_config().get("db", {})
+    env_schema = os.environ.get("DB_SCHEMA")
+    return env_schema or cfg.get("schema") or "public"
     
 def init_db():
-    ddl = """
-    CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-    CREATE TABLE IF NOT EXISTS accounts (
-      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      email         TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    """
+    schema = get_db_schema()
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(ddl)
+            if schema != "public":
+                cur.execute(
+                    sql.SQL("CREATE SCHEMA IF NOT EXISTS {}")
+                    .format(sql.Identifier(schema))
+                )
+                cur.execute(
+                    sql.SQL("SET search_path TO {}")
+                    .format(sql.Identifier(schema))
+                )
+
+            cur.execute('CREATE EXTENSION IF NOT EXISTS "pgcrypto";')
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {}.accounts (
+                      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                      email         TEXT UNIQUE NOT NULL,
+                      password_hash TEXT NOT NULL,
+                      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+                    """
+                ).format(sql.Identifier(schema))
+            )
             
     
 def get_google_api_key():
