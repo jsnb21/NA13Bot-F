@@ -53,13 +53,25 @@
             return false;
         }
 
+        let userInteracted = false;
+
         function updateSticky(){
+            if(!userInteracted){
+                sticky.classList.remove('show');
+                return;
+            }
             if(isDirty()) sticky.classList.add('show'); else sticky.classList.remove('show');
         }
 
         // listen for changes
-        form.addEventListener('input', updateSticky);
-        form.addEventListener('change', updateSticky);
+        form.addEventListener('input', (e) => {
+            if(e && e.isTrusted) userInteracted = true;
+            updateSticky();
+        });
+        form.addEventListener('change', (e) => {
+            if(e && e.isTrusted) userInteracted = true;
+            updateSticky();
+        });
 
         stickySave.addEventListener('click', ()=>{ saveBtn.click(); });
 

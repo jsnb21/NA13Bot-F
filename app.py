@@ -325,13 +325,13 @@ def settings():
     if request.method == 'POST':
         # collect branding & display fields and merge into existing config
         data = {
-            'establishment_name': request.form.get('establishment_name', ''),
-            'logo_url': request.form.get('logo_url', ''),
-            'main_color': request.form.get('main_color', request.form.get('color_hex','')),
-            'sub_color': request.form.get('sub_color', ''),
-            'font_family': request.form.get('font_family', ''),
-            'menu_text': request.form.get('menu_text', ''),
-            'image_urls': [u.strip() for u in request.form.get('image_urls', '').splitlines() if u.strip()],
+            'establishment_name': request.form.get('establishment_name', cfg.get('establishment_name', '')),
+            'logo_url': request.form.get('logo_url', cfg.get('logo_url', '')),
+            'main_color': request.form.get('main_color', request.form.get('color_hex', cfg.get('main_color', cfg.get('color_hex','')))),
+            'sub_color': request.form.get('sub_color', cfg.get('sub_color', '')),
+            'font_family': request.form.get('font_family', cfg.get('font_family', '')),
+            'menu_text': request.form.get('menu_text', cfg.get('menu_text', '')),
+            'image_urls': [u.strip() for u in request.form.get('image_urls', "\n".join(cfg.get('image_urls', []))).splitlines() if u.strip()],
             'business_name': request.form.get('business_name', cfg.get('business_name', '')),
             'business_email': request.form.get('business_email', cfg.get('business_email', '')),
             'business_phone': request.form.get('business_phone', cfg.get('business_phone', '')),
