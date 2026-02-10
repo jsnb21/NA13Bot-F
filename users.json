@@ -43,5 +43,14 @@
       "main_color": "#0b343d",
       "sub_color": "#ffc832"
     }
+  },
+  "test@email.com": {
+    "password_hash": "",
+    "meta": {
+      "establishment_name": "test resto",
+      "logo_url": "/static/uploads/sefersephiroth.png",
+      "main_color": "#a42323",
+      "sub_color": "#ffc832"
+    }
   }
 }

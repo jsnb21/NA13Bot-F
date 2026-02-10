@@ -80,6 +80,51 @@ def init_db():
                     """
                 ).format(sql.Identifier(schema))
             )
+
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {}.brand_settings (
+                      id                SMALLINT PRIMARY KEY CHECK (id = 1),
+                      establishment_name TEXT,
+                      logo_url          TEXT,
+                      color_hex         TEXT,
+                      main_color        TEXT,
+                      sub_color         TEXT,
+                      font_family       TEXT,
+                      font_color        TEXT,
+                      menu_text         TEXT,
+                      chatbot_avatar    TEXT,
+                      business_name     TEXT,
+                      business_email    TEXT,
+                      business_phone    TEXT,
+                      business_address  TEXT,
+                      open_time         TEXT,
+                      close_time        TEXT,
+                      tax_rate          TEXT,
+                      image_urls        JSONB,
+                      updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+                    """
+                ).format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {}.menu_items (
+                      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                      name        TEXT NOT NULL,
+                      description TEXT,
+                      price       TEXT,
+                      category    TEXT,
+                      status      TEXT,
+                      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+                    """
+                ).format(sql.Identifier(schema))
+            )
             
     
 def get_google_api_key():

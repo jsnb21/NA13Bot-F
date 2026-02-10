@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+from psycopg import sql
+from config import get_connection, get_db_schema
 
 
 CFG_PATH = Path(__file__).parent / 'config.json'
@@ -8,13 +10,227 @@ USERS_PATH = Path(__file__).parent / 'users.json'
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def load_config():
+    cfg = _load_json_config()
+
+    try:
+        brand = _fetch_brand_settings()
+        if brand:
+            cfg.update(brand)
+
+        menu_items = _fetch_menu_items()
+        if menu_items:
+            cfg['menu_items'] = menu_items
+    except Exception:
+        # Fall back to JSON-only config if DB is unavailable.
+        return cfg
+
+    return cfg
+
+def save_config(data: dict):
+    base_cfg = _load_json_config()
+
+    brand_data = _extract_brand_data(data)
+    menu_items = data.get('menu_items') if isinstance(data, dict) else None
+
+    # Keep non-brand keys in JSON config (API keys, DB config, etc.).
+    json_update = {}
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key in BRAND_FIELDS or key == 'menu_items':
+                continue
+            json_update[key] = value
+
+    base_cfg.update(json_update)
+    _save_json_config(base_cfg)
+
+    if brand_data or menu_items is not None:
+        try:
+            if brand_data:
+                _upsert_brand_settings(brand_data)
+            if menu_items is not None:
+                _replace_menu_items(menu_items)
+        except Exception:
+            # Still return True since JSON config was updated.
+            return True
+
+    return True
+
+
+def _load_json_config():
     if CFG_PATH.exists():
         return json.loads(CFG_PATH.read_text())
     return {}
 
-def save_config(data: dict):
+
+def _save_json_config(data: dict):
     CFG_PATH.write_text(json.dumps(data, indent=2))
-    return True
+
+
+BRAND_FIELDS = {
+    'establishment_name',
+    'logo_url',
+    'color_hex',
+    'main_color',
+    'sub_color',
+    'font_family',
+    'font_color',
+    'menu_text',
+    'chatbot_avatar',
+    'business_name',
+    'business_email',
+    'business_phone',
+    'business_address',
+    'open_time',
+    'close_time',
+    'tax_rate',
+    'image_urls'
+}
+
+
+def _extract_brand_data(data: dict):
+    if not isinstance(data, dict):
+        return {}
+    return {key: data.get(key) for key in BRAND_FIELDS if key in data}
+
+
+def _fetch_brand_settings():
+    schema = get_db_schema()
+    columns = [
+        'establishment_name',
+        'logo_url',
+        'color_hex',
+        'main_color',
+        'sub_color',
+        'font_family',
+        'font_color',
+        'menu_text',
+        'chatbot_avatar',
+        'business_name',
+        'business_email',
+        'business_phone',
+        'business_address',
+        'open_time',
+        'close_time',
+        'tax_rate',
+        'image_urls'
+    ]
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                sql.SQL(
+                    "SELECT {} FROM {}.brand_settings WHERE id = 1"
+                ).format(
+                    sql.SQL(', ').join(map(sql.Identifier, columns)),
+                    sql.Identifier(schema)
+                )
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return {}
+
+    data = dict(zip(columns, row))
+    if data.get('image_urls') is None:
+        data['image_urls'] = []
+    return data
+
+
+def _fetch_menu_items():
+    schema = get_db_schema()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                sql.SQL(
+                    """
+                    SELECT name, description, price, category, status
+                    FROM {}.menu_items
+                    ORDER BY created_at ASC
+                    """
+                ).format(sql.Identifier(schema))
+            )
+            rows = cur.fetchall()
+
+    items = []
+    for row in rows or []:
+        items.append({
+            'name': row[0],
+            'description': row[1],
+            'price': row[2],
+            'category': row[3],
+            'status': row[4]
+        })
+    return items
+
+
+def _upsert_brand_settings(data: dict):
+    schema = get_db_schema()
+    columns = list(data.keys())
+    if not columns:
+        return
+
+    values = []
+    placeholders = []
+    for col in columns:
+        if col == 'image_urls':
+            placeholders.append(sql.SQL("%s::jsonb"))
+            values.append(json.dumps(data.get(col)) if data.get(col) is not None else None)
+        else:
+            placeholders.append(sql.SQL("%s"))
+            values.append(data.get(col))
+
+    insert_cols = sql.SQL(', ').join(map(sql.Identifier, columns))
+    insert_vals = sql.SQL(', ').join(placeholders)
+    update_cols = sql.SQL(', ').join(
+        sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(col), sql.Identifier(col))
+        for col in columns
+    )
+
+    query = sql.SQL(
+        """
+        INSERT INTO {}.brand_settings (id, {})
+        VALUES (1, {})
+        ON CONFLICT (id) DO UPDATE
+        SET {}, updated_at = now()
+        """
+    ).format(sql.Identifier(schema), insert_cols, insert_vals, update_cols)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, values)
+
+
+def _replace_menu_items(menu_items):
+    schema = get_db_schema()
+    items = menu_items if isinstance(menu_items, list) else []
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                sql.SQL("DELETE FROM {}.menu_items").format(sql.Identifier(schema))
+            )
+
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                name = (item.get('name') or '').strip()
+                if not name:
+                    continue
+                cur.execute(
+                    sql.SQL(
+                        """
+                        INSERT INTO {}.menu_items (name, description, price, category, status)
+                        VALUES (%s, %s, %s, %s, %s)
+                        """
+                    ).format(sql.Identifier(schema)),
+                    [
+                        name,
+                        (item.get('description') or '').strip(),
+                        (item.get('price') or '').strip(),
+                        (item.get('category') or '').strip(),
+                        (item.get('status') or '').strip()
+                    ]
+                )
 
 
 def load_users():
