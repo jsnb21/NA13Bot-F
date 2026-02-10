@@ -1,11 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-from tools import save_config, load_config, add_user, verify_user, user_exists
+from tools import save_config, load_config, add_user, verify_user, user_exists, get_user, update_user_meta
 from config import init_db
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
 import time
 import secrets
+import uuid
+from datetime import datetime, timezone
 from chatbot.routes import chatbot_bp
 import google.genai as genai
 
@@ -37,6 +39,44 @@ def login_required(f):
             return redirect(url_for('login', next=request.path))
         return f(*args, **kwargs)
     return decorated
+
+
+def get_current_restaurant_id():
+    rid = session.get('restaurant_id')
+    if rid:
+        email = session.get('user')
+        ensure_brand_seed(rid, email)
+        return rid
+    email = session.get('user')
+    if not email:
+        return None
+    user = get_user(email) or {}
+    meta = user.get('meta') or {}
+    rid = meta.get('restaurant_id')
+    if not rid:
+        rid = str(uuid.uuid4())
+        update_user_meta(email, {'restaurant_id': rid})
+    session['restaurant_id'] = rid
+    ensure_brand_seed(rid, email)
+    return rid
+
+
+def ensure_brand_seed(restaurant_id: str, email: str):
+    if not restaurant_id or not email:
+        return
+    current = load_config(restaurant_id)
+    if current.get('establishment_name'):
+        return
+    user = get_user(email) or {}
+    meta = user.get('meta') or {}
+    seed = {
+        'establishment_name': meta.get('establishment_name', ''),
+        'logo_url': meta.get('logo_url', ''),
+        'main_color': meta.get('main_color', ''),
+        'sub_color': meta.get('sub_color', '')
+    }
+    if any(seed.values()):
+        save_config(seed, restaurant_id)
 
 
 def generate_otp_code():
@@ -84,7 +124,8 @@ def index():
 @app.route('/chatbot')
 def chatbot_route():
     # explicit route for /chatbot for convenience
-    cfg = load_config()
+    restaurant_id = session.get('restaurant_id')
+    cfg = load_config(restaurant_id)
     return render_template('clients/chatbot.html', cfg=cfg)
 
 @app.route('/api/models', methods=['GET'])
@@ -123,7 +164,8 @@ def api_chat():
     
     try:
         # Load config to get restaurant context
-        cfg = load_config()
+        restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+        cfg = load_config(restaurant_id)
         establishment_name = cfg.get('establishment_name', 'our restaurant')
         menu_text = cfg.get('menu_text', '')
         menu_items = cfg.get('menu_items', [])
@@ -198,6 +240,7 @@ def superadmin():
 @login_required
 def admin_client():
     if request.method == 'POST':
+        restaurant_id = get_current_restaurant_id()
         data = {
             'establishment_name': request.form.get('establishment_name', ''),
             'logo_url': request.form.get('logo_url', ''),
@@ -206,34 +249,39 @@ def admin_client():
             'menu_text': request.form.get('menu_text', ''),
             'image_urls': [u.strip() for u in request.form.get('image_urls', '').splitlines() if u.strip()]
         }
-        save_config(data)
+        save_config(data, restaurant_id)
         return redirect(url_for('admin_client'))
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     return render_template('clients/admin-client.html', cfg=cfg)
 
 @app.route('/admin-client/dashboard')
 @login_required
 def dashboard():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     return render_template('clients/dashboard.html', cfg=cfg)
 
 @app.route('/admin-client/orders')
 @login_required
 def orders():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     return render_template('clients/orders.html', cfg=cfg)
 
 @app.route('/admin-client/menu')
 @login_required
 def menu():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     return render_template('clients/menu.html', cfg=cfg)
 
 
 @app.route('/admin-client/menu/add', methods=['POST'])
 @login_required
 def menu_add_item():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     name = request.form.get('name', '').strip()
     description = request.form.get('description', '').strip()
     price = request.form.get('price', '').strip()
@@ -252,25 +300,28 @@ def menu_add_item():
         'status': status
     })
     cfg['menu_items'] = items
-    save_config(cfg)
+    save_config(cfg, restaurant_id)
     return redirect(url_for('menu'))
 
 @app.route('/admin-client/customers')
 @login_required
 def customers():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     return render_template('clients/customers.html', cfg=cfg)
 
 @app.route('/admin-client/reports')
 @login_required
 def reports():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     return render_template('clients/reports.html', cfg=cfg)
 
 @app.route('/admin-client/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     if request.method == 'POST':
         # collect branding & display fields and merge into existing config
         data = {
@@ -295,24 +346,31 @@ def settings():
         avatar_file = request.files.get('chatbot_avatar_file')
         if avatar_file and avatar_file.filename:
             if allowed_file(avatar_file.filename):
-                filename = secure_filename(avatar_file.filename)
-                dest = UPLOAD_DIR / filename
+                safe_name = secure_filename(avatar_file.filename)
+                ext = Path(safe_name).suffix.lower()
+                avatar_filename = f"{uuid.uuid4().hex}{ext}"
+                avatar_dir = UPLOAD_DIR / restaurant_id
+                avatar_dir.mkdir(parents=True, exist_ok=True)
+                dest = avatar_dir / avatar_filename
                 avatar_file.save(str(dest))
-                avatar_url = f'/static/uploads/{filename}'
+                avatar_url = f'/static/uploads/{restaurant_id}/{avatar_filename}'
+                data['chatbot_avatar_uploaded_by'] = session.get('user')
+                data['chatbot_avatar_uploaded_at'] = datetime.now(timezone.utc)
             else:
                 flash('Unsupported avatar file type.')
 
         data['chatbot_avatar'] = avatar_url
 
         cfg.update(data)
-        save_config(cfg)
+        save_config(cfg, restaurant_id)
         return redirect(url_for('settings'))
     return render_template('clients/settings.html', cfg=cfg)
 
 @app.route('/admin-client/ai-training', methods=['GET', 'POST'])
 @login_required
 def ai_training():
-    cfg = load_config()
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
     if request.method == 'POST':
         # Handle file uploads for AI training
         if 'training_files' in request.files:
@@ -347,6 +405,7 @@ def login_verify():
     if ok:
         session.pop('otp', None)
         session['user'] = email
+        get_current_restaurant_id()
         return redirect(url_for('dashboard'))
     otp_code = session.get('otp', {}).get('code')
     return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', error=error, otp_hint=otp_code)
@@ -409,11 +468,13 @@ def signup_verify():
         otp_code = session.get('otp', {}).get('code')
         return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='signup', error=error, otp_hint=otp_code)
 
+    restaurant_id = str(uuid.uuid4())
     meta = {
         'establishment_name': pending.get('establishment_name', ''),
         'logo_url': pending.get('logo_url', ''),
         'main_color': pending.get('main_color', ''),
-        'sub_color': pending.get('sub_color', '')
+        'sub_color': pending.get('sub_color', ''),
+        'restaurant_id': restaurant_id
     }
     success = add_user(email, password=None, meta=meta)
     if not success:
@@ -426,7 +487,7 @@ def signup_verify():
         'main_color': pending.get('main_color', ''),
         'sub_color': pending.get('sub_color', '')
     })
-    save_config(cfg)
+    save_config(cfg, restaurant_id)
     session.pop('pending_signup', None)
     session.pop('otp', None)
     return redirect(url_for('login'))

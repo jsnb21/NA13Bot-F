@@ -85,7 +85,7 @@ def init_db():
                 sql.SQL(
                     """
                     CREATE TABLE IF NOT EXISTS {}.brand_settings (
-                      id                SMALLINT PRIMARY KEY CHECK (id = 1),
+                                            restaurant_id     UUID PRIMARY KEY,
                       establishment_name TEXT,
                       logo_url          TEXT,
                       color_hex         TEXT,
@@ -95,6 +95,8 @@ def init_db():
                       font_color        TEXT,
                       menu_text         TEXT,
                       chatbot_avatar    TEXT,
+                                            chatbot_avatar_uploaded_by TEXT,
+                                            chatbot_avatar_uploaded_at TIMESTAMPTZ,
                       business_name     TEXT,
                       business_email    TEXT,
                       business_phone    TEXT,
@@ -114,6 +116,7 @@ def init_db():
                     """
                     CREATE TABLE IF NOT EXISTS {}.menu_items (
                       id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                      restaurant_id UUID,
                       name        TEXT NOT NULL,
                       description TEXT,
                       price       TEXT,
@@ -124,6 +127,57 @@ def init_db():
                     );
                     """
                 ).format(sql.Identifier(schema))
+            )
+
+            # Legacy schema migration: allow multi-tenant rows and add missing columns.
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS restaurant_id UUID")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS chatbot_avatar_uploaded_by TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS chatbot_avatar_uploaded_at TIMESTAMPTZ")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.menu_items ADD COLUMN IF NOT EXISTS restaurant_id UUID")
+                .format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS menu_items_restaurant_id_idx ON {}.menu_items (restaurant_id)"
+                ).format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL("UPDATE {}.brand_settings SET restaurant_id = gen_random_uuid() WHERE restaurant_id IS NULL")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL(
+                    "UPDATE {}.menu_items SET restaurant_id = (SELECT restaurant_id FROM {}.brand_settings LIMIT 1) WHERE restaurant_id IS NULL"
+                ).format(sql.Identifier(schema), sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings DROP CONSTRAINT IF EXISTS brand_settings_id_check")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings DROP CONSTRAINT IF EXISTS brand_settings_pkey")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings DROP COLUMN IF EXISTS id")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD CONSTRAINT brand_settings_pkey PRIMARY KEY (restaurant_id)")
+                .format(sql.Identifier(schema))
             )
             
     

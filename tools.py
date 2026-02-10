@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
+from psycopg import sql
+from config import get_connection, get_db_schema
 
 
 CFG_PATH = Path(__file__).parent / 'config.json'
@@ -9,16 +11,16 @@ USERS_PATH = Path(__file__).parent / 'users.json'
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
-def load_config():
+def load_config(restaurant_id: str = None):
     cfg = _load_json_config()
 
     try:
-        brand = _fetch_brand_settings()
+        brand = _fetch_brand_settings(restaurant_id)
         if brand:
             cfg.update(brand)
 
-        menu_items = _fetch_menu_items()
-        if menu_items:
+        menu_items = _fetch_menu_items(restaurant_id)
+        if menu_items is not None:
             cfg['menu_items'] = menu_items
     except Exception:
         # Fall back to JSON-only config if DB is unavailable.
@@ -26,7 +28,7 @@ def load_config():
 
     return cfg
 
-def save_config(data: dict):
+def save_config(data: dict, restaurant_id: str = None):
     base_cfg = _load_json_config()
 
     brand_data = _extract_brand_data(data)
@@ -43,12 +45,12 @@ def save_config(data: dict):
     base_cfg.update(json_update)
     _save_json_config(base_cfg)
 
-    if brand_data or menu_items is not None:
+    if restaurant_id and (brand_data or menu_items is not None):
         try:
             if brand_data:
-                _upsert_brand_settings(brand_data)
+                _upsert_brand_settings(restaurant_id, brand_data)
             if menu_items is not None:
-                _replace_menu_items(menu_items)
+                _replace_menu_items(restaurant_id, menu_items)
         except Exception:
             # Still return True since JSON config was updated.
             return True
@@ -63,7 +65,7 @@ def _load_json_config():
 
 
 def _save_json_config(data: dict):
-    CFG_PATH.write_text(json.dumps(data, indent=2))
+    CFG_PATH.write_text(json.dumps(data, indent=2, default=str))
 
 
 BRAND_FIELDS = {
@@ -76,6 +78,8 @@ BRAND_FIELDS = {
     'font_color',
     'menu_text',
     'chatbot_avatar',
+    'chatbot_avatar_uploaded_by',
+    'chatbot_avatar_uploaded_at',
     'business_name',
     'business_email',
     'business_phone',
@@ -93,9 +97,18 @@ def _extract_brand_data(data: dict):
     return {key: data.get(key) for key in BRAND_FIELDS if key in data}
 
 
-def _fetch_brand_settings():
+def _resolve_restaurant_id(restaurant_id: str = None):
+    if restaurant_id:
+        return str(restaurant_id)
+    cfg = _load_json_config()
+    rid = cfg.get('default_restaurant_id')
+    return str(rid) if rid else None
+
+
+def _fetch_brand_settings(restaurant_id: str = None):
     schema = get_db_schema()
     columns = [
+        'restaurant_id',
         'establishment_name',
         'logo_url',
         'color_hex',
@@ -105,6 +118,8 @@ def _fetch_brand_settings():
         'font_color',
         'menu_text',
         'chatbot_avatar',
+        'chatbot_avatar_uploaded_by',
+        'chatbot_avatar_uploaded_at',
         'business_name',
         'business_email',
         'business_phone',
@@ -115,17 +130,31 @@ def _fetch_brand_settings():
         'image_urls'
     ]
 
+    resolved_id = _resolve_restaurant_id(restaurant_id)
+
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                sql.SQL(
-                    "SELECT {} FROM {}.brand_settings WHERE id = 1"
-                ).format(
-                    sql.SQL(', ').join(map(sql.Identifier, columns)),
-                    sql.Identifier(schema)
+            if resolved_id:
+                cur.execute(
+                    sql.SQL(
+                        "SELECT {} FROM {}.brand_settings WHERE restaurant_id = %s"
+                    ).format(
+                        sql.SQL(', ').join(map(sql.Identifier, columns)),
+                        sql.Identifier(schema)
+                    ),
+                    [resolved_id]
                 )
-            )
-            row = cur.fetchone()
+                row = cur.fetchone()
+            else:
+                cur.execute(
+                    sql.SQL(
+                        "SELECT {} FROM {}.brand_settings ORDER BY updated_at DESC LIMIT 1"
+                    ).format(
+                        sql.SQL(', ').join(map(sql.Identifier, columns)),
+                        sql.Identifier(schema)
+                    )
+                )
+                row = cur.fetchone()
 
     if not row:
         return {}
@@ -133,10 +162,21 @@ def _fetch_brand_settings():
     data = dict(zip(columns, row))
     if data.get('image_urls') is None:
         data['image_urls'] = []
+
+    if not resolved_id and data.get('restaurant_id'):
+        cfg = _load_json_config()
+        if not cfg.get('default_restaurant_id'):
+            cfg['default_restaurant_id'] = str(data['restaurant_id'])
+            _save_json_config(cfg)
+
     return data
 
 
-def _fetch_menu_items():
+def _fetch_menu_items(restaurant_id: str = None):
+    resolved_id = _resolve_restaurant_id(restaurant_id)
+    if not resolved_id:
+        return None
+
     schema = get_db_schema()
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -145,9 +185,11 @@ def _fetch_menu_items():
                     """
                     SELECT name, description, price, category, status
                     FROM {}.menu_items
+                    WHERE restaurant_id = %s
                     ORDER BY created_at ASC
                     """
-                ).format(sql.Identifier(schema))
+                ).format(sql.Identifier(schema)),
+                [resolved_id]
             )
             rows = cur.fetchall()
 
@@ -163,15 +205,19 @@ def _fetch_menu_items():
     return items
 
 
-def _upsert_brand_settings(data: dict):
+def _upsert_brand_settings(restaurant_id: str, data: dict):
     schema = get_db_schema()
-    columns = list(data.keys())
+    columns = ['restaurant_id'] + list(data.keys())
     if not columns:
         return
 
     values = []
     placeholders = []
     for col in columns:
+        if col == 'restaurant_id':
+            placeholders.append(sql.SQL("%s"))
+            values.append(restaurant_id)
+            continue
         if col == 'image_urls':
             placeholders.append(sql.SQL("%s::jsonb"))
             values.append(json.dumps(data.get(col)) if data.get(col) is not None else None)
@@ -188,9 +234,9 @@ def _upsert_brand_settings(data: dict):
 
     query = sql.SQL(
         """
-        INSERT INTO {}.brand_settings (id, {})
-        VALUES (1, {})
-        ON CONFLICT (id) DO UPDATE
+        INSERT INTO {}.brand_settings ({})
+        VALUES ({})
+        ON CONFLICT (restaurant_id) DO UPDATE
         SET {}, updated_at = now()
         """
     ).format(sql.Identifier(schema), insert_cols, insert_vals, update_cols)
@@ -200,14 +246,17 @@ def _upsert_brand_settings(data: dict):
             cur.execute(query, values)
 
 
-def _replace_menu_items(menu_items):
+def _replace_menu_items(restaurant_id: str, menu_items):
     schema = get_db_schema()
     items = menu_items if isinstance(menu_items, list) else []
+    if not restaurant_id:
+        return
 
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                sql.SQL("DELETE FROM {}.menu_items").format(sql.Identifier(schema))
+                sql.SQL("DELETE FROM {}.menu_items WHERE restaurant_id = %s").format(sql.Identifier(schema)),
+                [restaurant_id]
             )
 
             for item in items:
@@ -219,11 +268,12 @@ def _replace_menu_items(menu_items):
                 cur.execute(
                     sql.SQL(
                         """
-                        INSERT INTO {}.menu_items (name, description, price, category, status)
-                        VALUES (%s, %s, %s, %s, %s)
+                        INSERT INTO {}.menu_items (restaurant_id, name, description, price, category, status)
+                        VALUES (%s, %s, %s, %s, %s, %s)
                         """
                     ).format(sql.Identifier(schema)),
                     [
+                        restaurant_id,
                         name,
                         (item.get('description') or '').strip(),
                         (item.get('price') or '').strip(),
@@ -278,3 +328,16 @@ def user_exists(email: str) -> bool:
 def get_user(email: str):
     users = load_users()
     return users.get(email)
+
+
+def update_user_meta(email: str, updates: dict):
+    users = load_users()
+    u = users.get(email)
+    if not u:
+        return False
+    meta = u.get('meta') or {}
+    meta.update(updates or {})
+    u['meta'] = meta
+    users[email] = u
+    save_users(users)
+    return True

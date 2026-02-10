@@ -39,7 +39,12 @@
             new FormData(f).forEach((v,k)=>{ o[k]=v; });
             return o;
         }
-        const initial = formToObj(form);
+        let initial = formToObj(form);
+
+        function resetInitial(){
+            initial = formToObj(form);
+            updateSticky();
+        }
 
         function isDirty(){
             const cur = formToObj(form);
@@ -72,6 +77,9 @@
             if(subHex){ subHex.value = initial['sub_color'] || ''; subHex.dispatchEvent(new Event('input',{bubbles:true})); }
             updateSticky();
         });
+
+        // Expose to other modules (color pickers) so they can re-sync baseline.
+        window.__settingsResetInitial = resetInitial;
     })();
 })();
 
@@ -257,6 +265,9 @@
     }
 
     document.querySelectorAll('.color-picker').forEach(initPicker);
+    if (typeof window.__settingsResetInitial === 'function') {
+        window.__settingsResetInitial();
+    }
 })();
 
 (function(){
@@ -307,4 +318,8 @@
         inputs.forEach(input => { input.disabled = true; });
         syncDisplay();
     });
+
+    if (typeof window.__settingsResetInitial === 'function') {
+        window.__settingsResetInitial();
+    }
 })();

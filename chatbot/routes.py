@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from tools import load_config
 from chatbot.ai import GeminiChatbot
 from chatbot.prompts import build_system_prompt
@@ -9,7 +9,8 @@ ai =GeminiChatbot()
 @chatbot_bp.route('/config', methods=['GET'])
 def api_config():
     """Return admin config as JSON"""
-    cfg = load_config()
+    restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+    cfg = load_config(restaurant_id)
     return jsonify(cfg)
 
 @chatbot_bp.route('/models', methods=['GET'])
@@ -30,7 +31,8 @@ def api_chat():
     if not user_message:
         return jsonify({'error': 'No message provided'}), 400
     
-    cfg = load_config()
+    restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+    cfg = load_config(restaurant_id)
     establishment_name = cfg.get('establishment_name', 'our restaurant')
     menu_text = cfg.get('menu_text', '')
     menu_items = cfg.get('menu_items', [])

@@ -50,7 +50,8 @@
       "establishment_name": "test resto",
       "logo_url": "/static/uploads/sefersephiroth.png",
       "main_color": "#a42323",
-      "sub_color": "#ffc832"
+      "sub_color": "#ffc832",
+      "restaurant_id": "15d6d150-13a0-4704-adde-04efd6be2e89"
     }
   }
 }
