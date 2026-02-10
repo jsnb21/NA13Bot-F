@@ -335,3 +335,38 @@
         window.__settingsResetInitial();
     }
 })();
+
+(function(){
+    function bindClearMenu(){
+        const clearBtn = document.getElementById('clearMenuBtn');
+        if (!clearBtn) return;
+
+        clearBtn.addEventListener('click', async () => {
+            const ok = confirm('Clear all menu items? This cannot be undone.');
+            if (!ok) return;
+
+            clearBtn.disabled = true;
+            try {
+                const res = await fetch('/admin-client/settings/clear-menu', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                });
+                if (!res.ok) {
+                    alert('Unable to clear menu items.');
+                    return;
+                }
+                alert('Menu items cleared.');
+            } catch (err) {
+                alert('Unable to clear menu items.');
+            } finally {
+                clearBtn.disabled = false;
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindClearMenu);
+    } else {
+        bindClearMenu();
+    }
+})();

@@ -11,20 +11,18 @@ class GeminiChatbot:
         if not self.client:
             return 'Google API key not configured.'
         try:
-            generation_config = {
-                'temperature': 0.7,
-                'max_output_tokens': 500,
-                'top_p': 0.9,
-                'top_k': 40
-            }
-
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=[
-                    {"role": "system", "parts": [{"text": system_prompt}]},
                     {"role": "user", "parts": [{"text": user_message}]}
                 ],
-                generation_config=generation_config
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.7,
+                    max_output_tokens=500,
+                    top_p=0.9,
+                    top_k=40
+                )
             )
             return response.text
         except Exception as e:

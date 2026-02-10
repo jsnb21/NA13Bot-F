@@ -145,12 +145,12 @@
 
     <div class="kiosk-grid">
         <div class="upload-menu-card" onclick="document.getElementById('menuUpload').click()">
-            <input type="file" id="menuUpload" hidden accept=".pdf">
+          <input type="file" id="menuUpload" hidden accept=".pdf,.txt">
             <div class="upload-icon-wrap">
                 <i class="fa-solid fa-file-pdf"></i>
             </div>
-            <h5 class="fw-bold mb-2">Sync PDF Menu</h5>
-            <p class="text-secondary small mb-4">Drag and drop your menu PDF here to automatically train the AI and update items.</p>
+            <h5 class="fw-bold mb-2">Sync Menu File</h5>
+            <p class="text-secondary small mb-4">Upload a PDF or TXT menu to train the AI and keep items in sync.</p>
             <span class="btn btn-sm btn-outline-dark px-3 fw-bold" style="border-radius: 8px;">Browse Files</span>
         </div>
 
@@ -174,4 +174,42 @@
         {% endfor %}
     </div>
 </div>
+
+<script>
+  const menuUploadInput = document.getElementById('menuUpload');
+
+  menuUploadInput.addEventListener('change', async () => {
+    if (!menuUploadInput.files || menuUploadInput.files.length === 0) {
+      return;
+    }
+
+    const file = menuUploadInput.files[0];
+
+    try {
+      const formData = new FormData();
+      formData.append('menu_file', file, file.name);
+      const res = await fetch('/admin-client/menu/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin'
+      });
+      if (!res.ok) {
+        let message = 'Upload failed. Please check the file format.';
+        try {
+          const data = await res.json();
+          if (data && data.error) message = data.error;
+          if (data && data.detail) message = `${message}: ${data.detail}`;
+        } catch (err) {}
+        alert(message);
+      } else {
+        alert('Menu file uploaded and items updated.');
+        window.location.reload();
+      }
+    } catch (err) {
+      alert('Upload failed. Please try again.');
+    } finally {
+      menuUploadInput.value = '';
+    }
+  });
+</script>
 {% endblock %}

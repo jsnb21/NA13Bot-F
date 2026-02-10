@@ -25,7 +25,7 @@
                     <p style="color:#666; margin-bottom:20px;">or click to browse your computer</p>
                     <div class="file-input-wrapper">
                         <button class="btn btn-primary" style="background:#667eea; border:none;">Choose Files</button>
-                        <input type="file" id="trainingFiles" multiple accept=".txt,.pdf,.docx,.json,.csv">
+                        <input type="file" id="trainingFiles" name="training_files" multiple accept=".txt,.pdf,.docx,.json,.csv">
                     </div>
                     <p style="color:#999; font-size:0.85rem; margin-top:20px;">Supported formats: TXT, PDF, DOCX, JSON, CSV</p>
                 </div>
@@ -41,44 +41,11 @@
             <div class="card-surface">
                 <h5 class="mb-4">Uploaded Training Files</h5>
                 
-                <div id="filesList">
-                    <div class="training-file-item">
-                        <div class="file-info">
-                            <div class="file-name">📄 restaurant-menu.json</div>
-                            <div class="file-meta">Uploaded 2 days ago • 245 KB • Active</div>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span class="training-status status-complete">Trained</span>
-                            <button class="btn btn-sm btn-outline-danger">Remove</button>
-                        </div>
-                    </div>
-
-                    <div class="training-file-item">
-                        <div class="file-info">
-                            <div class="file-name">📄 faq-responses.txt</div>
-                            <div class="file-meta">Uploaded 5 days ago • 128 KB • Active</div>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span class="training-status status-complete">Trained</span>
-                            <button class="btn btn-sm btn-outline-danger">Remove</button>
-                        </div>
-                    </div>
-
-                    <div class="training-file-item">
-                        <div class="file-info">
-                            <div class="file-name">📄 customer-support.pdf</div>
-                            <div class="file-meta">Uploaded today • 512 KB • Processing</div>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <span class="training-status status-training">Training</span>
-                            <button class="btn btn-sm btn-outline-secondary" disabled>Remove</button>
-                        </div>
-                    </div>
-                </div>
+                <div id="filesList"></div>
 
                 <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
-                    <button class="btn btn-secondary" style="background:#667eea; border:none; margin-right:10px;">Retrain All Models</button>
-                    <button class="btn btn-outline-secondary">Export Training Data</button>
+                    <button id="retrainBtn" class="btn btn-secondary" style="background:#667eea; border:none; margin-right:10px;" disabled>Retrain All Models</button>
+                    <button id="exportBtn" class="btn btn-outline-secondary" disabled>Export Training Data</button>
                 </div>
             </div>
         </div>
@@ -86,11 +53,11 @@
         <div class="col-md-4">
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-value">3</div>
+                    <div class="stat-value" id="filesCount">0</div>
                     <div class="stat-label">Files Uploaded</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">885 KB</div>
+                    <div class="stat-value" id="totalSize">0 KB</div>
                     <div class="stat-label">Total Size</div>
                 </div>
             </div>

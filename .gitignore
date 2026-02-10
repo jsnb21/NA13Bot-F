@@ -30,6 +30,10 @@ Thumbs.db
 # Environment variables / secrets
 .env
 config.json
+users.json
 
 # Node
 node_modules/
+
+#training data
+training_data/

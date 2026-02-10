@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, session
 from tools import load_config
 from chatbot.ai import GeminiChatbot
 from chatbot.prompts import build_system_prompt
+from training import build_training_context
 
 chatbot_bp = Blueprint('chatbot', __name__, url_prefix = '/api')
 ai =GeminiChatbot()
@@ -54,7 +55,8 @@ def api_chat():
     if not menu_text:
         menu_text = 'No menu available'
 
-    system_prompt = build_system_prompt(establishment_name, menu_text)
+    training_context = build_training_context(restaurant_id, user_message)
+    system_prompt = build_system_prompt(establishment_name, menu_text, training_context)
     response = ai.get_response(user_message, system_prompt)
     
     return jsonify({'response' : response})

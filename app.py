@@ -4,11 +4,20 @@ from config import init_db
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
+import json
+import csv
+import io
+import re
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
 import time
 import secrets
 import uuid
 from datetime import datetime, timezone
 from chatbot.routes import chatbot_bp
+from training import build_training_context
 import google.genai as genai
 
 # after app is created, before routes
@@ -22,15 +31,251 @@ app.register_blueprint(chatbot_bp)
 # upload dir for logo files
 UPLOAD_DIR = Path(__file__).parent / 'static' / 'uploads'
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+TRAINING_DIR = Path(__file__).parent / 'training_data'
+TRAINING_DIR.mkdir(parents=True, exist_ok=True)
 from functools import wraps
 from flask import flash
 
 # allowed logo extensions
 ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+TRAINING_ALLOWED_EXT = {'txt', 'pdf', 'docx', 'json', 'csv'}
+MAX_TRAINING_FILE_MB = 50
 OTP_TTL_SECONDS = 300
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXT
+
+
+def training_allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in TRAINING_ALLOWED_EXT
+
+
+def get_training_dir(restaurant_id: str):
+    safe_id = str(restaurant_id) if restaurant_id else 'default'
+    path = TRAINING_DIR / safe_id
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def get_training_manifest_path(restaurant_id: str):
+    return get_training_dir(restaurant_id) / 'manifest.json'
+
+
+def load_training_manifest(restaurant_id: str):
+    manifest_path = get_training_manifest_path(restaurant_id)
+    if manifest_path.exists():
+        try:
+            return json.loads(manifest_path.read_text())
+        except Exception:
+            return []
+    return []
+
+
+def save_training_manifest(restaurant_id: str, entries):
+    manifest_path = get_training_manifest_path(restaurant_id)
+    manifest_path.write_text(json.dumps(entries, indent=2, default=str))
+
+
+def save_training_upload_bytes(restaurant_id: str, filename: str, data_bytes: bytes):
+    if not filename:
+        return None
+    if not training_allowed_file(filename):
+        return None
+    training_dir = get_training_dir(restaurant_id)
+    safe_name = secure_filename(filename)
+    ext = Path(safe_name).suffix.lower()
+    stored_name = f"{uuid.uuid4().hex}{ext}"
+    dest = training_dir / stored_name
+    dest.write_bytes(data_bytes)
+
+    entry = {
+        'id': uuid.uuid4().hex,
+        'original_name': safe_name,
+        'stored_name': stored_name,
+        'uploaded_at': datetime.now(timezone.utc).isoformat(),
+        'status': 'ready'
+    }
+    entries = load_training_manifest(restaurant_id)
+    entries.append(entry)
+    save_training_manifest(restaurant_id, entries)
+    return entry
+
+
+def parse_menu_txt(content: str):
+    if not content:
+        return []
+    text = content.replace('\r\n', '\n').replace('\r', '\n')
+
+    items = []
+    heading_matches = list(re.finditer(r"\b([A-Z][A-Z &]{2,})\b(?=\s+NAME:)", text))
+    headings = [(m.start(), m.group(1).strip()) for m in heading_matches]
+
+    pattern = re.compile(
+        r"NAME:\s*(.*?)\s*\|\s*PRICE:\s*(.*?)\s*\|\s*DESCRIPTION:\s*(.*?)(?=\s+(?:[A-Z][A-Z &]{2,}\s+)?NAME:|$)",
+        re.DOTALL
+    )
+
+    for match in pattern.finditer(text):
+        name = (match.group(1) or '').strip()
+        if not name:
+            continue
+        price = (match.group(2) or '').strip()
+        description = (match.group(3) or '').strip()
+        category = 'Uncategorized'
+        for pos, heading in reversed(headings):
+            if pos < match.start():
+                category = heading.title()
+                break
+        items.append({
+            'name': name,
+            'description': description,
+            'price': price,
+            'category': category,
+            'status': 'Live'
+        })
+
+    if items:
+        return items
+
+    price_pattern = re.compile(r"(\$\s*\d+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?\s*(?:usd|php|php\.|aud|cad|eur)?)", re.IGNORECASE)
+    for line in text.split('\n'):
+        clean = line.strip()
+        if not clean:
+            continue
+        match = price_pattern.search(clean)
+        if not match:
+            continue
+        price = match.group(1).strip()
+        name_part = clean[:match.start()].strip(" -:\t")
+        desc_part = clean[match.end():].strip(" -:\t")
+        if not name_part:
+            continue
+        items.append({
+            'name': name_part,
+            'description': desc_part,
+            'price': price,
+            'category': 'Uncategorized',
+            'status': 'Live'
+        })
+    if items:
+        return items
+
+    rows = []
+    reader = csv.reader(io.StringIO(content))
+    for row in reader:
+        if not row:
+            continue
+        cleaned = [cell.strip() for cell in row]
+        if not any(cleaned):
+            continue
+        rows.append(cleaned)
+
+    if not rows:
+        return []
+
+    first = [cell.lower() for cell in rows[0]]
+    if 'name' in first and ('price' in first or 'description' in first):
+        rows = rows[1:]
+
+    for row in rows:
+        name = row[0].strip() if len(row) > 0 else ''
+        if not name:
+            continue
+        description = row[1].strip() if len(row) > 1 else ''
+        price = row[2].strip() if len(row) > 2 else ''
+        category = row[3].strip() if len(row) > 3 else 'Uncategorized'
+        status = row[4].strip() if len(row) > 4 else 'Live'
+        items.append({
+            'name': name,
+            'description': description,
+            'price': price,
+            'category': category or 'Uncategorized',
+            'status': status or 'Live'
+        })
+    return items
+
+
+def parse_menu_txt_with_ai(content: str):
+    if not content:
+        return []
+    api_key = get_google_api_key()
+    if not api_key:
+        return []
+
+    try:
+        client = genai.Client(api_key=api_key)
+        system_instruction = (
+            "Extract restaurant menu items from the provided text. "
+            "Return JSON only: an array of objects with keys "
+            "name, description, price, category, status. "
+            "Use empty string when a field is missing. "
+            "Preserve currency symbols if present in the price. "
+            "If a section heading (e.g., APPETIZERS) appears, use it as category. "
+            "Default status to Live."
+        )
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[{"role": "user", "parts": [{"text": content}]}],
+            config=genai.types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                response_mime_type='application/json',
+                temperature=0.2,
+                max_output_tokens=1200
+            )
+        )
+        text = (response.text or '').strip()
+        if not text:
+            return []
+        if not text.startswith('['):
+            start = text.find('[')
+            end = text.rfind(']')
+            if start != -1 and end != -1 and end > start:
+                text = text[start:end + 1]
+        data = json.loads(text)
+        if isinstance(data, dict) and 'items' in data:
+            data = data.get('items')
+        if not isinstance(data, list):
+            return []
+
+        items = []
+        for row in data:
+            if not isinstance(row, dict):
+                continue
+            name = (row.get('name') or '').strip()
+            if not name:
+                continue
+            description = (row.get('description') or '').strip()
+            price = (row.get('price') or '').strip()
+            category = (row.get('category') or '').strip() or 'Uncategorized'
+            status = (row.get('status') or '').strip() or 'Live'
+            items.append({
+                'name': name,
+                'description': description,
+                'price': price,
+                'category': category,
+                'status': status
+            })
+        return items
+    except Exception:
+        return []
+
+
+def extract_pdf_text(data_bytes: bytes):
+    if not PdfReader:
+        return ''
+    try:
+        reader = PdfReader(io.BytesIO(data_bytes))
+    except Exception:
+        return ''
+    parts = []
+    for page in reader.pages:
+        try:
+            text = page.extract_text() or ''
+        except Exception:
+            text = ''
+        if text:
+            parts.append(text)
+    return '\n'.join(parts)
 
 def login_required(f):
     @wraps(f)
@@ -187,6 +432,8 @@ def api_chat():
         if not menu_text:
             menu_text = 'No menu available'
         
+        training_context = build_training_context(restaurant_id, user_message)
+
         # Create context-aware prompt
         system_prompt = f"""You are a helpful AI assistant for {establishment_name}, a restaurant chatbot.
 You help customers with:
@@ -197,22 +444,23 @@ You help customers with:
 Menu:
 {menu_text}
 
+    Training data (reference only):
+    {training_context}
+
 Respond in a friendly, helpful manner. Keep responses concise and focused on helping the customer."""
         
-        generation_config = {
-            'temperature': 0.7,
-            'max_output_tokens': 500,
-            'top_p': 0.9,
-            'top_k': 40
-        }
-
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=[
-                {"role": "system", "parts": [{"text": system_prompt}]},
                 {"role": "user", "parts": [{"text": user_message}]}
             ],
-            generation_config=generation_config
+            config=genai.types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.7,
+                max_output_tokens=500,
+                top_p=0.9,
+                top_k=40
+            )
         )
         
         return jsonify({'response': response.text})
@@ -303,6 +551,46 @@ def menu_add_item():
     save_config(cfg, restaurant_id)
     return redirect(url_for('menu'))
 
+
+@app.route('/admin-client/menu/upload', methods=['POST'])
+@login_required
+def menu_upload_menu_file():
+    try:
+        restaurant_id = get_current_restaurant_id()
+        file = request.files.get('menu_file')
+        if not file or not file.filename:
+            return jsonify({'error': 'No file provided'}), 400
+        filename = file.filename.lower()
+        if not (filename.endswith('.txt') or filename.endswith('.pdf')):
+            return jsonify({'error': 'Only .txt or .pdf files are supported'}), 400
+
+        data_bytes = file.read()
+        content = ''
+        is_pdf = filename.endswith('.pdf')
+        if is_pdf:
+            content = extract_pdf_text(data_bytes)
+            if not content:
+                return jsonify({'error': 'Unable to extract text from PDF'}), 400
+        else:
+            content = data_bytes.decode('utf-8', errors='ignore')
+
+        items = parse_menu_txt_with_ai(content)
+        if not items and not is_pdf:
+            items = parse_menu_txt(content)
+        if not items:
+            return jsonify({'error': 'No menu items found in file'}), 400
+
+        cfg = load_config(restaurant_id)
+        cfg['menu_items'] = items
+        save_config(cfg, restaurant_id)
+
+        save_training_upload_bytes(restaurant_id, file.filename, data_bytes)
+
+        return jsonify({'saved': len(items)})
+    except Exception as exc:
+        app.logger.exception('Menu upload failed')
+        return jsonify({'error': 'Menu upload failed', 'detail': str(exc)}), 500
+
 @app.route('/admin-client/customers')
 @login_required
 def customers():
@@ -366,18 +654,130 @@ def settings():
         return redirect(url_for('settings'))
     return render_template('clients/settings.html', cfg=cfg)
 
+
+@app.route('/admin-client/settings/clear-menu', methods=['POST'])
+@login_required
+def settings_clear_menu():
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
+    cfg['menu_items'] = []
+    save_config(cfg, restaurant_id)
+    return jsonify({'cleared': True})
+
 @app.route('/admin-client/ai-training', methods=['GET', 'POST'])
 @login_required
 def ai_training():
     restaurant_id = get_current_restaurant_id()
     cfg = load_config(restaurant_id)
-    if request.method == 'POST':
-        # Handle file uploads for AI training
-        if 'training_files' in request.files:
-            files = request.files.getlist('training_files')
-            # Process uploaded files here
-            pass
     return render_template('clients/ai-training.html', cfg=cfg)
+
+
+@app.route('/admin-client/ai-training/files', methods=['GET'])
+@login_required
+def ai_training_files():
+    restaurant_id = get_current_restaurant_id()
+    entries = load_training_manifest(restaurant_id)
+    training_dir = get_training_dir(restaurant_id)
+
+    filtered = []
+    for entry in entries:
+        stored_name = entry.get('stored_name')
+        if not stored_name:
+            continue
+        file_path = training_dir / stored_name
+        if not file_path.exists():
+            continue
+        size_bytes = file_path.stat().st_size
+        filtered.append({
+            'id': entry.get('id'),
+            'original_name': entry.get('original_name'),
+            'stored_name': stored_name,
+            'size_bytes': size_bytes,
+            'uploaded_at': entry.get('uploaded_at'),
+            'status': entry.get('status', 'ready')
+        })
+
+    filtered.sort(key=lambda x: x.get('uploaded_at') or '', reverse=True)
+    return jsonify({'files': filtered})
+
+
+@app.route('/admin-client/ai-training/upload', methods=['POST'])
+@login_required
+def ai_training_upload():
+    restaurant_id = get_current_restaurant_id()
+    if 'training_files' not in request.files:
+        return jsonify({'error': 'No files provided'}), 400
+
+    files = request.files.getlist('training_files')
+    if not files:
+        return jsonify({'error': 'No files provided'}), 400
+
+    entries = load_training_manifest(restaurant_id)
+    training_dir = get_training_dir(restaurant_id)
+    saved = []
+    errors = []
+
+    for file in files:
+        filename = file.filename or ''
+        if not filename:
+            continue
+        if not training_allowed_file(filename):
+            errors.append({'file': filename, 'error': 'Unsupported file type'})
+            continue
+        file.seek(0, os.SEEK_END)
+        size_bytes = file.tell()
+        file.seek(0)
+        if size_bytes > MAX_TRAINING_FILE_MB * 1024 * 1024:
+            errors.append({'file': filename, 'error': 'File too large'})
+            continue
+
+        safe_name = secure_filename(filename)
+        ext = Path(safe_name).suffix.lower()
+        stored_name = f"{uuid.uuid4().hex}{ext}"
+        dest = training_dir / stored_name
+        file.save(str(dest))
+
+        entry = {
+            'id': uuid.uuid4().hex,
+            'original_name': safe_name,
+            'stored_name': stored_name,
+            'uploaded_at': datetime.now(timezone.utc).isoformat(),
+            'status': 'ready'
+        }
+        entries.append(entry)
+        saved.append(entry)
+
+    save_training_manifest(restaurant_id, entries)
+    return jsonify({'saved': saved, 'errors': errors})
+
+
+@app.route('/admin-client/ai-training/files/<file_id>', methods=['DELETE'])
+@login_required
+def ai_training_delete(file_id):
+    restaurant_id = get_current_restaurant_id()
+    entries = load_training_manifest(restaurant_id)
+    training_dir = get_training_dir(restaurant_id)
+
+    remaining = []
+    deleted = False
+    for entry in entries:
+        if entry.get('id') != file_id:
+            remaining.append(entry)
+            continue
+        stored_name = entry.get('stored_name')
+        if stored_name:
+            file_path = training_dir / stored_name
+            if file_path.exists():
+                try:
+                    file_path.unlink()
+                except Exception:
+                    pass
+        deleted = True
+
+    save_training_manifest(restaurant_id, remaining)
+    if not deleted:
+        return jsonify({'error': 'File not found'}), 404
+    return jsonify({'deleted': True})
 
 
 @app.route('/login', methods=['GET', 'POST'])
