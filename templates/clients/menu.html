@@ -184,6 +184,43 @@
   .toast-notification .toast-close:hover {
     opacity: 1;
   }
+
+  .menu-editor {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: #fff;
+    padding: 20px;
+  }
+
+  .menu-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .menu-editor-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .menu-editor-table th,
+  .menu-editor-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .menu-editor-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.7rem;
+    color: #64748b;
+  }
+
+  .menu-editor-table tr:last-child td {
+    border-bottom: none;
+  }
 </style>
 {% endblock %}
 
@@ -198,43 +235,11 @@
             <button class="btn btn-outline-danger px-3 py-2" style="border-radius: 10px;" type="button" onclick="clearAllMenu()">
                 <i class="fas fa-trash me-2"></i>Clear All Menu
             </button>
-            <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" onclick="document.getElementById('menuAddForm').classList.toggle('d-none')">
-                <i class="fas fa-plus me-2"></i>Add Manual Item
+            <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" id="menuEditorToggle">
+                <i class="fas fa-pen-to-square me-2"></i>Edit Menu
             </button>
         </div>
     </div>
-
-  <div id="menuAddForm" class="card-surface mb-4 d-none">
-    <form method="POST" action="/admin-client/menu/add" class="row g-3">
-      <div class="col-md-4">
-        <label class="form-label">Item Name</label>
-        <input type="text" name="name" class="form-control" placeholder="Margherita Pizza" required>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Category</label>
-        <input type="text" name="category" class="form-control" placeholder="Main Course">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Price (PHP)</label>
-        <input type="text" name="price" class="form-control" placeholder="12.99">
-      </div>
-      <div class="col-md-8">
-        <label class="form-label">Description</label>
-        <input type="text" name="description" class="form-control" placeholder="Fresh tomato, mozzarella, and basil on crispy crust">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Status</label>
-        <select name="status" class="form-select">
-          <option value="Live" selected>Live</option>
-          <option value="Draft">Draft</option>
-        </select>
-      </div>
-      <div class="col-12 d-flex gap-2">
-        <button type="submit" class="btn btn-dark" style="background: var(--brand-dark);">Save Item</button>
-        <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('menuAddForm').classList.add('d-none')">Cancel</button>
-      </div>
-    </form>
-  </div>
 
     <div class="category-tabs mb-4">
       <button class="category-btn active">All Items</button>
@@ -243,7 +248,123 @@
       <button class="category-btn">Desserts</button>
     </div>
 
-    <div class="kiosk-grid">
+    <div id="menuEditor" class="menu-editor mb-4 d-none">
+      <div class="menu-editor-header mb-3">
+        <div>
+          <h5 class="fw-bold mb-1" style="color: var(--brand-dark)">Edit Menu</h5>
+          <p class="text-secondary small mb-0">Update items or add new ones.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <input type="text" class="form-control form-control-sm" id="menuSearch" placeholder="Search items..." aria-label="Search menu items">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="menuEditorClose">Close</button>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-dark mb-3" style="background: var(--brand-dark);" id="menuAddToggle">Add Item</button>
+      <form method="POST" action="/admin-client/menu/add" class="row g-3 mb-4 d-none" id="menuAddForm">
+        <div class="col-md-4">
+          <label class="form-label">Item Name</label>
+          <input type="text" name="name" class="form-control" placeholder="Margherita Pizza" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Category</label>
+          <input type="text" name="category" class="form-control" placeholder="Main Course">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Price ({{ cfg.get('currency_code','PHP') }})</label>
+          <input type="text" name="price" class="form-control" placeholder="12.99">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Description</label>
+          <input type="text" name="description" class="form-control" placeholder="Fresh tomato, mozzarella, and basil on crispy crust">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select">
+            <option value="Live" selected>Live</option>
+            <option value="Draft">Draft</option>
+          </select>
+        </div>
+        <div class="col-12 d-flex gap-2">
+          <button type="submit" class="btn btn-dark" style="background: var(--brand-dark);">Save Item</button>
+          <button type="button" class="btn btn-outline-secondary" id="menuAddCancel">Cancel</button>
+        </div>
+      </form>
+
+      <form method="POST" action="/admin-client/menu/update" class="row g-3 mb-4 d-none" id="menuEditForm">
+        <input type="hidden" name="item_index" id="menuEditIndex">
+        <div class="col-md-4">
+          <label class="form-label">Item Name</label>
+          <input type="text" name="name" class="form-control" id="menuEditName" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Category</label>
+          <input type="text" name="category" class="form-control" id="menuEditCategory">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Price ({{ cfg.get('currency_code','PHP') }})</label>
+          <input type="text" name="price" class="form-control" id="menuEditPrice">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Description</label>
+          <input type="text" name="description" class="form-control" id="menuEditDescription">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Status</label>
+          <select name="status" class="form-select" id="menuEditStatus">
+            <option value="Live">Live</option>
+            <option value="Draft">Draft</option>
+          </select>
+        </div>
+        <div class="col-12 d-flex gap-2">
+          <button type="submit" class="btn btn-dark" style="background: var(--brand-dark);">Save Changes</button>
+          <button type="button" class="btn btn-outline-secondary" id="menuEditCancel">Cancel</button>
+        </div>
+      </form>
+
+      <div class="table-responsive" id="menuItemsList">
+        <table class="menu-editor-table">
+          <thead>
+            <tr>
+              <th style="width: 18%">Name</th>
+              <th style="width: 26%">Description</th>
+              <th style="width: 12%">Price</th>
+              <th style="width: 16%">Category</th>
+              <th style="width: 12%">Status</th>
+              <th style="width: 16%">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in cfg.get('menu_items', []) %}
+            <tr data-menu-row>
+              <td>{{ item.get('name','') }}</td>
+              <td>{{ item.get('description','') }}</td>
+              <td>{{ cfg.get('currency_symbol','₱') }}{{ item.get('price','') }}</td>
+              <td>{{ item.get('category','') }}</td>
+              <td>{{ item.get('status','') }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-dark"
+                  data-menu-edit-row
+                  data-index="{{ loop.index0 }}"
+                  data-name="{{ item.get('name','') }}"
+                  data-description="{{ item.get('description','') }}"
+                  data-price="{{ item.get('price','') }}"
+                  data-category="{{ item.get('category','') }}"
+                  data-status="{{ item.get('status','') }}"
+                >
+                  Edit
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="kiosk-grid" id="menuGrid">
         <div class="upload-menu-card" id="uploadCard" onclick="document.getElementById('menuUpload').click()">
           <input type="file" id="menuUpload" hidden accept=".pdf,.txt">
             <div class="upload-icon-wrap">
@@ -272,8 +393,7 @@
             </div>
             <p class="text-secondary small">{{ item.get('description','') }}</p>
             <div class="d-flex justify-content-between align-items-center mt-3">
-              <span class="menu-card-price">₱{{ item.get('price','') }}</span>
-              <button class="btn btn-sm btn-light border" type="button" disabled><i class="fa-solid fa-pen"></i></button>
+              <span class="menu-card-price">{{ cfg.get('currency_symbol','₱') }}{{ item.get('price','') }}</span>
             </div>
           </div>
         </div>
@@ -392,6 +512,133 @@
     } catch (err) {
       showToast('error', 'Failed to clear menu items');
     }
+  }
+
+  const menuEditor = document.getElementById('menuEditor');
+  const menuGrid = document.getElementById('menuGrid');
+  const menuEditorToggle = document.getElementById('menuEditorToggle');
+  const menuEditorClose = document.getElementById('menuEditorClose');
+  const menuSearch = document.getElementById('menuSearch');
+  const menuAddToggle = document.getElementById('menuAddToggle');
+  const menuAddForm = document.getElementById('menuAddForm');
+  const menuAddCancel = document.getElementById('menuAddCancel');
+  const menuEditForm = document.getElementById('menuEditForm');
+  const menuEditCancel = document.getElementById('menuEditCancel');
+  const menuEditIndex = document.getElementById('menuEditIndex');
+  const menuEditName = document.getElementById('menuEditName');
+  const menuEditDescription = document.getElementById('menuEditDescription');
+  const menuEditPrice = document.getElementById('menuEditPrice');
+  const menuEditCategory = document.getElementById('menuEditCategory');
+  const menuEditStatus = document.getElementById('menuEditStatus');
+  const menuItemsList = document.getElementById('menuItemsList');
+
+  function toggleMenuEditor(show) {
+    if (!menuEditor) return;
+    const shouldShow = typeof show === 'boolean' ? show : menuEditor.classList.contains('d-none');
+    menuEditor.classList.toggle('d-none', !shouldShow);
+    if (menuGrid) {
+      menuGrid.classList.toggle('d-none', shouldShow);
+    }
+    if (shouldShow) {
+      menuEditor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  if (menuEditorToggle) {
+    menuEditorToggle.addEventListener('click', () => toggleMenuEditor());
+  }
+  if (menuEditorClose) {
+    menuEditorClose.addEventListener('click', () => toggleMenuEditor(false));
+  }
+
+  if (menuAddToggle && menuAddForm) {
+    menuAddToggle.addEventListener('click', () => {
+      menuAddForm.classList.toggle('d-none');
+      if (menuEditForm) menuEditForm.classList.add('d-none');
+      if (menuItemsList) {
+        menuItemsList.classList.toggle('d-none', !menuAddForm.classList.contains('d-none'));
+      }
+      if (!menuAddForm.classList.contains('d-none')) {
+        const firstInput = menuAddForm.querySelector('input, select, textarea');
+        if (firstInput) firstInput.focus();
+      }
+    });
+  }
+  if (menuAddCancel && menuAddForm) {
+    menuAddCancel.addEventListener('click', () => {
+      menuAddForm.classList.add('d-none');
+      if (menuItemsList) {
+        menuItemsList.classList.remove('d-none');
+      }
+    });
+  }
+
+  if (menuEditCancel && menuEditForm) {
+    menuEditCancel.addEventListener('click', () => {
+      menuEditForm.classList.add('d-none');
+      if (menuItemsList) {
+        menuItemsList.classList.remove('d-none');
+      }
+    });
+  }
+
+  document.querySelectorAll('[data-menu-edit-row]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!menuEditForm) return;
+      if (menuAddForm) menuAddForm.classList.add('d-none');
+      if (menuItemsList) menuItemsList.classList.add('d-none');
+      menuEditForm.classList.remove('d-none');
+      if (menuEditIndex) menuEditIndex.value = btn.dataset.index || '';
+      if (menuEditName) menuEditName.value = btn.dataset.name || '';
+      if (menuEditDescription) menuEditDescription.value = btn.dataset.description || '';
+      if (menuEditPrice) menuEditPrice.value = btn.dataset.price || '';
+      if (menuEditCategory) menuEditCategory.value = btn.dataset.category || '';
+      if (menuEditStatus) menuEditStatus.value = btn.dataset.status || 'Live';
+      if (menuEditName) menuEditName.focus();
+    });
+  });
+
+  if (menuAddForm) {
+    menuAddForm.addEventListener('submit', () => {
+      try {
+        sessionStorage.setItem('menuEditorOpen', 'true');
+      } catch (err) {
+        /* ignore storage errors */
+      }
+    });
+  }
+
+  if (menuEditForm) {
+    menuEditForm.addEventListener('submit', () => {
+      try {
+        sessionStorage.setItem('menuEditorOpen', 'true');
+      } catch (err) {
+        /* ignore storage errors */
+      }
+    });
+  }
+
+  try {
+    const shouldOpenEditor = sessionStorage.getItem('menuEditorOpen') === 'true';
+    if (shouldOpenEditor) {
+      toggleMenuEditor(true);
+      if (menuAddForm) menuAddForm.classList.add('d-none');
+      if (menuEditForm) menuEditForm.classList.add('d-none');
+      if (menuItemsList) menuItemsList.classList.remove('d-none');
+    }
+    sessionStorage.removeItem('menuEditorOpen');
+  } catch (err) {
+    /* ignore storage errors */
+  }
+
+  if (menuSearch) {
+    menuSearch.addEventListener('input', () => {
+      const query = menuSearch.value.trim().toLowerCase();
+      document.querySelectorAll('[data-menu-row]').forEach((row) => {
+        const text = row.textContent.toLowerCase();
+        row.classList.toggle('d-none', query && !text.includes(query));
+      });
+    });
   }
 </script>
 {% endblock %}

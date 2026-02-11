@@ -149,6 +149,7 @@ document.getElementById('txt').addEventListener('keydown', (e) => {
 function buildMenuText(cfg) {
     if (!cfg) return '';
     const items = cfg.menu_items || [];
+    const currency = cfg.currency_symbol || '₱';
     if (items.length) {
         const lines = items.map(item => {
             const name = (item.name || '').trim();
@@ -157,7 +158,7 @@ function buildMenuText(cfg) {
             const price = (item.price || '').trim();
             let line = name;
             if (desc) line += ' — ' + desc;
-            if (price) line += ' (₱' + price + ')';
+            if (price) line += ' (' + currency + price + ')';
             return line;
         }).filter(Boolean);
         if (lines.length) return lines.join('\n');
