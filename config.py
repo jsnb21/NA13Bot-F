@@ -75,10 +75,22 @@ def init_db():
                       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                       email         TEXT UNIQUE NOT NULL,
                       password_hash TEXT NOT NULL,
+                      meta          JSONB,
+                      restaurant_id UUID,
                       created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
                     );
                     """
                 ).format(sql.Identifier(schema))
+            )
+            
+            # Add columns for existing tables
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.accounts ADD COLUMN IF NOT EXISTS meta JSONB")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.accounts ADD COLUMN IF NOT EXISTS restaurant_id UUID")
+                .format(sql.Identifier(schema))
             )
 
             cur.execute(

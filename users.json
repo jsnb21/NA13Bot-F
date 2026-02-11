@@ -53,5 +53,15 @@
       "sub_color": "#ffc832",
       "restaurant_id": "15d6d150-13a0-4704-adde-04efd6be2e89"
     }
+  },
+  "vercelesjames27@gmail.com": {
+    "password_hash": "",
+    "meta": {
+      "establishment_name": "Chicken Joy",
+      "logo_url": "",
+      "main_color": "#db0000",
+      "sub_color": "#0b343d",
+      "restaurant_id": "9376d120-a0a2-439c-8d22-00b6580e1dba"
+    }
   }
 }

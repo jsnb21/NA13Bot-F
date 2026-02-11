@@ -2,11 +2,10 @@ import json
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
-from psycopg import sql
-from config import get_connection, get_db_schema
-
 
 CFG_PATH = Path(__file__).parent / 'config.json'
+
+#Depracated
 USERS_PATH = Path(__file__).parent / 'users.json'
 
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -16,7 +15,7 @@ def load_config(restaurant_id: str = None):
 
     try:
         brand = _fetch_brand_settings(restaurant_id)
-        if brand:
+        if brand:   
             cfg.update(brand)
 
         menu_items = _fetch_menu_items(restaurant_id)
@@ -295,49 +294,133 @@ def save_users(data: dict):
 
 
 def add_user(email: str, password: str = None, meta: dict = None):
-    users = load_users()
-    if email in users:
-        return False
+    """Add a new user to the database."""
+    schema = get_db_schema()
     password_hash = ''
     if password:
         password_hash = generate_password_hash(password)
-    users[email] = {
-        'password_hash': password_hash,
-        'meta': meta or {}
-    }
-    save_users(users)
-    return True
+    
+    restaurant_id = (meta or {}).get('restaurant_id') if meta else None
+    meta_json = json.dumps(meta) if meta else None
+    
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """INSERT INTO {}.accounts (email, password_hash, meta, restaurant_id)
+                           VALUES (%s, %s, %s::jsonb, %s)
+                           ON CONFLICT (email) DO NOTHING
+                           RETURNING id"""
+                    ).format(sql.Identifier(schema)),
+                    [email, password_hash, meta_json, restaurant_id]
+                )
+                result = cur.fetchone()
+                return result is not None
+    except Exception:
+        return False
 
 
 def verify_user(email: str, password: str):
-    users = load_users()
-    u = users.get(email)
-    if not u:
+    """Verify user credentials against the database."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        "SELECT password_hash FROM {}.accounts WHERE email = %s"
+                    ).format(sql.Identifier(schema)),
+                    [email]
+                )
+                row = cur.fetchone()
+                if not row or not row[0]:
+                    return False
+                return check_password_hash(row[0], password)
+    except Exception:
         return False
-    password_hash = u.get('password_hash', '')
-    if not password_hash:
-        return False
-    return check_password_hash(password_hash, password)
 
 
 def user_exists(email: str) -> bool:
-    users = load_users()
-    return email in users
+    """Check if a user exists in the database."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        "SELECT 1 FROM {}.accounts WHERE email = %s"
+                    ).format(sql.Identifier(schema)),
+                    [email]
+                )
+                return cur.fetchone() is not None
+    except Exception:
+        return False
 
 
 def get_user(email: str):
-    users = load_users()
-    return users.get(email)
+    """Get user data from the database."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        "SELECT id, email, password_hash, meta, restaurant_id, created_at FROM {}.accounts WHERE email = %s"
+                    ).format(sql.Identifier(schema)),
+                    [email]
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                return {
+                    'id': str(row[0]),
+                    'email': row[1],
+                    'password_hash': row[2],
+                    'meta': row[3] or {},
+                    'restaurant_id': str(row[4]) if row[4] else None,
+                    'created_at': row[5]
+                }
+    except Exception:
+        return None
 
 
 def update_user_meta(email: str, updates: dict):
-    users = load_users()
-    u = users.get(email)
-    if not u:
+    """Update user metadata in the database."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Get current meta
+                cur.execute(
+                    sql.SQL("SELECT meta FROM {}.accounts WHERE email = %s").format(sql.Identifier(schema)),
+                    [email]
+                )
+                row = cur.fetchone()
+                if not row:
+                    return False
+                
+                # Merge updates
+                meta = row[0] or {}
+                meta.update(updates or {})
+                
+                # Update restaurant_id if present in updates
+                restaurant_id = updates.get('restaurant_id')
+                
+                if restaurant_id:
+                    cur.execute(
+                        sql.SQL(
+                            "UPDATE {}.accounts SET meta = %s::jsonb, restaurant_id = %s WHERE email = %s"
+                        ).format(sql.Identifier(schema)),
+                        [json.dumps(meta), restaurant_id, email]
+                    )
+                else:
+                    cur.execute(
+                        sql.SQL(
+                            "UPDATE {}.accounts SET meta = %s::jsonb WHERE email = %s"
+                        ).format(sql.Identifier(schema)),
+                        [json.dumps(meta), email]
+                    )
+                return True
+    except Exception:
         return False
-    meta = u.get('meta') or {}
-    meta.update(updates or {})
-    u['meta'] = meta
-    users[email] = u
-    save_users(users)
-    return True
