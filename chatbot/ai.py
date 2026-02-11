@@ -6,16 +6,28 @@ class GeminiChatbot:
         self.api_key = get_google_api_key()
         self.client = genai.Client(api_key=self.api_key) if self.api_key else None
         
-    def get_response(self, user_message, system_prompt):
+    def get_response(self, user_message, system_prompt, conversation_history=None):
         """Generate AI response using Gemini"""
         if not self.client:
             return 'Google API key not configured.'
         try:
+            # Build conversation contents
+            contents = []
+            
+            # Add conversation history if provided
+            if conversation_history:
+                for msg in conversation_history:
+                    role = 'user' if msg.get('role') == 'user' else 'model'
+                    content = msg.get('content', '')
+                    if content:
+                        contents.append({"role": role, "parts": [{"text": content}]})
+            
+            # Add current user message
+            contents.append({"role": "user", "parts": [{"text": user_message}]})
+            
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash',
-                contents=[
-                    {"role": "user", "parts": [{"text": user_message}]}
-                ],
+                contents=contents,
                 config=genai.types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     temperature=0.7,
@@ -26,7 +38,16 @@ class GeminiChatbot:
             )
             return response.text
         except Exception as e:
-            return f'Sorry, I encountered an error: {str(e)}'
+            error_str = str(e)
+            # Check for rate limit / quota errors
+            if '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str or 'quota' in error_str.lower():
+                return 'I apologize, but I\'ve reached my usage limit for now. Please try again in a minute or contact support if this persists.'
+            # Check for authentication errors
+            elif '401' in error_str or 'UNAUTHENTICATED' in error_str or 'API key' in error_str:
+                return 'There\'s an issue with the API configuration. Please contact support.'
+            # Generic error
+            else:
+                return f'Sorry, I encountered an error. Please try again or contact support if this continues.'
         
     def list_models(self):
         """List available Gemini models."""

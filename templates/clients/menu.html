@@ -339,7 +339,7 @@
             <tr data-menu-row>
               <td>{{ item.get('name','') }}</td>
               <td>{{ item.get('description','') }}</td>
-              <td>{{ cfg.get('currency_symbol','₱') }}{{ item.get('price','') }}</td>
+              <td>{{ cfg.get('currency_symbol') }}{{ item.get('price','') }}</td>
               <td>{{ item.get('category','') }}</td>
               <td>{{ item.get('status','') }}</td>
               <td>
@@ -393,7 +393,7 @@
             </div>
             <p class="text-secondary small">{{ item.get('description','') }}</p>
             <div class="d-flex justify-content-between align-items-center mt-3">
-              <span class="menu-card-price">{{ cfg.get('currency_symbol','₱') or '₱' }}{{ item.get('price','') or '' }}</span>
+              <span class="menu-card-price">{{ cfg.get('currency_symbol') or '' }}{{ item.get('price','') or '' }}</span>
             </div>
           </div>
         </div>

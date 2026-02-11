@@ -1,11 +1,14 @@
 // 1. Move config to global scope so all functions can access it
 let chatbotConfig = {};
 
+// Conversation history
+let conversationHistory = [];
+
 // Order state management
 let orderState = {
     items: [],
     customerName: '',
-    customerEmail: '',
+    tableNumber: '',
     isCollectingOrder: false
 };
 
@@ -158,7 +161,7 @@ function postOrderForm(orderData) {
         </div>
         <form id="order-form" style="display: flex; flex-direction: column; gap: 8px;">
             <input type="text" id="order-name" placeholder="Your name" required style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit;">
-            <input type="email" id="order-email" placeholder="Your email" required style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit;">
+            <input type="text" id="order-table" placeholder="Table number" required style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit;">
             <button type="button" id="confirm-order-btn" style="padding: 10px; background: #0b343d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">Confirm & Place Order</button>
         </form>
     `;
@@ -173,15 +176,15 @@ function postOrderForm(orderData) {
     
     document.getElementById('confirm-order-btn').addEventListener('click', async () => {
         const name = document.getElementById('order-name').value.trim();
-        const email = document.getElementById('order-email').value.trim();
+        const tableNumber = document.getElementById('order-table').value.trim();
         
-        if (!name || !email) {
-            alert('Please provide your name and email');
+        if (!name || !tableNumber) {
+            alert('Please provide your name and table number');
             return;
         }
         
         orderState.customerName = name;
-        orderState.customerEmail = email;
+        orderState.tableNumber = tableNumber;
         orderState.isCollectingOrder = false;
         
         // Disable button and show loading
@@ -195,12 +198,22 @@ function postOrderForm(orderData) {
 
 async function sendToAI(message) {
     try {
+        // Add user message to history
+        conversationHistory.push({ role: 'user', content: message });
+        
         const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
+            body: JSON.stringify({ 
+                message,
+                history: conversationHistory.slice(0, -1) // Send history excluding current message
+            })
         });
         const data = await res.json();
+        
+        // Add bot response to history
+        const botResponse = data.response || 'Sorry, I could not process that.';
+        conversationHistory.push({ role: 'assistant', content: botResponse });
         
         // Check if the response contains an order ready
         if (data.order_ready && data.order_items && data.order_items.length > 0) {
@@ -208,11 +221,11 @@ async function sendToAI(message) {
                 orderReady: true,
                 items: data.order_items,
                 total: data.order_total,
-                message: data.response
+                message: botResponse
             };
         }
         
-        return data.response || 'Sorry, I could not process that.';
+        return botResponse;
     } catch (e) {
         console.error('Chat error:', e);
         return 'Sorry, I encountered an error. Please try again.';
@@ -267,8 +280,8 @@ async function submitOrder() {
         return;
     }
     
-    if (!orderState.customerName || !orderState.customerEmail) {
-        postMessage('Please provide your name and email to confirm the order.', 'bot');
+    if (!orderState.customerName || !orderState.tableNumber) {
+        postMessage('Please provide your name and table number to confirm the order.', 'bot');
         return;
     }
     
@@ -284,7 +297,7 @@ async function submitOrder() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 customer_name: orderState.customerName,
-                customer_email: orderState.customerEmail,
+                table_number: orderState.tableNumber,
                 items: orderState.items,
                 total_amount: totalAmount
             })
@@ -294,8 +307,9 @@ async function submitOrder() {
         
         if (response.ok) {
             postMessage(`✓ ${data.message}`, 'bot');
-            // Reset order state
-            orderState = { items: [], customerName: '', customerEmail: '', isCollectingOrder: false };
+            // Reset order state and conversation history
+            orderState = { items: [], customerName: '', tableNumber: '', isCollectingOrder: false };
+            conversationHistory = [];
         } else {
             postMessage(`Order failed: ${data.error}`, 'bot');
         }

@@ -18,7 +18,9 @@ def extract_order_items(response_text, menu_items, currency_symbol):
         if not menu_name or not menu_price:
             continue
         
-        price_float = float(menu_price)
+        # Remove any currency symbols and non-numeric characters except decimal point
+        cleaned_price = re.sub(r'[^\d.]', '', menu_price)
+        price_float = float(cleaned_price) if cleaned_price else 0.0
         
         # Pattern 1: "1 Item Name" or "2x Item Name"
         pattern1 = rf'(\d+)\s*x?\s*{re.escape(menu_name)}'
@@ -70,6 +72,7 @@ def api_chat():
     """Handle chat messages."""
     data = request.get_json()
     user_message = data.get('message', '')
+    conversation_history = data.get('history', [])
     
     if not user_message:
         return jsonify({'error': 'No message provided'}), 400
@@ -100,7 +103,7 @@ def api_chat():
 
     training_context = build_training_context(restaurant_id, user_message)
     system_prompt = build_system_prompt(establishment_name, menu_text, training_context)
-    response = ai.get_response(user_message, system_prompt)
+    response = ai.get_response(user_message, system_prompt, conversation_history)
     
     # Check if response indicates order is ready
     if '[READY_TO_ORDER]' in response:
@@ -135,7 +138,7 @@ def api_place_order():
         
         order_data = {
             'customer_name': data.get('customer_name', '').strip(),
-            'customer_email': data.get('customer_email', '').strip(),
+            'table_number': data.get('table_number', '').strip(),
             'items': data.get('items', []),
             'total_amount': data.get('total_amount', 0),
             'status': 'pending'
@@ -144,6 +147,9 @@ def api_place_order():
         # Validate required fields
         if not order_data['customer_name']:
             return jsonify({'error': 'Customer name is required'}), 400
+        
+        if not order_data['table_number']:
+            return jsonify({'error': 'Table number is required'}), 400
         
         if not order_data['items']:
             return jsonify({'error': 'Order must contain at least one item'}), 400
