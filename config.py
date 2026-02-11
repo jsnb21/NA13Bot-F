@@ -164,6 +164,18 @@ def init_db():
                     "CREATE INDEX IF NOT EXISTS menu_items_restaurant_id_idx ON {}.menu_items (restaurant_id)"
                 ).format(sql.Identifier(schema))
             )
+            
+            # Additional performance indexes
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS menu_items_restaurant_category_idx ON {}.menu_items (restaurant_id, category)"
+                ).format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS menu_items_restaurant_status_idx ON {}.menu_items (restaurant_id, status)"
+                ).format(sql.Identifier(schema))
+            )
 
             cur.execute(
                 sql.SQL("UPDATE {}.brand_settings SET restaurant_id = gen_random_uuid() WHERE restaurant_id IS NULL")

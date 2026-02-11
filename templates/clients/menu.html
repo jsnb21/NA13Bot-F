@@ -27,6 +27,7 @@
     text-align: center;
     min-height: 320px;
     cursor: pointer;
+    position: relative;
   }
 
   .upload-menu-card:hover {
@@ -34,6 +35,12 @@
     background: #fff;
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  }
+  
+  .upload-menu-card.uploading {
+    border-color: #667eea;
+    background: #f0f4ff;
+    pointer-events: none;
   }
 
   .upload-icon-wrap {
@@ -47,6 +54,49 @@
     justify-content: center;
     font-size: 1.5rem;
     margin-bottom: 20px;
+  }
+  
+  .upload-progress-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+  }
+  
+  .upload-progress-overlay.active {
+    display: flex;
+  }
+  
+  .upload-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e0e0e0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .upload-status-text {
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 5px;
+  }
+  
+  .upload-filename {
+    font-size: 0.85rem;
+    color: #666;
   }
 
   /* Standard Menu Card Modernization */
@@ -89,6 +139,51 @@
     color: white;
     border-color: var(--brand-dark);
   }
+  
+  /* Toast Notifications */
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+  }
+  .toast-notification {
+    background: white;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(400px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  .toast-notification.success {
+    border-left: 4px solid #4caf50;
+  }
+  .toast-notification.error {
+    border-left: 4px solid #f44336;
+  }
+  .toast-notification .toast-icon {
+    font-size: 1.5rem;
+  }
+  .toast-notification .toast-message {
+    flex: 1;
+    font-weight: 500;
+  }
+  .toast-notification .toast-close {
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .toast-notification .toast-close:hover {
+    opacity: 1;
+  }
 </style>
 {% endblock %}
 
@@ -99,9 +194,14 @@
             <h2 class="fw-bold" style="color: var(--brand-dark)">Menu Kiosk</h2>
             <p class="text-secondary mb-0">Manage digital menu items and AI training documents</p>
         </div>
-    <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" onclick="document.getElementById('menuAddForm').classList.toggle('d-none')">
-      <i class="fas fa-plus me-2"></i>Add Manual Item
-    </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger px-3 py-2" style="border-radius: 10px;" type="button" onclick="clearAllMenu()">
+                <i class="fas fa-trash me-2"></i>Clear All Menu
+            </button>
+            <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" onclick="document.getElementById('menuAddForm').classList.toggle('d-none')">
+                <i class="fas fa-plus me-2"></i>Add Manual Item
+            </button>
+        </div>
     </div>
 
   <div id="menuAddForm" class="card-surface mb-4 d-none">
@@ -144,7 +244,7 @@
     </div>
 
     <div class="kiosk-grid">
-        <div class="upload-menu-card" onclick="document.getElementById('menuUpload').click()">
+        <div class="upload-menu-card" id="uploadCard" onclick="document.getElementById('menuUpload').click()">
           <input type="file" id="menuUpload" hidden accept=".pdf,.txt">
             <div class="upload-icon-wrap">
                 <i class="fa-solid fa-file-pdf"></i>
@@ -152,6 +252,12 @@
             <h5 class="fw-bold mb-2">Sync Menu File</h5>
             <p class="text-secondary small mb-4">Upload a PDF or TXT menu to train the AI and keep items in sync.</p>
             <span class="btn btn-sm btn-outline-dark px-3 fw-bold" style="border-radius: 8px;">Browse Files</span>
+            
+            <div class="upload-progress-overlay" id="uploadProgress">
+                <div class="upload-spinner"></div>
+                <div class="upload-status-text">Processing menu file...</div>
+                <div class="upload-filename" id="uploadFilename"></div>
+            </div>
         </div>
 
         {% for item in cfg.get('menu_items', []) %}
@@ -177,6 +283,40 @@
 
 <script>
   const menuUploadInput = document.getElementById('menuUpload');
+  const uploadCard = document.getElementById('uploadCard');
+  const uploadProgress = document.getElementById('uploadProgress');
+  const uploadFilename = document.getElementById('uploadFilename');
+
+  // Toast notification function
+  function showToast(type, message) {
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    
+    const icons = {
+      success: '✓',
+      error: '✕'
+    };
+    
+    toast.innerHTML = `
+      <div class="toast-icon">${icons[type] || '✓'}</div>
+      <div class="toast-message">${message}</div>
+      <div class="toast-close" onclick="this.parentElement.remove()">✕</div>
+    `;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.animation = 'slideIn 0.3s ease reverse';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
 
   menuUploadInput.addEventListener('change', async () => {
     if (!menuUploadInput.files || menuUploadInput.files.length === 0) {
@@ -184,6 +324,11 @@
     }
 
     const file = menuUploadInput.files[0];
+    
+    // Show loading state
+    uploadCard.classList.add('uploading');
+    uploadProgress.classList.add('active');
+    uploadFilename.textContent = file.name;
 
     try {
       const formData = new FormData();
@@ -193,6 +338,7 @@
         body: formData,
         credentials: 'same-origin'
       });
+      
       if (!res.ok) {
         let message = 'Upload failed. Please check the file format.';
         try {
@@ -200,16 +346,52 @@
           if (data && data.error) message = data.error;
           if (data && data.detail) message = `${message}: ${data.detail}`;
         } catch (err) {}
-        alert(message);
+        showToast('error', message);
       } else {
-        alert('Menu file uploaded and items updated.');
-        window.location.reload();
+        const data = await res.json();
+        const itemCount = data.saved || 0;
+        showToast('success', `Successfully imported ${itemCount} menu items!`);
+        
+        // Reload after brief delay to show success state
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
     } catch (err) {
-      alert('Upload failed. Please try again.');
+      showToast('error', 'Upload failed. Please try again.');
     } finally {
+      // Hide loading state
+      setTimeout(() => {
+        uploadCard.classList.remove('uploading');
+        uploadProgress.classList.remove('active');
+      }, 500);
       menuUploadInput.value = '';
     }
   });
+
+  // Clear all menu items
+  async function clearAllMenu() {
+    if (!confirm('Are you sure you want to delete ALL menu items? This cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      const res = await fetch('/admin-client/settings/clear-menu', {
+        method: 'POST',
+        credentials: 'same-origin'
+      });
+      
+      if (res.ok) {
+        showToast('success', 'All menu items cleared successfully!');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        showToast('error', 'Failed to clear menu items');
+      }
+    } catch (err) {
+      showToast('error', 'Failed to clear menu items');
+    }
+  }
 </script>
 {% endblock %}

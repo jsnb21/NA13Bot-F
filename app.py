@@ -580,8 +580,17 @@ def menu_upload_menu_file():
         if not items:
             return jsonify({'error': 'No menu items found in file'}), 400
 
+        # Deduplicate items by name (case-insensitive)
+        seen_names = set()
+        unique_items = []
+        for item in items:
+            name_lower = (item.get('name') or '').strip().lower()
+            if name_lower and name_lower not in seen_names:
+                seen_names.add(name_lower)
+                unique_items.append(item)
+
         cfg = load_config(restaurant_id)
-        cfg['menu_items'] = items
+        cfg['menu_items'] = unique_items
         save_config(cfg, restaurant_id)
 
         save_training_upload_bytes(restaurant_id, file.filename, data_bytes)
