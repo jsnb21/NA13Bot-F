@@ -5,6 +5,7 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -21,9 +22,7 @@
         <div class="col-md-8">
             <div class="report-card">
                 <h5 class="mb-3">Revenue Over Time</h5>
-                <div class="chart-placeholder">
-                    📊 Revenue Chart Placeholder
-                </div>
+                <canvas id="revenueChart" height="80"></canvas>
                 <small class="text-muted">Total Revenue This Month: {{ cfg.get('currency_symbol','₱') }}12,450</small>
             </div>
         </div>
@@ -56,17 +55,13 @@
         <div class="col-md-6">
             <div class="report-card">
                 <h5 class="mb-3">Orders by Day of Week</h5>
-                <div class="chart-placeholder">
-                    📈 Daily Orders Chart
-                </div>
+                <canvas id="ordersChart" height="80"></canvas>
             </div>
         </div>
         <div class="col-md-6">
             <div class="report-card">
                 <h5 class="mb-3">Customer Growth</h5>
-                <div class="chart-placeholder">
-                    📉 Growth Trend Chart
-                </div>
+                <canvas id="growthChart" height="80"></canvas>
             </div>
         </div>
     </div>
@@ -127,4 +122,6 @@
         </div>
     </div>
 </div>
+
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
 {% endblock %}
