@@ -41,7 +41,7 @@ async function sendChat(){
     appendMessage('user', text);
     adminChatInput.value = '';
     try{
-        const res = await fetch('/admin-client/chat', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({message:text})});
+        const res = await fetch('/chat', {method:'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({message:text})});
         if(res.ok){
             const j = await res.json();
             appendMessage('bot', j.reply || 'Sorry, no reply.');

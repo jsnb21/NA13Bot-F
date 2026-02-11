@@ -347,7 +347,7 @@
 
             clearBtn.disabled = true;
             try {
-                const res = await fetch('/admin-client/settings/clear-menu', {
+                const res = await fetch('/settings/clear-menu', {
                     method: 'POST',
                     credentials: 'same-origin'
                 });

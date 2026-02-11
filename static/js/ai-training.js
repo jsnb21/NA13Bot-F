@@ -11,8 +11,8 @@ const selectAll = document.getElementById('selectAll');
 const selectedCount = document.getElementById('selectedCount');
 const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
 
-const FILES_ENDPOINT = '/admin-client/ai-training/files';
-const UPLOAD_ENDPOINT = '/admin-client/ai-training/upload';
+const FILES_ENDPOINT = '/ai-training/files';
+const UPLOAD_ENDPOINT = '/ai-training/upload';
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const ALLOWED_EXTENSIONS = ['txt', 'pdf', 'docx', 'json', 'csv'];
 

@@ -261,7 +261,7 @@
       </div>
 
       <button type="button" class="btn btn-dark mb-3" style="background: var(--brand-dark);" id="menuAddToggle">Add Item</button>
-      <form method="POST" action="/admin-client/menu/add" class="row g-3 mb-4 d-none" id="menuAddForm">
+      <form method="POST" action="/menu/add" class="row g-3 mb-4 d-none" id="menuAddForm">
         <div class="col-md-4">
           <label class="form-label">Item Name</label>
           <input type="text" name="name" class="form-control" placeholder="Margherita Pizza" required>
@@ -291,7 +291,7 @@
         </div>
       </form>
 
-      <form method="POST" action="/admin-client/menu/update" class="row g-3 mb-4 d-none" id="menuEditForm">
+      <form method="POST" action="/menu/update" class="row g-3 mb-4 d-none" id="menuEditForm">
         <input type="hidden" name="item_index" id="menuEditIndex">
         <div class="col-md-4">
           <label class="form-label">Item Name</label>
@@ -453,7 +453,7 @@
     try {
       const formData = new FormData();
       formData.append('menu_file', file, file.name);
-      const res = await fetch('/admin-client/menu/upload', {
+      const res = await fetch('/menu/upload', {
         method: 'POST',
         body: formData,
         credentials: 'same-origin'
@@ -496,7 +496,7 @@
     }
     
     try {
-      const res = await fetch('/admin-client/settings/clear-menu', {
+      const res = await fetch('/settings/clear-menu', {
         method: 'POST',
         credentials: 'same-origin'
       });

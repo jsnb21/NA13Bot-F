@@ -391,6 +391,62 @@ def api_models():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/chat', methods=['POST'])
+@login_required
+def admin_chat():
+    """Handle admin chat messages for the help bot."""
+    data = request.get_json()
+    user_message = data.get('message', '')
+    
+    if not user_message:
+        return jsonify({'error': 'No message provided'}), 400
+    
+    # Get fresh API key in case it was just configured
+    api_key = get_google_api_key()
+    if not api_key:
+        return jsonify({'reply': 'AI is not configured. Please add your Google API key in the settings.'}), 200
+    
+    client = genai.Client(api_key=api_key)
+    
+    try:
+        # Load config to get restaurant context
+        restaurant_id = get_current_restaurant_id()
+        cfg = load_config(restaurant_id)
+        establishment_name = cfg.get('establishment_name', 'your restaurant')
+        
+        # Create admin-specific prompt
+        system_prompt = f"""You are a helpful AI assistant for restaurant administrators.
+You help with:
+- Understanding the admin dashboard features
+- Menu management questions
+- Settings configuration
+- AI training tips
+- General restaurant management advice
+
+Restaurant name: {establishment_name}
+
+Respond in a friendly, helpful manner. Keep responses concise and focused on helping the administrator."""
+        
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                {"role": "user", "parts": [{"text": user_message}]}
+            ],
+            config=genai.types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.7,
+                max_output_tokens=500,
+                top_p=0.9,
+                top_k=40
+            )
+        )
+        
+        return jsonify({'reply': response.text})
+    
+    except Exception as e:
+        return jsonify({'reply': f'Sorry, I encountered an error: {str(e)}'}), 500
+
+
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     """Handle chat messages and return AI responses."""
@@ -485,7 +541,7 @@ def superadmin():
     return render_template('superadmin/superadmin.html', cfg=cfg)
 
 
-@app.route('/admin-client', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 @login_required
 def admin_client():
     if request.method == 'POST':
@@ -504,21 +560,21 @@ def admin_client():
     cfg = load_config(restaurant_id)
     return render_template('clients/admin-client.html', cfg=cfg)
 
-@app.route('/admin-client/dashboard')
+@app.route('/dashboard')
 @login_required
 def dashboard():
     restaurant_id = get_current_restaurant_id()
     cfg = load_config(restaurant_id)
     return render_template('clients/dashboard.html', cfg=cfg)
 
-@app.route('/admin-client/orders')
+@app.route('/orders')
 @login_required
 def orders():
     restaurant_id = get_current_restaurant_id()
     cfg = load_config(restaurant_id)
     return render_template('clients/orders.html', cfg=cfg)
 
-@app.route('/admin-client/menu')
+@app.route('/menu')
 @login_required
 def menu():
     restaurant_id = get_current_restaurant_id()
@@ -526,7 +582,7 @@ def menu():
     return render_template('clients/menu.html', cfg=cfg)
 
 
-@app.route('/admin-client/menu/add', methods=['POST'])
+@app.route('/menu/add', methods=['POST'])
 @login_required
 def menu_add_item():
     restaurant_id = get_current_restaurant_id()
@@ -553,7 +609,7 @@ def menu_add_item():
     return redirect(url_for('menu'))
 
 
-@app.route('/admin-client/menu/update', methods=['POST'])
+@app.route('/menu/update', methods=['POST'])
 @login_required
 def menu_update_item():
     restaurant_id = get_current_restaurant_id()
@@ -584,7 +640,7 @@ def menu_update_item():
     return redirect(url_for('menu'))
 
 
-@app.route('/admin-client/menu/upload', methods=['POST'])
+@app.route('/menu/upload', methods=['POST'])
 @login_required
 def menu_upload_menu_file():
     try:
@@ -632,21 +688,21 @@ def menu_upload_menu_file():
         app.logger.exception('Menu upload failed')
         return jsonify({'error': 'Menu upload failed', 'detail': str(exc)}), 500
 
-@app.route('/admin-client/customers')
+@app.route('/customers')
 @login_required
 def customers():
     restaurant_id = get_current_restaurant_id()
     cfg = load_config(restaurant_id)
     return render_template('clients/customers.html', cfg=cfg)
 
-@app.route('/admin-client/reports')
+@app.route('/reports')
 @login_required
 def reports():
     restaurant_id = get_current_restaurant_id()
     cfg = load_config(restaurant_id)
     return render_template('clients/reports.html', cfg=cfg)
 
-@app.route('/admin-client/settings', methods=['GET', 'POST'])
+@app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
     restaurant_id = get_current_restaurant_id()
@@ -720,7 +776,7 @@ def settings():
     return render_template('clients/settings.html', cfg=cfg)
 
 
-@app.route('/admin-client/settings/clear-menu', methods=['POST'])
+@app.route('/settings/clear-menu', methods=['POST'])
 @login_required
 def settings_clear_menu():
     restaurant_id = get_current_restaurant_id()
@@ -729,7 +785,7 @@ def settings_clear_menu():
     save_config(cfg, restaurant_id)
     return jsonify({'cleared': True})
 
-@app.route('/admin-client/ai-training', methods=['GET', 'POST'])
+@app.route('/ai-training', methods=['GET', 'POST'])
 @login_required
 def ai_training():
     restaurant_id = get_current_restaurant_id()
@@ -737,7 +793,7 @@ def ai_training():
     return render_template('clients/ai-training.html', cfg=cfg)
 
 
-@app.route('/admin-client/ai-training/files', methods=['GET'])
+@app.route('/ai-training/files', methods=['GET'])
 @login_required
 def ai_training_files():
     restaurant_id = get_current_restaurant_id()
@@ -766,7 +822,7 @@ def ai_training_files():
     return jsonify({'files': filtered})
 
 
-@app.route('/admin-client/ai-training/upload', methods=['POST'])
+@app.route('/ai-training/upload', methods=['POST'])
 @login_required
 def ai_training_upload():
     restaurant_id = get_current_restaurant_id()
@@ -816,7 +872,7 @@ def ai_training_upload():
     return jsonify({'saved': saved, 'errors': errors})
 
 
-@app.route('/admin-client/ai-training/files/<file_id>', methods=['DELETE'])
+@app.route('/ai-training/files/<file_id>', methods=['DELETE'])
 @login_required
 def ai_training_delete(file_id):
     restaurant_id = get_current_restaurant_id()
