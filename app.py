@@ -688,6 +688,73 @@ def menu_upload_menu_file():
         app.logger.exception('Menu upload failed')
         return jsonify({'error': 'Menu upload failed', 'detail': str(exc)}), 500
 
+# Order Management Routes
+from tools import save_order, get_orders, update_order_status
+
+@app.route('/api/orders/create', methods=['POST'])
+def api_create_order():
+    """Create a new order from chatbot or client."""
+    try:
+        data = request.get_json()
+        restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+        
+        if not restaurant_id:
+            return jsonify({'error': 'No restaurant ID provided'}), 400
+        
+        order_data = {
+            'customer_name': data.get('customer_name', ''),
+            'customer_email': data.get('customer_email', ''),
+            'items': data.get('items', []),
+            'total_amount': data.get('total_amount', 0),
+            'status': 'pending'
+        }
+        
+        order_id = save_order(restaurant_id, order_data)
+        if not order_id:
+            return jsonify({'error': 'Failed to save order'}), 500
+        
+        return jsonify({
+            'success': True,
+            'order_id': order_id,
+            'message': f'Order #{order_id} placed successfully!'
+        }), 201
+    except Exception as e:
+        app.logger.exception('Order creation failed')
+        return jsonify({'error': 'Failed to create order', 'detail': str(e)}), 500
+
+
+@app.route('/api/orders/list', methods=['GET'])
+@login_required
+def api_list_orders():
+    """List all orders for a restaurant."""
+    try:
+        restaurant_id = get_current_restaurant_id()
+        orders = get_orders(restaurant_id)
+        return jsonify({'orders': orders})
+    except Exception as e:
+        app.logger.exception('Listing orders failed')
+        return jsonify({'error': 'Failed to list orders', 'detail': str(e)}), 500
+
+
+@app.route('/api/orders/<order_id>/status', methods=['POST'])
+@login_required
+def api_update_order_status(order_id):
+    """Update order status."""
+    try:
+        data = request.get_json()
+        new_status = data.get('status', '').strip().lower()
+        
+        if new_status not in ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']:
+            return jsonify({'error': 'Invalid status'}), 400
+        
+        if update_order_status(order_id, new_status):
+            return jsonify({'success': True, 'message': f'Order status updated to {new_status}'})
+        else:
+            return jsonify({'error': 'Failed to update order status'}), 500
+    except Exception as e:
+        app.logger.exception('Order status update failed')
+        return jsonify({'error': 'Failed to update order status', 'detail': str(e)}), 500
+
 @app.route('/customers')
 @login_required
 def customers():

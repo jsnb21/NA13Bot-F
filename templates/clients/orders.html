@@ -9,7 +9,7 @@
             <h2 class="page-title">Orders</h2>
             <p class="page-subtitle">Track and manage customer orders.</p>
         </div>
-        <button class="page-action-btn" type="button">Export Orders</button>
+        <button class="page-action-btn" type="button" onclick="exportOrders()">Export Orders</button>
     </div>
 
     <div class="card-surface mb-4 text-center" style="height: calc(100vh - 140px); display:flex; flex-direction:column;">
@@ -29,10 +29,11 @@
         .card-surface .pagination { justify-content: center; }
         </style>
         <div style="display:flex; gap:10px; margin-bottom:15px; justify-content:center;">
-            <input type="text" class="form-control" placeholder="Search orders..." style="max-width:300px; display:inline-block;">
-            <select class="form-select" style="max-width:150px; display:inline-block;">
+            <input type="text" class="form-control" id="searchInput" placeholder="Search orders..." style="max-width:300px; display:inline-block;" onkeyup="filterOrders()">
+            <select class="form-select" id="statusFilter" style="max-width:150px; display:inline-block;" onchange="filterOrders()">
                 <option value="">All Status</option>
                 <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
@@ -40,7 +41,7 @@
         </div>
 
         <div style="flex:1; overflow:auto;">
-        <table class="table mb-0">
+        <table class="table mb-0" id="ordersTable">
             <thead class="text-center" style="background:#f8f9fa;">
                 <tr>
                     <th class="align-middle">Order ID</th>
@@ -52,81 +53,173 @@
                     <th class="align-middle">Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="ordersBody">
                 <tr>
-                    <td><strong>#ORD-2024-001</strong></td>
-                    <td>John Doe</td>
-                    <td>Pizza, Salad, Drink</td>
-                    <td>{{ cfg.get('currency_symbol','₱') }}45.99</td>
-                    <td><span class="badge bg-success">Completed</span></td>
-                    <td>2:30 PM</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary">View</button>
-                        <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>#ORD-2024-002</strong></td>
-                    <td>Jane Smith</td>
-                    <td>Burger, Fries</td>
-                    <td>{{ cfg.get('currency_symbol','₱') }}38.50</td>
-                    <td><span class="badge bg-warning">In Progress</span></td>
-                    <td>2:25 PM</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary">View</button>
-                        <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>#ORD-2024-003</strong></td>
-                    <td>Mike Johnson</td>
-                    <td>Pasta, Garlic Bread, Dessert</td>
-                    <td>{{ cfg.get('currency_symbol','₱') }}62.25</td>
-                    <td><span class="badge bg-success">Completed</span></td>
-                    <td>2:15 PM</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary">View</button>
-                        <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>#ORD-2024-004</strong></td>
-                    <td>Sarah Williams</td>
-                    <td>Steak, Vegetables</td>
-                    <td>{{ cfg.get('currency_symbol','₱') }}55.00</td>
-                    <td><span class="badge bg-primary">Pending</span></td>
-                    <td>2:10 PM</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary">View</button>
-                        <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td><strong>#ORD-2024-005</strong></td>
-                    <td>Tom Brown</td>
-                    <td>Fish & Chips</td>
-                    <td>{{ cfg.get('currency_symbol','₱') }}32.75</td>
-                    <td><span class="badge bg-danger">Cancelled</span></td>
-                    <td>1:50 PM</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary">View</button>
-                        <button class="btn btn-sm btn-outline-secondary">Edit</button>
-                    </td>
+                    <td colspan="7" style="padding: 40px;">Loading orders...</td>
                 </tr>
             </tbody>
         </table>
         </div>
-        <div class="mt-3">
-            <nav aria-label="Page navigation">
-                <ul class="pagination justify-content-center">
-                    <li class="page-item"><a class="page-link" href="#">Previous</a></li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item"><a class="page-link" href="#">2</a></li>
-                    <li class="page-item"><a class="page-link" href="#">3</a></li>
-                    <li class="page-item"><a class="page-link" href="#">Next</a></li>
-                </ul>
-            </nav>
-        </div>
     </div>
 </div>
+
+<script>
+let allOrders = [];
+
+// Utility function to format currency
+function formatCurrency(amount) {
+    const symbol = '{{ cfg.get("currency_symbol", "₱") }}';
+    return symbol + parseFloat(amount || 0).toFixed(2);
+}
+
+// Utility function to format date
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit'
+    });
+}
+
+// Load orders from API
+async function loadOrders() {
+    try {
+        const response = await fetch('/api/orders/list');
+        if (!response.ok) throw new Error('Failed to fetch orders');
+        const data = await response.json();
+        allOrders = data.orders || [];
+        displayOrders(allOrders);
+    } catch (error) {
+        console.error('Error loading orders:', error);
+        const tbody = document.getElementById('ordersBody');
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; color: #dc3545;">Failed to load orders. Please try again.</td></tr>';
+    }
+}
+
+// Display orders in table
+function displayOrders(orders) {
+    const tbody = document.getElementById('ordersBody');
+    
+    if (!orders || orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; color: #6c757d;">No orders found.</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = orders.map(order => {
+        const itemsText = order.items
+            .map(item => `${item.name} (x${item.quantity || 1})`)
+            .join(', ');
+        
+        const statusBadge = {
+            'pending': '<span class="badge bg-primary">Pending</span>',
+            'confirmed': '<span class="badge bg-info">Confirmed</span>',
+            'in_progress': '<span class="badge bg-warning">In Progress</span>',
+            'completed': '<span class="badge bg-success">Completed</span>',
+            'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+        }[order.status] || '<span class="badge bg-secondary">' + order.status + '</span>';
+        
+        return `
+            <tr>
+                <td><strong>#${order.id.substring(0, 8).toUpperCase()}</strong></td>
+                <td>${order.customer_name}</td>
+                <td>${itemsText}</td>
+                <td>${formatCurrency(order.total_amount)}</td>
+                <td>${statusBadge}</td>
+                <td>${formatDate(order.created_at)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="viewOrder('${order.id}')">View</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="updateOrderStatus('${order.id}')">Update</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Filter orders by search and status
+function filterOrders() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    const filtered = allOrders.filter(order => {
+        const matchesSearch = 
+            order.id.toLowerCase().includes(searchTerm) ||
+            order.customer_name.toLowerCase().includes(searchTerm) ||
+            order.customer_email.toLowerCase().includes(searchTerm);
+        
+        const matchesStatus = !statusFilter || order.status === statusFilter;
+        
+        return matchesSearch && matchesStatus;
+    });
+    
+    displayOrders(filtered);
+}
+
+// View order details
+function viewOrder(orderId) {
+    const order = allOrders.find(o => o.id === orderId);
+    if (order) {
+        const itemsList = order.items
+            .map(item => `${item.name} (x${item.quantity || 1}) @ ${formatCurrency(item.price)}`)
+            .join('\n');
+        
+        alert(`Order #${orderId.substring(0, 8).toUpperCase()}\n\nCustomer: ${order.customer_name}\nEmail: ${order.customer_email}\n\nItems:\n${itemsList}\n\nTotal: ${formatCurrency(order.total_amount)}\nStatus: ${order.status}`);
+    }
+}
+
+// Update order status
+async function updateOrderStatus(orderId) {
+    const newStatus = prompt('Enter new status (pending, confirmed, in_progress, completed, cancelled):', 'confirmed');
+    if (!newStatus) return;
+    
+    try {
+        const response = await fetch(`/api/orders/${orderId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus.toLowerCase() })
+        });
+        
+        if (response.ok) {
+            alert('Order status updated successfully!');
+            loadOrders();
+        } else {
+            const data = await response.json();
+            alert('Error: ' + (data.error || 'Failed to update status'));
+        }
+    } catch (error) {
+        alert('Error updating order status: ' + error.message);
+    }
+}
+
+// Export orders as CSV
+function exportOrders() {
+    if (allOrders.length === 0) {
+        alert('No orders to export');
+        return;
+    }
+    
+    let csv = 'Order ID,Customer,Email,Items,Total,Status,Date\n';
+    
+    allOrders.forEach(order => {
+        const itemsList = order.items.map(i => `${i.name}(x${i.quantity || 1})`).join(';');
+        csv += `"${order.id}","${order.customer_name}","${order.customer_email}","${itemsList}","${order.total_amount}","${order.status}","${order.created_at}"\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Load orders on page load
+document.addEventListener('DOMContentLoaded', loadOrders);
+
+// Refresh orders every 30 seconds
+setInterval(loadOrders, 30000);
+</script>
 {% endblock %}

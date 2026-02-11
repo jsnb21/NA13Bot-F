@@ -2,11 +2,9 @@ import json
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
+from datetime import datetime, timezone
 
 CFG_PATH = Path(__file__).parent / 'config.json'
-
-#Depracated
-USERS_PATH = Path(__file__).parent / 'users.json'
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -286,17 +284,6 @@ def _replace_menu_items(restaurant_id: str, menu_items):
                 )
 
 
-def load_users():
-    if USERS_PATH.exists():
-        return json.loads(USERS_PATH.read_text())
-    return {}
-
-
-def save_users(data: dict):
-    USERS_PATH.write_text(json.dumps(data, indent=2))
-    return True
-
-
 def add_user(email: str, password: str = None, meta: dict = None):
     """Add a new user to the database."""
     schema = get_db_schema()
@@ -425,6 +412,83 @@ def update_user_meta(email: str, updates: dict):
                         ).format(sql.Identifier(schema)),
                         [json.dumps(meta), email]
                     )
+                return True
+    except Exception:
+        return False
+
+
+def save_order(restaurant_id: str, order_data: dict):
+    """Save a new order to the database."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """INSERT INTO {}.orders (restaurant_id, customer_name, customer_email, 
+                           items, total_amount, status, created_at) 
+                           VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id"""
+                    ).format(sql.Identifier(schema)),
+                    [
+                        restaurant_id,
+                        order_data.get('customer_name', ''),
+                        order_data.get('customer_email', ''),
+                        json.dumps(order_data.get('items', [])),
+                        float(order_data.get('total_amount', 0)),
+                        order_data.get('status', 'pending'),
+                        datetime.now(timezone.utc).isoformat()
+                    ]
+                )
+                order_id = cur.fetchone()[0]
+                return str(order_id)
+    except Exception as e:
+        print(f"Error saving order: {e}")
+        return None
+
+
+def get_orders(restaurant_id: str, limit: int = 50):
+    """Retrieve orders for a restaurant."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """SELECT id, customer_name, customer_email, items, total_amount, 
+                           status, created_at FROM {}.orders 
+                           WHERE restaurant_id = %s ORDER BY created_at DESC LIMIT %s"""
+                    ).format(sql.Identifier(schema)),
+                    [restaurant_id, limit]
+                )
+                rows = cur.fetchall()
+                return [
+                    {
+                        'id': str(row[0]),
+                        'customer_name': row[1],
+                        'customer_email': row[2],
+                        'items': row[3] if isinstance(row[3], list) else json.loads(row[3] or '[]'),
+                        'total_amount': float(row[4]),
+                        'status': row[5],
+                        'created_at': row[6].isoformat() if row[6] else None
+                    }
+                    for row in rows
+                ]
+    except Exception:
+        return []
+
+
+def update_order_status(order_id: str, status: str):
+    """Update order status."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        "UPDATE {}.orders SET status = %s WHERE id = %s"
+                    ).format(sql.Identifier(schema)),
+                    [status, order_id]
+                )
                 return True
     except Exception:
         return False

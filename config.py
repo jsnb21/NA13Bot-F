@@ -143,6 +143,24 @@ def init_db():
                 ).format(sql.Identifier(schema))
             )
 
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {}.orders (
+                      id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                      restaurant_id   UUID NOT NULL,
+                      customer_name   TEXT,
+                      customer_email  TEXT,
+                      items           JSONB,
+                      total_amount    NUMERIC(10,2),
+                      status          TEXT DEFAULT 'pending',
+                      created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+                      updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+                    """
+                ).format(sql.Identifier(schema))
+            )
+
             # Legacy schema migration: allow multi-tenant rows and add missing columns.
             cur.execute(
                 sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS restaurant_id UUID")
@@ -175,6 +193,12 @@ def init_db():
                 ).format(sql.Identifier(schema))
             )
             
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS orders_restaurant_id_idx ON {}.orders (restaurant_id)"
+                ).format(sql.Identifier(schema))
+            )
+            
             # Additional performance indexes
             cur.execute(
                 sql.SQL(
@@ -184,6 +208,11 @@ def init_db():
             cur.execute(
                 sql.SQL(
                     "CREATE INDEX IF NOT EXISTS menu_items_restaurant_status_idx ON {}.menu_items (restaurant_id, status)"
+                ).format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS orders_restaurant_status_idx ON {}.orders (restaurant_id, status)"
                 ).format(sql.Identifier(schema))
             )
 
