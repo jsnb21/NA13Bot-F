@@ -425,14 +425,14 @@ def save_order(restaurant_id: str, order_data: dict):
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL(
-                        """INSERT INTO {}.orders (restaurant_id, customer_name, customer_email, 
+                        """INSERT INTO {}.orders (restaurant_id, customer_name, table_number, 
                            items, total_amount, status, created_at) 
                            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id"""
                     ).format(sql.Identifier(schema)),
                     [
                         restaurant_id,
                         order_data.get('customer_name', ''),
-                        order_data.get('customer_email', ''),
+                        order_data.get('table_number', ''),
                         json.dumps(order_data.get('items', [])),
                         float(order_data.get('total_amount', 0)),
                         order_data.get('status', 'pending'),
@@ -454,7 +454,7 @@ def get_orders(restaurant_id: str, limit: int = 50):
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL(
-                        """SELECT id, customer_name, customer_email, items, total_amount, 
+                        """SELECT id, customer_name, table_number, items, total_amount, 
                            status, created_at FROM {}.orders 
                            WHERE restaurant_id = %s ORDER BY created_at DESC LIMIT %s"""
                     ).format(sql.Identifier(schema)),
@@ -465,7 +465,7 @@ def get_orders(restaurant_id: str, limit: int = 50):
                     {
                         'id': str(row[0]),
                         'customer_name': row[1],
-                        'customer_email': row[2],
+                        'table_number': row[2],
                         'items': row[3] if isinstance(row[3], list) else json.loads(row[3] or '[]'),
                         'total_amount': float(row[4]),
                         'status': row[5],

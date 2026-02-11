@@ -178,6 +178,12 @@ def init_db():
                 sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS currency_code TEXT")
                 .format(sql.Identifier(schema))
             )
+            
+            # Add table_number column to orders table (migration from customer_email)
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.orders ADD COLUMN IF NOT EXISTS table_number TEXT")
+                .format(sql.Identifier(schema))
+            )
             cur.execute(
                 sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS currency_symbol TEXT")
                 .format(sql.Identifier(schema))
