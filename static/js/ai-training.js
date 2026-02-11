@@ -174,6 +174,32 @@ function renderFiles(files) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'file-checkbox';
+        checkbox.dataset.fileId = file.id;
+        
+        // Make entire card clickable
+        item.addEventListener('click', (e) => {
+            // Don't toggle if clicking on action buttons
+            if (e.target.closest('.file-actions button')) {
+                return;
+            }
+            // Toggle checkbox
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                selectedFiles.add(file.id);
+                item.classList.add('selected');
+            } else {
+                selectedFiles.delete(file.id);
+                item.classList.remove('selected');
+            }
+            updateBulkActions();
+        });
+        
+        // Prevent checkbox click from bubbling to card
+        checkbox.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
         checkbox.addEventListener('change', (e) => {
             if (e.target.checked) {
                 selectedFiles.add(file.id);
@@ -213,12 +239,18 @@ function renderFiles(files) {
         const previewBtn = document.createElement('button');
         previewBtn.className = 'btn btn-sm btn-outline-primary';
         previewBtn.innerHTML = '<i class="fa fa-eye"></i> Preview';
-        previewBtn.addEventListener('click', () => showToast('warning', 'Preview feature coming soon!'));
+        previewBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showToast('warning', 'Preview feature coming soon!');
+        });
 
         const removeBtn = document.createElement('button');
         removeBtn.className = 'btn btn-sm btn-outline-danger';
         removeBtn.innerHTML = '<i class="fa fa-trash"></i> Delete';
-        removeBtn.addEventListener('click', () => removeFile(file.id));
+        removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeFile(file.id);
+        });
 
         actions.appendChild(status);
         actions.appendChild(previewBtn);

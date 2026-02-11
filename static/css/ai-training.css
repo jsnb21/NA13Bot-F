@@ -61,20 +61,27 @@
         align-items: center;
         gap: 15px;
         transition: all 0.3s ease;
+        cursor: pointer;
+        user-select: none;
     }
     .training-file-item:hover {
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         border-color: #0b343d;
+        background: #f8f9fa;
+        transform: translateX(2px);
     }
     .training-file-item.selected {
-        background: #f0f7ff;
+        background: #e8eaf6;
         border-color: #667eea;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
     }
     
     .file-checkbox {
         width: 18px;
         height: 18px;
         cursor: pointer;
+        flex-shrink: 0;
+        margin: 0;
     }
     
     .file-icon-preview {
