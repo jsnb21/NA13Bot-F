@@ -9,7 +9,10 @@ TEXT_EXTENSIONS = {'.txt', '.json', '.csv'}
 
 
 def get_training_dir(restaurant_id: str):
-    safe_id = str(restaurant_id) if restaurant_id else 'default'
+    if restaurant_id:
+        safe_id = str(restaurant_id)
+    else:
+        safe_id = 'default'
     path = TRAINING_DIR / safe_id
     path.mkdir(parents=True, exist_ok=True)
     return path

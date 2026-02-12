@@ -3,10 +3,9 @@ from tools import load_config, save_order
 from chatbot.ai import GeminiChatbot
 from chatbot.prompts import build_system_prompt
 from chatbot.training import build_training_context
-import json
 import re
 
-def extract_order_items(response_text, menu_items, currency_symbol):
+def extract_order_items(response_text, menu_items):
     """Extract order items from the bot's response."""
     items = []
     
