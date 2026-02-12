@@ -21,8 +21,12 @@ def load_config(restaurant_id: str = None):
             cfg['menu_items'] = menu_items
     except Exception:
         # Fall back to JSON-only config if DB is unavailable.
-        return cfg
+        pass
 
+    # Ensure currency_symbol has a proper default (not None)
+    if not cfg.get('currency_symbol') or cfg.get('currency_symbol') == 'None':
+        cfg['currency_symbol'] = '₱'
+    
     return cfg
 
 def save_config(data: dict, restaurant_id: str = None):
