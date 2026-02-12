@@ -2,9 +2,13 @@
 
 {% block title %}Dashboard — Resto Admin{% endblock %}
 
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <div class="page-header">
         <div>
             <h2 class="page-title">{{ cfg.get('establishment_name','Resto') }} — Dashboard</h2>

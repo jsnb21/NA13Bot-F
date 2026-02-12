@@ -6,17 +6,33 @@
     <title>Chatbot — Resto</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css')}}">
+    {% if cfg.get('main_color') or cfg.get('sub_color') %}
+    <style>
+      :root {
+        {% if cfg.get('main_color') %}--accent: {{ cfg.get('main_color') }};{% endif %}
+        {% if cfg.get('sub_color') %}--sub-accent: {{ cfg.get('sub_color') }};{% endif %}
+      }
+    </style>
+    {% endif %}
   </head>
   <body>
     <div class="chat-shell">
       <div class="phone" id="phone">
         <div class="header" id="resto-name">
-          <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Resto logo" style="height:24px;width:auto;margin-right:8px;vertical-align:middle;">
+          {% if cfg.get('logo_url') %}
+            <img src="{{ cfg.get('logo_url') }}" alt="Resto logo" style="height:24px;width:auto;margin-right:8px;vertical-align:middle;">
+          {% else %}
+            <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Resto logo" style="height:24px;width:auto;margin-right:8px;vertical-align:middle;">
+          {% endif %}
           <span id="resto-name-text">Resto Name - A.I Chatbot</span>
         </div>
         <div class="messages" id="messages">
           <div class="message-row bot">
-            <img src="{{ cfg.get('chatbot_avatar', '/static/img/bot-avatar.svg')}}" alt="Bot" class="avatar">
+            {% if cfg.get('chatbot_avatar') %}
+              <img src="{{ cfg.get('chatbot_avatar') }}" alt="Bot" class="avatar">
+            {% else %}
+              <img src="{{ url_for('static', filename='img/bot-avatar.svg') }}" alt="Bot" class="avatar">
+            {% endif %}
             <div class="bubble bot">Welcome! How can I help?</div>
           </div>
           

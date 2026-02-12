@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
+<div class="container-fluid px-4" >
     <div class="page-header">
         <div>
             <h2 class="page-title">Settings</h2>
@@ -70,11 +70,22 @@
 
         <div class="editable-item mb-3" data-empty="Not set">
             <div class="editable-header">
-                <label for="logo_url" class="form-label">Logo URL</label>
+                <label for="logo_url" class="form-label">Logo</label>
                 <button type="button" class="edit-btn" data-edit>Edit</button>
             </div>
             <div class="display-value" data-display>{{ cfg.get('logo_url','') }}</div>
-            <input id="logo_url" name="logo_url" type="text" class="form-control editable-input" data-input placeholder="https://example.com/logo.png" value="{{ cfg.get('logo_url','') }}" disabled>
+            <div class="d-flex align-items-center editable-input" data-input-group style="gap:12px;">
+                <input id="logo_url" name="logo_url" type="text" class="form-control editable-input" data-input placeholder="https://example.com/logo.png" value="{{ cfg.get('logo_url','') }}" disabled>
+                <label class="btn btn-outline-secondary mb-0" style="padding:6px 10px; position:relative; overflow:hidden;">
+                    Upload
+                    <input id="logo_file" name="logo_file" type="file" accept="image/*" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;" />
+                </label>
+                <span id="logo_filename" style="font-size:.9rem;color:#555;">&nbsp;</span>
+            </div>
+            <div class="mt-2 d-flex align-items-center" style="gap:12px;">
+                <img id="logo_preview" src="{{ cfg.get('logo_url','') }}" alt="Logo" style="width:48px;height:48px;border-radius:8px;border:1px solid var(--border);object-fit:contain;background:#f5f5f5;padding:4px;" onerror="this.style.display='none'">
+                <small class="text-muted">Preview (changes show after Save)</small>
+            </div>
         </div>
 
         <div class="row mb-3">

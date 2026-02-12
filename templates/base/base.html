@@ -7,75 +7,29 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     {% block head %}
-    <style>
-    :root {
-      --main-color: {{ cfg.get('main_color', '#1e40af') }};
-      --main-foreground: {{ cfg.get('main_foreground', '#ffffff') }};
-      --sub-color: {{ cfg.get('sub_color', '#ffd41d') }};
-      --sub-foreground: {{ cfg.get('sub_foreground', '#000000') }};
-      --text-primary: {{ cfg.get('text_primary', '#1f2937') }};
-      --text-secondary: {{ cfg.get('text_secondary', '#6b7280') }};
-      --light: {{ cfg.get('light', '#f9fafb') }};
-      --border: {{ cfg.get('border', '#e5e7eb') }};
-      --primary: {{ cfg.get('primary', '#3b82f6') }};
-      --primary-light: {{ cfg.get('primary_light', '#60a5fa') }};
-      --secondary: {{ cfg.get('secondary', '#fbbf24') }};
-      --dark: {{ cfg.get('dark', '#111827') }};
-    }
-    </style>
+    <!-- Dynamic color variables from config -->
     <style>
       :root {
+        --main-color: {{ cfg.get('main_color', '#1e40af') }};
+        --main-foreground: {{ cfg.get('main_foreground', '#ffffff') }};
+        --sub-color: {{ cfg.get('sub_color', '#ffd41d') }};
+        --sub-foreground: {{ cfg.get('sub_foreground', '#000000') }};
+        --text-primary: {{ cfg.get('text_primary', '#1f2937') }};
+        --text-secondary: {{ cfg.get('text_secondary', '#6b7280') }};
+        --light: {{ cfg.get('light', '#f9fafb') }};
+        --border: {{ cfg.get('border', '#e5e7eb') }};
+        --primary: {{ cfg.get('primary', '#3b82f6') }};
+        --primary-light: {{ cfg.get('primary_light', '#60a5fa') }};
+        --secondary: {{ cfg.get('secondary', '#fbbf24') }};
+        --dark: {{ cfg.get('dark', '#111827') }};
         /* Map legacy names to configurable colors so existing templates keep working */
         --brand-dark: var(--main-color);
         --accent-yellow: var(--sub-color);
         --sidebar-width: 260px;
         --glass-bg: rgba(255, 255, 255, 0.9);
       }
-
-      body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
-
-      /* Modern Sidebar */
-      .admin-sidebar {
-        width: var(--sidebar-width);
-        background: var(--brand-dark);
-        height: 100vh;
-        position: fixed;
-        padding: 24px 16px;
-        color: white;
-      }
-
-      .nav-link {
-        color: rgba(255,255,255,0.7);
-        border-radius: 12px;
-        padding: 12px 16px;
-        margin-bottom: 4px;
-        transition: 0.3s;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .nav-link:hover, .nav-link.active {
-        background: rgba(255,255,255,0.1);
-        color: var(--accent-yellow);
-      }
-
-      /* Main Content Area */
-      .main-content {
-        margin-left: var(--sidebar-width);
-        padding: 40px;
-        min-height: 100vh;
-      }
-
-      /* Consistent Card Styling */
-      .surface-card {
-        background: white;
-        border-radius: 16px;
-        border: 1px solid #e2e8f0;
-        padding: 24px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-      }
     </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base-theme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% endblock %}
     </head>
@@ -129,7 +83,7 @@
 
       <main class="main-content flex-fill">
         {% block content %}
-        <div class="container-fluid">
+        <div class="container-fluid" >
           <div class="row">
             <div class="col-12 card-surface">
               <h3>Welcome to Resto Admin</h3>
@@ -159,6 +113,8 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    <!-- Seamless navigation disabled - using normal page loads -->
+    <!-- <script src="{{ url_for('static', filename='js/seamless-nav.js') }}"></script> -->
 
   </body>
   {% block scripts %}{% endblock %}

@@ -285,7 +285,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-
 def get_current_restaurant_id():
     rid = session.get('restaurant_id')
     if rid:
@@ -817,6 +816,26 @@ def settings():
             'currency_symbol': currency_symbol
         }
         # merge with existing config to avoid wiping other keys
+        # handle logo upload (optional)
+        logo_url = request.form.get('logo_url', cfg.get('logo_url',''))
+        logo_file = request.files.get('logo_file')
+        if logo_file and logo_file.filename:
+            if allowed_file(logo_file.filename):
+                safe_name = secure_filename(logo_file.filename)
+                ext = Path(safe_name).suffix.lower()
+                logo_filename = f"{uuid.uuid4().hex}{ext}"
+                logo_dir = UPLOAD_DIR / restaurant_id
+                logo_dir.mkdir(parents=True, exist_ok=True)
+                dest = logo_dir / logo_filename
+                logo_file.save(str(dest))
+                logo_url = f'/static/uploads/{restaurant_id}/{logo_filename}'
+                data['logo_uploaded_by'] = session.get('user')
+                data['logo_uploaded_at'] = datetime.now(timezone.utc)
+            else:
+                flash('Unsupported logo file type.')
+
+        data['logo_url'] = logo_url
+
         # handle chatbot avatar upload (optional)
         avatar_url = request.form.get('chatbot_avatar_url', cfg.get('chatbot_avatar',''))
         avatar_file = request.files.get('chatbot_avatar_file')
@@ -993,6 +1012,7 @@ def login_verify():
     if ok:
         session.pop('otp', None)
         session['user'] = email
+        session.pop('restaurant_id', None)
         get_current_restaurant_id()
         return redirect(url_for('dashboard'))
     otp_code = session.get('otp', {}).get('code')
@@ -1084,6 +1104,7 @@ def signup_verify():
 @app.route('/logout')
 def logout():
     session.pop('user', None)
+    session.pop('restaurant_id', None)
     return redirect(url_for('login'))
 
 if __name__ == '__main__':

@@ -96,6 +96,30 @@
 })();
 
 (function(){
+    const fileInput = document.getElementById('logo_file');
+    const preview = document.getElementById('logo_preview');
+    const filename = document.getElementById('logo_filename');
+    const urlInput = document.getElementById('logo_url');
+
+    if(!fileInput) return;
+    fileInput.addEventListener('change', function(e){
+        const f = this.files && this.files[0];
+        if(!f){
+            filename.textContent = '';
+            return;
+        }
+        filename.textContent = f.name;
+        // preview via data URL
+        const reader = new FileReader();
+        reader.onload = function(ev){
+            preview.src = ev.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(f);
+    });
+})();
+
+(function(){
     document.querySelectorAll('[data-section-toggle]').forEach(btn => {
         btn.addEventListener('click', () => {
             const section = btn.closest('[data-collapsible]');
