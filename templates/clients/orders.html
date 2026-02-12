@@ -301,8 +301,119 @@ function closeModal(event) {
 }
 
 async function updateOrderStatus(orderId) {
-    const newStatus = prompt('Enter new status (pending, confirmed, in_progress, completed, cancelled):', 'confirmed');
-    if (!newStatus) return;
+    const order = window.allOrders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    const statusOptions = [
+        { value: 'pending', label: 'Pending', color: 'bg-warning text-dark' },
+        { value: 'confirmed', label: 'Confirmed', color: 'bg-info' },
+        { value: 'in_progress', label: 'In Progress', color: 'bg-primary' },
+        { value: 'completed', label: 'Completed', color: 'bg-success' },
+        { value: 'cancelled', label: 'Cancelled', color: 'bg-danger' }
+    ];
+    
+    const statusOptionsHtml = statusOptions
+        .map(s => `<option value="${s.value}" ${s.value === order.status ? 'selected' : ''}>${s.label}</option>`)
+        .join('');
+    
+    const modalHtml = `
+        <div class="order-modal show" id="statusModal" onclick="closeStatusModal(event)">
+            <div class="order-modal-content" onclick="event.stopPropagation()" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3>Update Order Status</h3>
+                    <button class="modal-close" onclick="closeStatusModal()">×</button>
+                </div>
+                <div class="modal-body" style="padding: 20px;">
+                    <div class="order-detail-row">
+                        <span class="order-detail-label">Order ID</span>
+                        <span class="order-detail-value">#${orderId.substring(0, 8).toUpperCase()}</span>
+                    </div>
+                    <div class="order-detail-row">
+                        <span class="order-detail-label">Customer</span>
+                        <span class="order-detail-value">${order.customer_name}</span>
+                    </div>
+                    <div class="order-detail-row">
+                        <span class="order-detail-label">Current Status</span>
+                        <span class="order-detail-value">
+                            ${statusOptions.find(s => s.value === order.status) ? `<span class="badge ${statusOptions.find(s => s.value === order.status).color}">${statusOptions.find(s => s.value === order.status).label}</span>` : order.status}
+                        </span>
+                    </div>
+                    <div style="margin-top: 20px; margin-bottom: 20px;">
+                        <label for="statusSelect" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">New Status</label>
+                        <select id="statusSelect" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 1rem; cursor: pointer;">
+                            ${statusOptionsHtml}
+                        </select>
+                    </div>
+                </div>
+                <div style="padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="closeStatusModal()" style="padding: 10px 20px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #374151; font-weight: 600; cursor: pointer;">Cancel</button>
+                    <button onclick="confirmStatusUpdate('${orderId}')" style="padding: 10px 20px; border: none; border-radius: 6px; background: var(--brand-primary, #3b82f6); color: white; font-weight: 600; cursor: pointer;">Update Status</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeStatusModal(event) {
+    const modal = document.getElementById('statusModal');
+    if (modal && (!event || event.target === modal)) {
+        modal.remove();
+    }
+}
+
+function showResultModal(title, message, type = 'success') {
+    const colors = {
+        success: { bg: 'bg-success', icon: '✓', bgClass: '#10b981' },
+        error: { bg: 'bg-danger', icon: '✕', bgClass: '#ef4444' }
+    };
+    
+    const result = colors[type] || colors.success;
+    
+    const modalHtml = `
+        <div class="order-modal show" id="resultModal" onclick="closeResultModal(event)">
+            <div class="order-modal-content" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center;">
+                <div style="padding: 40px 20px 20px;">
+                    <div style="width: 60px; height: 60px; background: ${result.bgClass}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2rem; color: white; font-weight: bold;">
+                        ${result.icon}
+                    </div>
+                    <h3 style="margin: 0 0 8px; color: #111827; font-size: 1.1rem;">${title}</h3>
+                    <p style="margin: 0 0 24px; color: #6b7280; font-size: 0.95rem;">${message}</p>
+                </div>
+                <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb;">
+                    <button onclick="closeResultModal()" style="width: 100%; padding: 10px 20px; border: none; border-radius: 6px; background: var(--brand-primary, #3b82f6); color: white; font-weight: 600; cursor: pointer;">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Auto-close after 5 seconds if success
+    if (type === 'success') {
+        setTimeout(() => {
+            const modal = document.getElementById('resultModal');
+            if (modal) modal.remove();
+        }, 5000);
+    }
+}
+
+function closeResultModal(event) {
+    const modal = document.getElementById('resultModal');
+    if (modal && (!event || event.target === modal)) {
+        modal.remove();
+    }
+}
+
+async function confirmStatusUpdate(orderId) {
+    const statusSelect = document.getElementById('statusSelect');
+    const newStatus = statusSelect.value;
+    
+    if (!newStatus) {
+        showResultModal('Selection Required', 'Please select a status before updating.', 'error');
+        return;
+    }
     
     try {
         const response = await fetch(`/api/orders/${orderId}/status`, {
@@ -312,20 +423,21 @@ async function updateOrderStatus(orderId) {
         });
         
         if (response.ok) {
-            alert('Order status updated successfully!');
-            loadOrders();
+            closeStatusModal();
+            showResultModal('Success', 'Order status updated successfully!', 'success');
+            setTimeout(loadOrders, 1500);
         } else {
             const data = await response.json();
-            alert('Error: ' + (data.error || 'Failed to update status'));
+            showResultModal('Update Failed', data.error || 'Failed to update order status. Please try again.', 'error');
         }
     } catch (error) {
-        alert('Error updating order status: ' + error.message);
+        showResultModal('Error', 'Error updating order status: ' + error.message, 'error');
     }
 }
 
 function exportOrders() {
     if (!window.allOrders || window.allOrders.length === 0) {
-        alert('No orders to export');
+        showResultModal('No Data', 'No orders to export', 'error');
         return;
     }
     
@@ -345,12 +457,6 @@ function exportOrders() {
     a.click();
     window.URL.revokeObjectURL(url);
 }
-
-// Wrap initialization code in Turbo event to prevent variable redeclaration
-document.addEventListener('turbo:load', function initOrdersScript() {
-    // Guard against multiple initializations
-    if (window.ordersScriptInitialized) return;
-    window.ordersScriptInitialized = true;
 
 // Load orders from API
 async function loadOrders() {
@@ -432,6 +538,12 @@ function filterOrders() {
     
     displayOrders(filtered);
 }
+
+// Wrap initialization code in Turbo event to prevent variable redeclaration
+document.addEventListener('turbo:load', function initOrdersScript() {
+    // Guard against multiple initializations
+    if (window.ordersScriptInitialized) return;
+    window.ordersScriptInitialized = true;
 
 // Load orders on page load
 loadOrders();
