@@ -23,29 +23,14 @@
             <div class="report-card">
                 <h5 class="mb-3">Revenue Over Time</h5>
                 <canvas id="revenueChart" height="80"></canvas>
-                <small class="text-muted">Total Revenue This Month: {{ cfg.get('currency_symbol','₱') }}12,450</small>
+                <small class="text-muted" id="totalRevenueText">Total Revenue This Month: Loading...</small>
             </div>
         </div>
         <div class="col-md-4">
             <div class="report-card">
                 <h5 class="mb-3">Top Categories</h5>
-                <div style="padding: 10px 0;">
-                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
-                        <span>Main Courses</span>
-                        <strong>45%</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
-                        <span>Appetizers</span>
-                        <strong>25%</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
-                        <span>Desserts</span>
-                        <strong>18%</strong>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; padding:10px 0;">
-                        <span>Beverages</span>
-                        <strong>12%</strong>
-                    </div>
+                <div style="padding: 10px 0;" id="topCategoriesContainer">
+                    <p class="text-muted text-center">Loading...</p>
                 </div>
             </div>
         </div>
@@ -81,40 +66,40 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
+                        <tr id="revenueRow">
                             <td><strong>Total Revenue</strong></td>
-                            <td>{{ cfg.get('currency_symbol','₱') }}12,450</td>
-                            <td>{{ cfg.get('currency_symbol','₱') }}11,200</td>
-                            <td>+{{ cfg.get('currency_symbol','₱') }}1,250</td>
-                            <td><span style="color:#4caf50;">↑ 11.2%</span></td>
+                            <td id="revenueThisMonth">-</td>
+                            <td id="revenueLastMonth">-</td>
+                            <td id="revenueChange">-</td>
+                            <td id="revenueTrend">-</td>
                         </tr>
-                        <tr>
+                        <tr id="ordersRow">
                             <td><strong>Total Orders</strong></td>
-                            <td>248</td>
-                            <td>215</td>
-                            <td>+33</td>
-                            <td><span style="color:#4caf50;">↑ 15.3%</span></td>
+                            <td id="ordersThisMonth">-</td>
+                            <td id="ordersLastMonth">-</td>
+                            <td id="ordersChange">-</td>
+                            <td id="ordersTrend">-</td>
                         </tr>
-                        <tr>
+                        <tr id="avgOrderRow">
                             <td><strong>Avg Order Value</strong></td>
-                            <td>{{ cfg.get('currency_symbol','₱') }}50.20</td>
-                            <td>{{ cfg.get('currency_symbol','₱') }}52.09</td>
-                            <td>-{{ cfg.get('currency_symbol','₱') }}1.89</td>
-                            <td><span style="color:#f44336;">↓ 3.6%</span></td>
+                            <td id="avgOrderThisMonth">-</td>
+                            <td id="avgOrderLastMonth">-</td>
+                            <td id="avgOrderChange">-</td>
+                            <td id="avgOrderTrend">-</td>
                         </tr>
-                        <tr>
+                        <tr id="customersRow">
                             <td><strong>New Customers</strong></td>
-                            <td>42</td>
-                            <td>28</td>
-                            <td>+14</td>
-                            <td><span style="color:#4caf50;">↑ 50%</span></td>
+                            <td id="customersThisMonth">-</td>
+                            <td id="customersLastMonth">-</td>
+                            <td id="customersChange">-</td>
+                            <td id="customersTrend">-</td>
                         </tr>
-                        <tr>
+                        <tr id="satisfactionRow">
                             <td><strong>Customer Satisfaction</strong></td>
-                            <td>92%</td>
-                            <td>89%</td>
-                            <td>+3%</td>
-                            <td><span style="color:#4caf50;">↑ 3.4%</span></td>
+                            <td id="satisfactionThisMonth">-</td>
+                            <td id="satisfactionLastMonth">-</td>
+                            <td id="satisfactionChange">-</td>
+                            <td id="satisfactionTrend">-</td>
                         </tr>
                     </tbody>
                 </table>

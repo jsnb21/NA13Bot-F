@@ -1,12 +1,20 @@
-// Prevent re-initialization with Turbo
-if (window.aiTrainingInitialized) {
-  throw new Error('AI Training script already loaded');
-}
-
 (function() {
-  const uploadZone = document.getElementById('uploadZone');
-  const trainingFiles = document.getElementById('trainingFiles');
-  const filesList = document.getElementById('filesList');
+    const uploadZone = document.getElementById('uploadZone');
+    const trainingFiles = document.getElementById('trainingFiles');
+    const filesList = document.getElementById('filesList');
+
+    if (!uploadZone || !trainingFiles || !filesList) {
+        return;
+    }
+
+    if (uploadZone.dataset.aiTrainingBound === '1') {
+        if (typeof window.aiTrainingRefresh === 'function') {
+            window.aiTrainingRefresh();
+        }
+        return;
+    }
+
+    uploadZone.dataset.aiTrainingBound = '1';
   const filesCount = document.getElementById('filesCount');
   const totalSize = document.getElementById('totalSize');
   const uploadProgress = document.getElementById('uploadProgress');
@@ -542,8 +550,6 @@ trainingFiles.addEventListener('change', () => {
 });
 
 // Initial load
+window.aiTrainingRefresh = fetchFiles;
 fetchFiles();
-
-  // Mark as initialized to prevent re-loading
-  window.aiTrainingInitialized = true;
 })();
