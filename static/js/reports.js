@@ -1,3 +1,63 @@
+// Global variable to store report data for export
+window.reportData = {};
+
+function exportReportAsCSV() {
+    const data = window.reportData;
+    if (!data.orders || data.orders.length === 0) {
+        alert('No data available to export');
+        return;
+    }
+
+    // Use PHP for CSV since ₱ causes encoding issues in CSV
+    const currencySymbol = 'PHP';
+
+    // CSV headers
+    const headers = ['Order ID', 'Customer', 'Amount', 'Status', 'Date', 'Items'];
+    
+    // CSV rows
+    const rows = data.orders.map(order => [
+        order.id.substring(0, 8).toUpperCase(),
+        order.customer_name || 'Unknown',
+        order.total_amount || 0,
+        order.status || 'pending',
+        new Date(order.created_at).toLocaleDateString(),
+        order.items && Array.isArray(order.items) ? order.items.map(i => i.name).join('; ') : ''
+    ]);
+
+    // Create CSV content
+    let csv = headers.join(',') + '\n';
+    rows.forEach(row => {
+        csv += row.map(cell => {
+            // Escape quotes in strings and wrap in quotes if needed
+            const str = String(cell || '');
+            return str.includes(',') || str.includes('"') || str.includes('\n') 
+                ? `"${str.replace(/"/g, '""')}"` 
+                : str;
+        }).join(',') + '\n';
+    });
+
+    // Add summary metrics
+    csv += '\n\nReport Summary\n';
+    csv += 'Metric,Value\n';
+    csv += `Total Orders This Month,${data.countThis || 0}\n`;
+    csv += `Total Revenue This Month,${currencySymbol} ${parseFloat(data.revenueThis || 0).toFixed(2)}\n`;
+    csv += `Average Order Value,${currencySymbol} ${parseFloat(data.avgThis || 0).toFixed(2)}\n`;
+    csv += `Total Orders Last Month,${data.countLast || 0}\n`;
+    csv += `Total Revenue Last Month,${currencySymbol} ${parseFloat(data.revenueLast || 0).toFixed(2)}\n`;
+    csv += `Generated,${new Date().toLocaleString()}\n`;
+
+    // Trigger download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `report-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 document.addEventListener('turbo:load', function() {
     // Safety check: only run if we're on the reports page
     if (!document.getElementById('revenueChart')) return;
@@ -84,6 +144,20 @@ document.addEventListener('turbo:load', function() {
             
             // Update sales summary
             updateSalesSummary(revenueThis, revenueLast, revenueChange, revenuePercent, countThis, countLast, countChange, countPercent, avgThis, avgLast, avgChange, avgPercent);
+            
+            // Store data for export
+            window.reportData = {
+                orders: orders,
+                ordersThisMonth: ordersThisMonth,
+                ordersLastMonth: ordersLastMonth,
+                revenueThis: revenueThis,
+                revenueLast: revenueLast,
+                countThis: countThis,
+                countLast: countLast,
+                avgThis: avgThis,
+                avgLast: avgLast,
+                topCategories: topCategories
+            };
             
             // Update top categories
             updateTopCategories(topCategories);
@@ -193,6 +267,12 @@ document.addEventListener('turbo:load', function() {
             }
         })
         .catch(err => console.error('Error loading reports data:', err));
+    
+    // Export Report button handler
+    const exportBtn = document.getElementById('exportReportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportReportAsCSV);
+    }
     
     window.reportsChartsInitialized = true;
 });

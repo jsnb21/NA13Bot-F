@@ -14,7 +14,7 @@
             <h2 class="page-title">{{ cfg.get('establishment_name','Resto') }} — Dashboard</h2>
             <p class="page-subtitle">Welcome back! Here's your business overview.</p>
         </div>
-        <button class="page-action-btn" type="button">View Insights</button>
+        <button class="page-action-btn" type="button" id="viewInsightsBtn">View Insights</button>
     </div>
     
     <div class="row mb-4">
@@ -127,6 +127,67 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Insights Modal -->
+<div class="modal fade" id="insightsModal" tabindex="-1" aria-labelledby="insightsModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="insightsModalTitle">Business Insights</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div style="padding: 15px; background: #f0f9ff; border-radius: 10px; margin-bottom: 15px;">
+              <small style="color: #666; display: block; margin-bottom: 5px;">Today's Revenue</small>
+              <div style="font-size: 1.8rem; font-weight: 700; color: #1e40af;" id="insightsTodayRevenue">-</div>
+            </div>
+            <div style="padding: 15px; background: #fef2f2; border-radius: 10px;">
+              <small style="color: #666; display: block; margin-bottom: 5px;">Average Order Value</small>
+              <div style="font-size: 1.8rem; font-weight: 700; color: #dc3545;" id="insightsAOV">-</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div style="padding: 15px; background: #ecfdf5; border-radius: 10px; margin-bottom: 15px;">
+              <small style="color: #666; display: block; margin-bottom: 5px;">Orders Today</small>
+              <div style="font-size: 1.8rem; font-weight: 700; color: #059669;" id="insightsTodayOrders">-</div>
+            </div>
+            <div style="padding: 15px; background: #fffbeb; border-radius: 10px;">
+              <small style="color: #666; display: block; margin-bottom: 5px;">Best Selling Item</small>
+              <div style="font-size: 1.4rem; font-weight: 700; color: #b45309;" id="insightsBestItem">-</div>
+            </div>
+          </div>
+        </div>
+        <hr>
+        <div class="mt-4">
+          <h6 style="margin-bottom: 15px;">Order Status Breakdown</h6>
+          <div id="insightsStatusBreakdown" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+            <div style="padding: 12px; background: #e0e7ff; border-radius: 8px; text-align: center;">
+              <div style="font-size: 2rem; font-weight: 700; color: #4f46e5;" id="statusPending">-</div>
+              <small style="color: #666;">Pending</small>
+            </div>
+            <div style="padding: 12px; background: #dbeafe; border-radius: 8px; text-align: center;">
+              <div style="font-size: 2rem; font-weight: 700; color: #0ea5e9;" id="statusConfirmed">-</div>
+              <small style="color: #666;">Confirmed</small>
+            </div>
+            <div style="padding: 12px; background: #dcfce7; border-radius: 8px; text-align: center;">
+              <div style="font-size: 2rem; font-weight: 700; color: #16a34a;" id="statusCompleted">-</div>
+              <small style="color: #666;">Completed</small>
+            </div>
+            <div style="padding: 12px; background: #fee2e2; border-radius: 8px; text-align: center;">
+              <div style="font-size: 2rem; font-weight: 700; color: #dc2626;" id="statusCancelled">-</div>
+              <small style="color: #666;">Cancelled</small>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -249,12 +310,77 @@ async function loadDashboardData() {
     }
 }
 
+// View Insights handler
+function showInsights(orders) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const todayOrders = orders.filter(o => {
+        const oDate = new Date(o.created_at);
+        oDate.setHours(0, 0, 0, 0);
+        return oDate.getTime() === today.getTime();
+    });
+    
+    // Calculate metrics
+    const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+    const todayOrderCount = todayOrders.length;
+    const aov = todayOrderCount > 0 ? todayRevenue / todayOrderCount : 0;
+    
+    // Best selling item
+    const itemStats = {};
+    orders.forEach(order => {
+        order.items.forEach(item => {
+            itemStats[item.name] = (itemStats[item.name] || 0) + (item.quantity || 1);
+        });
+    });
+    const bestItem = Object.entries(itemStats).sort((a, b) => b[1] - a[1])[0] || ['N/A', 0];
+    
+    // Status breakdown
+    const statusCount = {
+        pending: orders.filter(o => o.status === 'pending').length,
+        confirmed: orders.filter(o => o.status === 'confirmed').length,
+        completed: orders.filter(o => o.status === 'completed').length,
+        cancelled: orders.filter(o => o.status === 'cancelled').length
+    };
+    
+    // Update modal
+    document.getElementById('insightsTodayRevenue').textContent = formatCurrency(todayRevenue);
+    document.getElementById('insightsTodayOrders').textContent = todayOrderCount;
+    document.getElementById('insightsAOV').textContent = formatCurrency(aov);
+    document.getElementById('insightsBestItem').textContent = bestItem[0];
+    document.getElementById('statusPending').textContent = statusCount.pending;
+    document.getElementById('statusConfirmed').textContent = statusCount.confirmed;
+    document.getElementById('statusCompleted').textContent = statusCount.completed;
+    document.getElementById('statusCancelled').textContent = statusCount.cancelled;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('insightsModal'));
+    modal.show();
+}
+
 // Wrap in Turbo event
 document.addEventListener('turbo:load', function initDashboard() {
     if (window.dashboardInitialized) return;
     window.dashboardInitialized = true;
     
     loadDashboardData();
+    
+    // View Insights button handler
+    const viewInsightsBtn = document.getElementById('viewInsightsBtn');
+    if (viewInsightsBtn) {
+        viewInsightsBtn.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/orders/list');
+                if (!res.ok) throw new Error('Failed to fetch orders');
+                const data = await res.json();
+                const orders = data.orders || [];
+                showInsights(orders);
+            } catch (error) {
+                console.error('Error fetching orders for insights:', error);
+                alert('Failed to load insights');
+            }
+        });
+    }
     
     // Refresh every minute
     if (window.dashboardRefreshInterval) {
