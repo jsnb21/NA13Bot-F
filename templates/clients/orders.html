@@ -214,7 +214,13 @@
 </div>
 
 <script>
-let allOrders = [];
+  // Wrap script in Turbo event to prevent variable redeclaration
+  document.addEventListener('turbo:load', function initOrdersScript() {
+    // Guard against multiple initializations
+    if (window.ordersScriptInitialized) return;
+    window.ordersScriptInitialized = true;
+
+    let allOrders = [];
 
 // Utility function to format currency
 function formatCurrency(amount) {
@@ -431,10 +437,14 @@ function exportOrders() {
 }
 
 // Load orders on page load
-document.addEventListener('DOMContentLoaded', loadOrders);
+loadOrders();
 
-// Refresh orders every 30 seconds
-setInterval(loadOrders, 30000);
+// Refresh orders every 30 seconds - clear old interval first
+if (window.ordersRefreshInterval) {
+  clearInterval(window.ordersRefreshInterval);
+}
+window.ordersRefreshInterval = setInterval(loadOrders, 30000);
+  });
 </script>
 
                         <button class="btn btn-sm btn-outline-secondary">Edit</button>

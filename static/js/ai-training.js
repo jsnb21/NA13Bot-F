@@ -1,63 +1,69 @@
-const uploadZone = document.getElementById('uploadZone');
-const trainingFiles = document.getElementById('trainingFiles');
-const filesList = document.getElementById('filesList');
-const filesCount = document.getElementById('filesCount');
-const totalSize = document.getElementById('totalSize');
-const uploadProgress = document.getElementById('uploadProgress');
-const uploadQueue = document.getElementById('uploadQueue');
-const validationMessages = document.getElementById('validationMessages');
-const bulkActions = document.getElementById('bulkActions');
-const selectAll = document.getElementById('selectAll');
-const selectedCount = document.getElementById('selectedCount');
-const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
-
-const FILES_ENDPOINT = '/ai-training/files';
-const UPLOAD_ENDPOINT = '/ai-training/upload';
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const ALLOWED_EXTENSIONS = ['txt', 'pdf', 'docx', 'json', 'csv'];
-
-let selectedFiles = new Set();
-let allFiles = [];
-
-// Toast notification system
-function showToast(type, message) {
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toast-container';
-        document.body.appendChild(container);
-    }
-    
-    const toast = document.createElement('div');
-    toast.className = `toast-notification ${type}`;
-    
-    const icons = {
-        success: '✓',
-        error: '✕',
-        warning: '⚠'
-    };
-    
-    toast.innerHTML = `
-        <div class="toast-icon">${icons[type] || '✓'}</div>
-        <div class="toast-message">${message}</div>
-        <div class="toast-close" onclick="this.parentElement.remove()">✕</div>
-    `;
-    
-    container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideIn 0.3s ease reverse';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+// Prevent re-initialization with Turbo
+if (window.aiTrainingInitialized) {
+  throw new Error('AI Training script already loaded');
 }
 
-function formatBytes(bytes) {
-    if (!bytes || bytes <= 0) {
-        return '0 KB';
-    }
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let size = bytes;
-    let idx = 0;
+(function() {
+  const uploadZone = document.getElementById('uploadZone');
+  const trainingFiles = document.getElementById('trainingFiles');
+  const filesList = document.getElementById('filesList');
+  const filesCount = document.getElementById('filesCount');
+  const totalSize = document.getElementById('totalSize');
+  const uploadProgress = document.getElementById('uploadProgress');
+  const uploadQueue = document.getElementById('uploadQueue');
+  const validationMessages = document.getElementById('validationMessages');
+  const bulkActions = document.getElementById('bulkActions');
+  const selectAll = document.getElementById('selectAll');
+  const selectedCount = document.getElementById('selectedCount');
+  const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+
+  const FILES_ENDPOINT = '/ai-training/files';
+  const UPLOAD_ENDPOINT = '/ai-training/upload';
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+  const ALLOWED_EXTENSIONS = ['txt', 'pdf', 'docx', 'json', 'csv'];
+
+  let selectedFiles = new Set();
+  let allFiles = [];
+
+  // Toast notification system
+  function showToast(type, message) {
+      let container = document.querySelector('.toast-container');
+      if (!container) {
+          container = document.createElement('div');
+          container.className = 'toast-container';
+          document.body.appendChild(container);
+      }
+      
+      const toast = document.createElement('div');
+      toast.className = `toast-notification ${type}`;
+      
+      const icons = {
+          success: '✓',
+          error: '✕',
+          warning: '⚠'
+      };
+      
+      toast.innerHTML = `
+          <div class="toast-icon">${icons[type] || '✓'}</div>
+          <div class="toast-message">${message}</div>
+          <div class="toast-close" onclick="this.parentElement.remove()">✕</div>
+      `;
+      
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+          toast.style.animation = 'slideIn 0.3s ease reverse';
+          setTimeout(() => toast.remove(), 300);
+      }, 4000);
+  }
+
+  function formatBytes(bytes) {
+      if (!bytes || bytes <= 0) {
+          return '0 KB';
+      }
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let size = bytes;
+      let idx = 0;
     while (size >= 1024 && idx < units.length - 1) {
         size /= 1024;
         idx += 1;
@@ -529,6 +535,10 @@ uploadZone.addEventListener('drop', (e) => {
 uploadZone.addEventListener('click', () => {
     trainingFiles.click();
 });
+
+  // Mark as initialized to prevent re-loading
+  window.aiTrainingInitialized = true;
+})();
 
 trainingFiles.addEventListener('change', () => {
     uploadFiles(trainingFiles.files);

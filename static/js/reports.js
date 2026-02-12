@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('turbo:load', function() {
     // Revenue Over Time Chart
     const revenueCtx = document.getElementById('revenueChart')?.getContext('2d');
     if (revenueCtx) {

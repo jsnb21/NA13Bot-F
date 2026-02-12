@@ -186,13 +186,19 @@
 </div>
 
 <script>
-  const menuUploadInput = document.getElementById('menuUpload');
-  const uploadCard = document.getElementById('uploadCard');
-  const uploadProgress = document.getElementById('uploadProgress');
-  const uploadFilename = document.getElementById('uploadFilename');
+  // Wrap in Turbo event to prevent variable redeclaration
+  document.addEventListener('turbo:load', function initMenuScript() {
+    const menuUploadInput = document.getElementById('menuUpload');
+    const uploadCard = document.getElementById('uploadCard');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadFilename = document.getElementById('uploadFilename');
 
-  // Toast notification function
-  function showToast(type, message) {
+    // Only initialize once by removing listener after first run
+    if (window.menuScriptInitialized) return;
+    window.menuScriptInitialized = true;
+
+    // Toast notification function
+    function showToast(type, message) {
     let container = document.querySelector('.toast-container');
     if (!container) {
       container = document.createElement('div');
@@ -424,5 +430,6 @@
       });
     });
   }
+  });
 </script>
 {% endblock %}

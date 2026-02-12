@@ -1,3 +1,8 @@
+// Prevent re-initialization with Turbo - chatbot is persistent across pages
+if (window.chatbotScriptInitialized) {
+    throw new Error('Chatbot script already loaded');
+}
+
 // 1. Move config to global scope so all functions can access it
 let chatbotConfig = {};
 
@@ -359,3 +364,6 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
         }
     });
 });
+
+// Mark chatbot as initialized to prevent re-loading
+window.chatbotScriptInitialized = true;

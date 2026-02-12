@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask_turbo import Turbo
 from tools import save_config, load_config, add_user, verify_user, user_exists, get_user, update_user_meta
 from config import init_db
 import os
@@ -26,6 +27,9 @@ init_db()
 # simple session secret
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
+
+# Initialize Turbo for seamless page navigation
+turbo = Turbo(app)
 
 app.register_blueprint(chatbot_bp)
 # upload dir for logo files
