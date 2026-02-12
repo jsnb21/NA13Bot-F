@@ -1,22 +1,13 @@
 document.addEventListener('turbo:load', function() {
     // Safety check: only run if we're on the reports page
     if (!document.getElementById('revenueChart')) return;
+
+    const loadToken = Date.now();
+    window.reportsLoadToken = loadToken;
     
     // Guard against re-initialization
     if (window.reportsChartsInitialized) {
-        // Destroy old charts first
-        if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
-            window.revenueChart.destroy();
-            window.revenueChart = null;
-        }
-        if (window.ordersChart && typeof window.ordersChart.destroy === 'function') {
-            window.ordersChart.destroy();
-            window.ordersChart = null;
-        }
-        if (window.growthChart && typeof window.growthChart.destroy === 'function') {
-            window.growthChart.destroy();
-            window.growthChart = null;
-        }
+        destroyReportsCharts();
     }
     
     // Get currency symbol
@@ -26,6 +17,9 @@ document.addEventListener('turbo:load', function() {
     fetch('/api/orders/list')
         .then(response => response.json())
         .then(data => {
+            if (window.reportsLoadToken !== loadToken) {
+                return;
+            }
             // Handle response structure - could be array or wrapped in object
             let orders = Array.isArray(data) ? data : (data.orders || data.data || []);
             
@@ -105,6 +99,8 @@ document.addEventListener('turbo:load', function() {
             const dayData = groupOrdersByDay(ordersThisMonth);
             const monthData = groupOrdersByMonth(orders);
             
+            destroyReportsCharts();
+
             // Revenue Over Time Chart
             const revenueCtx = document.getElementById('revenueChart')?.getContext('2d');
             if (revenueCtx) {
@@ -241,6 +237,21 @@ function updateSalesSummary(revenueThis, revenueLast, revenueChange, revenuePerc
         const trendColor = avgPercent >= 0 ? '#4caf50' : '#f44336';
         const arrow = avgPercent >= 0 ? '↑' : '↓';
         el('avgOrderTrend').innerHTML = `<span style="color:${trendColor};">${arrow} ${Math.abs(avgPercent)}%</span>`;
+    }
+}
+
+function destroyReportsCharts() {
+    if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
+        window.revenueChart.destroy();
+        window.revenueChart = null;
+    }
+    if (window.ordersChart && typeof window.ordersChart.destroy === 'function') {
+        window.ordersChart.destroy();
+        window.ordersChart = null;
+    }
+    if (window.growthChart && typeof window.growthChart.destroy === 'function') {
+        window.growthChart.destroy();
+        window.growthChart = null;
     }
 }
 

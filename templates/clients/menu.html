@@ -167,7 +167,13 @@
 
         {% for item in cfg.get('menu_items', []) %}
         <div class="menu-card">
-          <div class="menu-card-image-box">🍽️</div>
+          <div class="menu-card-image-box">
+            {% if item.get('image_url') %}
+              <img src="{{ item.get('image_url') }}" alt="{{ item.get('name','') }}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" loading="lazy">
+            {% else %}
+              🍽️
+            {% endif %}
+          </div>
           <div class="menu-card-body">
             <div class="d-flex justify-content-between align-items-start">
               <h5 class="menu-card-title">{{ item.get('name','') }}</h5>

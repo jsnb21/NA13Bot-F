@@ -84,20 +84,50 @@ def api_chat():
     menu_items = cfg.get('menu_items', [])
     currency_symbol = cfg.get('currency_symbol', '₱')
     if menu_items:
-        lines = []
+        def normalize_price(price_value):
+            raw = str(price_value or '').strip()
+            if not raw:
+                return ''
+            cleaned = re.sub(r'[^0-9.]', '', raw)
+            try:
+                value = float(cleaned)
+                return f"{currency_symbol}{value:,.2f}"
+            except ValueError:
+                return f"{currency_symbol}{raw.replace(currency_symbol, '').strip()}"
+
+        def short_desc(desc_value):
+            text = str(desc_value or '').strip()
+            if not text:
+                return ''
+            return f"{text[:87]}..." if len(text) > 90 else text
+
+        grouped = {}
         for item in menu_items:
             name = (item.get('name') or '').strip()
-            desc = (item.get('description') or '').strip()
-            price = (item.get('price') or '').strip()
             if not name:
                 continue
-            line = name
-            if desc:
-                line += f" — {desc}"
-            if price:
-                line += f" ({currency_symbol}{price})"
-            lines.append(line)
-        menu_text = "\n".join(lines) if lines else menu_text
+            category = (item.get('category') or 'Other').strip() or 'Other'
+            grouped.setdefault(category, []).append(item)
+
+        lines = []
+        for category in sorted(grouped.keys(), key=lambda x: x.lower()):
+            lines.append(f"{category}:")
+            for idx, item in enumerate(grouped[category], start=1):
+                name = (item.get('name') or '').strip()
+                desc = short_desc(item.get('description'))
+                price = normalize_price(item.get('price'))
+                image_url = (item.get('image_url') or '').strip()
+                line = f"{idx}) {name}"
+                if desc:
+                    line += f" — {desc}"
+                if price:
+                    line += f" ({price})"
+                if image_url:
+                    line += f" • Photo: {image_url}"
+                lines.append(line)
+            lines.append('')
+
+        menu_text = "\n".join(lines).strip() if lines else menu_text
     if not menu_text:
         menu_text = 'No menu available'
 

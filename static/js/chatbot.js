@@ -256,17 +256,52 @@ function buildMenuText(cfg) {
     const items = cfg.menu_items || [];
     const currency = cfg.currency_symbol || '₱';
     if (items.length) {
-        const lines = items.map(item => {
+        const normalizePrice = (price) => {
+            const raw = (price || '').toString().trim();
+            if (!raw) return '';
+            const cleaned = raw.replace(/[^0-9.]/g, '');
+            const value = parseFloat(cleaned);
+            if (!Number.isNaN(value)) {
+                return `${currency}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+            return `${currency}${raw.replace(currency, '').trim()}`;
+        };
+
+        const shortDesc = (desc) => {
+            const text = (desc || '').toString().trim();
+            if (!text) return '';
+            return text.length > 90 ? `${text.slice(0, 87)}...` : text;
+        };
+
+        const grouped = {};
+        items.forEach((item) => {
             const name = (item.name || '').trim();
-            if (!name) return '';
-            const desc = (item.description || '').trim();
-            const price = (item.price || '').trim();
-            let line = name;
-            if (desc) line += ' — ' + desc;
-            if (price) line += ' (' + currency + price + ')';
-            return line;
-        }).filter(Boolean);
-        if (lines.length) return lines.join('\n');
+            if (!name) return;
+            const category = (item.category || 'Other').toString().trim() || 'Other';
+            if (!grouped[category]) grouped[category] = [];
+            grouped[category].push(item);
+        });
+
+        const categoryNames = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+        const lines = [];
+        categoryNames.forEach((category) => {
+            lines.push(`${category}:`);
+            grouped[category].forEach((item, index) => {
+                const name = (item.name || '').trim();
+                const desc = shortDesc(item.description);
+                const price = normalizePrice(item.price);
+                const imageUrl = (item.image_url || '').toString().trim();
+                let line = `${index + 1}) ${name}`;
+                if (desc) line += ` — ${desc}`;
+                if (price) line += ` (${price})`;
+                if (imageUrl) line += ` • Photo: ${imageUrl}`;
+                lines.push(line);
+            });
+            lines.push('');
+        });
+
+        const output = lines.join('\n').trim();
+        if (output) return output;
     }
     return cfg.menu_text || '';
 }
