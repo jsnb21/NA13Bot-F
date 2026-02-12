@@ -1,8 +1,28 @@
 document.addEventListener('turbo:load', function() {
+    // Safety check: only run if we're on the reports page
+    if (!document.getElementById('revenueChart')) return;
+    
+    // Guard against re-initialization
+    if (window.reportsChartsInitialized) {
+        // Destroy old charts first
+        if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
+            window.revenueChart.destroy();
+            window.revenueChart = null;
+        }
+        if (window.ordersChart && typeof window.ordersChart.destroy === 'function') {
+            window.ordersChart.destroy();
+            window.ordersChart = null;
+        }
+        if (window.growthChart && typeof window.growthChart.destroy === 'function') {
+            window.growthChart.destroy();
+            window.growthChart = null;
+        }
+    }
+    
     // Revenue Over Time Chart
     const revenueCtx = document.getElementById('revenueChart')?.getContext('2d');
     if (revenueCtx) {
-        new Chart(revenueCtx, {
+        window.revenueChart = new Chart(revenueCtx, {
             type: 'line',
             data: {
                 labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
@@ -36,7 +56,7 @@ document.addEventListener('turbo:load', function() {
     // Orders by Day of Week Chart
     const ordersCtx = document.getElementById('ordersChart')?.getContext('2d');
     if (ordersCtx) {
-        new Chart(ordersCtx, {
+        window.ordersChart = new Chart(ordersCtx, {
             type: 'bar',
             data: {
                 labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -62,7 +82,7 @@ document.addEventListener('turbo:load', function() {
     // Customer Growth Chart
     const growthCtx = document.getElementById('growthChart')?.getContext('2d');
     if (growthCtx) {
-        new Chart(growthCtx, {
+        window.growthChart = new Chart(growthCtx, {
             type: 'line',
             data: {
                 labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
@@ -89,4 +109,7 @@ document.addEventListener('turbo:load', function() {
             }
         });
     }
+    
+    window.reportsChartsInitialized = true;
 });
+

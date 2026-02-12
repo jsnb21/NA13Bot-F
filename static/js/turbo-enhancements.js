@@ -3,18 +3,44 @@
  * Provides loading indicators and smooth transitions
  */
 
-// Clean up page-specific flags when navigating to a new page
-document.addEventListener('turbo:before-fetch-request', function() {
+// Clean up page-specific flags and destroy charts when actually navigating away (not on hover preview)
+document.addEventListener('turbo:before-cache', function() {
+  // Only triggered when actually navigating away from current page, not on hover preview
+  
   // Clear any running page-specific intervals
   if (window.ordersRefreshInterval) {
     clearInterval(window.ordersRefreshInterval);
     window.ordersRefreshInterval = null;
   }
   
+  if (window.dashboardRefreshInterval) {
+    clearInterval(window.dashboardRefreshInterval);
+    window.dashboardRefreshInterval = null;
+  }
+  
+  // Destroy chart instances to prevent canvas reuse errors
+  if (window.revenueChart && typeof window.revenueChart.destroy === 'function') {
+    window.revenueChart.destroy();
+    window.revenueChart = null;
+  }
+  if (window.ordersChart && typeof window.ordersChart.destroy === 'function') {
+    window.ordersChart.destroy();
+    window.ordersChart = null;
+  }
+  if (window.growthChart && typeof window.growthChart.destroy === 'function') {
+    window.growthChart.destroy();
+    window.growthChart = null;
+  }
+  
   // Reset initialization flags for page-specific scripts
   window.menuScriptInitialized = false;
   window.ordersScriptInitialized = false;
-  
+  window.reportsChartsInitialized = false;
+  window.dashboardInitialized = false;
+});
+
+// Visual feedback during fetch request (hover preview or actual navigation)
+document.addEventListener('turbo:before-fetch-request', function() {
   // Add loading class to main frame for visual feedback
   const mainFrame = document.getElementById('main-frame');
   if (mainFrame) {

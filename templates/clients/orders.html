@@ -216,11 +216,10 @@
 <script>
 // Define shared variables and functions in global scope for onclick handlers
 window.allOrders = [];
-
-const symbol = '{{ cfg.get("currency_symbol") or "₱" }}';
+window.symbol = '{{ cfg.get("currency_symbol") or "₱" }}';
 
 function formatCurrency(amount) {
-    return symbol + parseFloat(amount || 0).toFixed(2);
+    return window.symbol + parseFloat(amount || 0).toFixed(2);
 }
 
 function formatDate(dateString) {
@@ -460,6 +459,10 @@ function exportOrders() {
 
 // Load orders from API
 async function loadOrders() {
+    // Safety check: only run if the orders page is still loaded
+    const tbody = document.getElementById('ordersBody');
+    if (!tbody) return;  // Page was navigated away, stop execution
+    
     try {
         const response = await fetch('/api/orders/list');
         if (!response.ok) throw new Error('Failed to fetch orders');
@@ -469,13 +472,16 @@ async function loadOrders() {
     } catch (error) {
         console.error('Error loading orders:', error);
         const tbody = document.getElementById('ordersBody');
-        tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; color: #dc3545;">Failed to load orders. Please try again.</td></tr>';
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; color: #dc3545;">Failed to load orders. Please try again.</td></tr>';
+        }
     }
 }
 
 // Display orders in table
 function displayOrders(orders) {
     const tbody = document.getElementById('ordersBody');
+    if (!tbody) return;  // Element doesn't exist on this page
     
     if (!orders || orders.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="padding: 40px; color: #6c757d;">No orders found.</td></tr>';

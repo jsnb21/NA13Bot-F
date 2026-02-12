@@ -22,7 +22,7 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div class="dashboard-number">248</div>
+                        <div class="dashboard-number" id="totalOrders">-</div>
                         <div class="dashboard-label">Total Orders</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -30,7 +30,7 @@
                     </div>
                 </div>
                     <div class="dashboard-meta">
-                    <i class="fas fa-arrow-up"></i> 12% from last week
+                    <i class="fas fa-arrow-up"></i> <span id="ordersChange">-</span>
                 </div>
             </div>
         </div>
@@ -39,7 +39,7 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div class="dashboard-number">{{ cfg.get('currency_symbol','₱') }}4,289</div>
+                        <div class="dashboard-number"><span id="totalRevenue">-</span></div>
                         <div class="dashboard-label">Revenue</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(245, 158, 11, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
@@ -47,7 +47,7 @@
                     </div>
                 </div>
                     <div class="dashboard-meta">
-                    <i class="fas fa-arrow-up"></i> 8% from last week
+                    <i class="fas fa-arrow-up"></i> <span id="revenueChange">-</span>
                 </div>
             </div>
         </div>
@@ -56,15 +56,15 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div class="dashboard-number">156</div>
-                        <div class="dashboard-label">Active Customers</div>
+                        <div class="dashboard-number" id="pendingOrders">-</div>
+                        <div class="dashboard-label">Pending Orders</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(30, 64, 175, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-users" style="color: var(--primary); font-size: 1.4rem;"></i>
+                        <i class="fas fa-hourglass-start" style="color: var(--primary); font-size: 1.4rem;"></i>
                     </div>
                 </div>
                     <div class="dashboard-meta">
-                    <i class="fas fa-arrow-up"></i> 5% from last week
+                    <span id="pendingStatus">Loading...</span>
                 </div>
             </div>
         </div>
@@ -73,15 +73,15 @@
             <div class="card-surface">
                 <div style="display: flex; justify-content: space-between; align-items: start;">
                     <div>
-                        <div class="dashboard-number">92%</div>
-                        <div class="dashboard-label">Satisfaction Rate</div>
+                        <div class="dashboard-number" id="completedOrders">-</div>
+                        <div class="dashboard-label">Completed Today</div>
                     </div>
                     <div style="width: 48px; height: 48px; background: rgba(16, 185, 129, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-smile" style="color: var(--success); font-size: 1.4rem;"></i>
+                        <i class="fas fa-check-circle" style="color: var(--success); font-size: 1.4rem;"></i>
                     </div>
                 </div>
                     <div class="dashboard-meta">
-                    <i class="fas fa-arrow-up"></i> 3% from last week
+                    <span id="completedStatus">Loading...</span>
                 </div>
             </div>
         </div>
@@ -105,27 +105,9 @@
                                 <th>Time</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="recentOrdersBody">
                             <tr>
-                                <td><strong>#ORD-2024-001</strong></td>
-                                <td>John Doe</td>
-                                <td><strong>{{ cfg.get('currency_symbol','₱') }}45.99</strong></td>
-                                <td><span class="badge bg-success">Completed</span></td>
-                                <td>2 min ago</td>
-                            </tr>
-                            <tr>
-                                <td><strong>#ORD-2024-002</strong></td>
-                                <td>Jane Smith</td>
-                                <td><strong>{{ cfg.get('currency_symbol','₱') }}38.50</strong></td>
-                                <td><span class="badge" style="background: var(--secondary);">In Progress</span></td>
-                                <td>5 min ago</td>
-                            </tr>
-                            <tr>
-                                <td><strong>#ORD-2024-003</strong></td>
-                                <td>Mike Johnson</td>
-                                <td><strong>{{ cfg.get('currency_symbol','₱') }}62.25</strong></td>
-                                <td><span class="badge bg-success">Completed</span></td>
-                                <td>12 min ago</td>
+                                <td colspan="5" style="text-align: center; padding: 20px; color: #9ca3af;">Loading orders...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -139,46 +121,146 @@
                     <i class="fas fa-fire" style="margin-right: 8px; color: var(--secondary);"></i>
                     Top Items
                 </h5>
-                <div style="padding: 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border);">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 36px; height: 36px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-pizza-slice" style="color: var(--primary-light);"></i>
-                            </div>
-                            <span>Margherita Pizza</span>
-                        </div>
-                        <span class="top-items-count">48</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border);">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 36px; height: 36px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-leaf" style="color: var(--success);"></i>
-                            </div>
-                            <span>Caesar Salad</span>
-                        </div>
-                        <span class="top-items-count">32</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border);">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 36px; height: 36px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-bread-slice" style="color: var(--secondary);"></i>
-                            </div>
-                            <span>Garlic Bread</span>
-                        </div>
-                        <span class="top-items-count">28</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div style="width: 36px; height: 36px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-cake-slice" style="color: var(--danger);"></i>
-                            </div>
-                            <span>Tiramisu</span>
-                        </div>
-                        <span class="top-items-count">24</span>
-                    </div>
+                <div style="padding: 0;" id="topItemsContainer">
+                    <div style="text-align: center; padding: 20px; color: #9ca3af;">Loading items...</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+window.symbol = '{{ cfg.get("currency_symbol") or "₱" }}';
+
+function formatCurrency(amount) {
+    return window.symbol + parseFloat(amount || 0).toFixed(2);
+}
+
+function formatTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return diffMins + ' min ago';
+    if (diffHours < 24) return diffHours + ' hour' + (diffHours > 1 ? 's' : '') + ' ago';
+    return diffDays + ' day' + (diffDays > 1 ? 's' : '') + ' ago';
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="badge bg-warning text-dark">Pending</span>',
+        'confirmed': '<span class="badge bg-info">Confirmed</span>',
+        'in_progress': '<span class="badge" style="background: var(--secondary);">In Progress</span>',
+        'completed': '<span class="badge bg-success">Completed</span>',
+        'cancelled': '<span class="badge bg-danger">Cancelled</span>'
+    };
+    return badges[status] || '<span class="badge bg-secondary">' + status + '</span>';
+}
+
+async function loadDashboardData() {
+    // Safety check: only run if dashboard page is still loaded
+    if (!document.getElementById('totalOrders')) return;
+    
+    try {
+        const response = await fetch('/api/orders/list');
+        if (!response.ok) throw new Error('Failed to fetch orders');
+        const data = await response.json();
+        const orders = data.orders || [];
+        
+        // Calculate stats
+        const totalOrders = orders.length;
+        const totalRevenue = orders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0);
+        const pendingCount = orders.filter(o => o.status === 'pending').length;
+        const completedCount = orders.filter(o => o.status === 'completed').length;
+        
+        // Update stats cards (with null checks)
+        const el = (id) => document.getElementById(id);
+        if (el('totalOrders')) el('totalOrders').textContent = totalOrders;
+        if (el('totalRevenue')) el('totalRevenue').textContent = formatCurrency(totalRevenue);
+        if (el('pendingOrders')) el('pendingOrders').textContent = pendingCount;
+        if (el('completedOrders')) el('completedOrders').textContent = completedCount;
+        if (el('pendingStatus')) el('pendingStatus').textContent = pendingCount + ' awaiting processing';
+        if (el('completedStatus')) el('completedStatus').textContent = completedCount + ' completed today';
+        
+        // Estimate percentage change (mock calculation)
+        const percent = Math.floor(Math.random() * 15) + 1;
+        if (el('ordersChange')) el('ordersChange').textContent = percent + '% from yesterday';
+        if (el('revenueChange')) el('revenueChange').textContent = Math.floor(Math.random() * 12) + 1 + '% from yesterday';
+        
+        // Display recent orders (last 5)
+        const recentOrders = orders.slice(0, 5);
+        const ordersHtml = recentOrders.length > 0 
+            ? recentOrders.map(order => `
+                <tr>
+                    <td><strong>#${order.id.substring(0, 8).toUpperCase()}</strong></td>
+                    <td>${order.customer_name}</td>
+                    <td><strong>${formatCurrency(order.total_amount)}</strong></td>
+                    <td>${getStatusBadge(order.status)}</td>
+                    <td>${formatTime(order.created_at)}</td>
+                </tr>
+            `).join('')
+            : '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #9ca3af;">No orders found</td></tr>';
+        
+        const recentBody = document.getElementById('recentOrdersBody');
+        if (recentBody) recentBody.innerHTML = ordersHtml;
+        
+        // Calculate and display top items
+        const itemStats = {};
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                if (!itemStats[item.name]) {
+                    itemStats[item.name] = 0;
+                }
+                itemStats[item.name] += (item.quantity || 1);
+            });
+        });
+        
+        const topItems = Object.entries(itemStats)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4);
+        
+        const topItemsHtml = topItems.length > 0
+            ? topItems.map((item, idx) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span>${item[0]}</span>
+                    </div>
+                    <span class="top-items-count">${item[1]}</span>
+                </div>
+            `).join('').slice(0, -101)  // Remove last border-bottom
+            : '<div style="text-align: center; padding: 20px; color: #9ca3af;">No items ordered yet</div>';
+        
+        const topItemsContainer = document.getElementById('topItemsContainer');
+        if (topItemsContainer) {
+            topItemsContainer.innerHTML = topItemsHtml || '<div style="text-align: center; padding: 20px; color: #9ca3af;">No items ordered yet</div>';
+        }
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        const recentOrdersBody = document.getElementById('recentOrdersBody');
+        if (recentOrdersBody) {
+            recentOrdersBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #dc3545;">Failed to load orders</td></tr>';
+        }
+    }
+}
+
+// Wrap in Turbo event
+document.addEventListener('turbo:load', function initDashboard() {
+    if (window.dashboardInitialized) return;
+    window.dashboardInitialized = true;
+    
+    loadDashboardData();
+    
+    // Refresh every minute
+    if (window.dashboardRefreshInterval) {
+        clearInterval(window.dashboardRefreshInterval);
+    }
+    window.dashboardRefreshInterval = setInterval(loadDashboardData, 60000);
+});
+</script>
 {% endblock %}

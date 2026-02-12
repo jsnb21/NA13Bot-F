@@ -193,6 +193,9 @@
     const uploadProgress = document.getElementById('uploadProgress');
     const uploadFilename = document.getElementById('uploadFilename');
 
+    // Guard: Only initialize if elements exist
+    if (!menuUploadInput || !uploadCard) return;
+
     // Only initialize once by removing listener after first run
     if (window.menuScriptInitialized) return;
     window.menuScriptInitialized = true;

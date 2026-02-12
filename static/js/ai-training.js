@@ -536,12 +536,14 @@ uploadZone.addEventListener('click', () => {
     trainingFiles.click();
 });
 
-  // Mark as initialized to prevent re-loading
-  window.aiTrainingInitialized = true;
-})();
-
+// File input change handler
 trainingFiles.addEventListener('change', () => {
     uploadFiles(trainingFiles.files);
 });
 
+// Initial load
 fetchFiles();
+
+  // Mark as initialized to prevent re-loading
+  window.aiTrainingInitialized = true;
+})();
