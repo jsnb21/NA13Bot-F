@@ -16,7 +16,7 @@
             <p class="text-secondary mb-0">Manage digital menu items and AI training documents</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-danger px-3 py-2" style="border-radius: 10px;" type="button" onclick="clearAllMenu()">
+            <button class="btn btn-outline-danger px-3 py-2" style="border-radius: 10px;" type="button" onclick="openClearMenuModal()">
                 <i class="fas fa-trash me-2"></i>Clear All Menu
             </button>
             <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" id="menuEditorToggle">
@@ -137,6 +137,7 @@
                   data-price="{{ item.get('price','') }}"
                   data-category="{{ item.get('category','') }}"
                   data-status="{{ item.get('status','') }}"
+                  data-image-url="{{ item.get('image_url','') }}"
                 >
                   Edit
                 </button>
@@ -165,6 +166,22 @@
             </div>
         </div>
 
+      <div class="upload-menu-card" id="photoUploadCard" onclick="document.getElementById('menuPhotoUpload').click()">
+        <input type="file" id="menuPhotoUpload" hidden accept=".png,.jpg,.jpeg,.gif,.svg" multiple>
+        <div class="upload-icon-wrap">
+          <i class="fa-solid fa-image"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Upload Menu Photos</h5>
+        <p class="text-secondary small mb-4">Upload one or multiple images. Name each file to match the menu item (ex: "Chicken Parmesan.jpg").</p>
+        <span class="btn btn-sm btn-outline-dark px-3 fw-bold" style="border-radius: 8px;">Browse Photos</span>
+
+        <div class="upload-progress-overlay" id="photoUploadProgress">
+            <div class="upload-spinner"></div>
+            <div class="upload-status-text">Uploading photos...</div>
+            <div class="upload-filename" id="photoUploadFilename"></div>
+        </div>
+      </div>
+
         {% for item in cfg.get('menu_items', []) %}
         <div class="menu-card">
           <div class="menu-card-image-box">
@@ -191,13 +208,40 @@
     </div>
 </div>
 
+<div class="modal fade" id="clearMenuModal" tabindex="-1" aria-labelledby="clearMenuModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 14px;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="clearMenuModalLabel">Clear All Menu Items</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        This action will permanently delete all menu items. This cannot be undone.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmClearMenuBtn">Yes, Clear All</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // Wrap in Turbo event to prevent variable redeclaration
   document.addEventListener('turbo:load', function initMenuScript() {
     const menuUploadInput = document.getElementById('menuUpload');
+    const menuPhotoUpload = document.getElementById('menuPhotoUpload');
     const uploadCard = document.getElementById('uploadCard');
+    const photoUploadCard = document.getElementById('photoUploadCard');
     const uploadProgress = document.getElementById('uploadProgress');
     const uploadFilename = document.getElementById('uploadFilename');
+    const photoUploadProgress = document.getElementById('photoUploadProgress');
+    const photoUploadFilename = document.getElementById('photoUploadFilename');
+    const clearMenuModalEl = document.getElementById('clearMenuModal');
+    const confirmClearMenuBtn = document.getElementById('confirmClearMenuBtn');
+    const clearMenuModal = (window.bootstrap && clearMenuModalEl)
+      ? new bootstrap.Modal(clearMenuModalEl)
+      : null;
 
     // Guard: Only initialize if elements exist
     if (!menuUploadInput || !uploadCard) return;
@@ -288,12 +332,72 @@
     }
   });
 
+  if (menuPhotoUpload) {
+    menuPhotoUpload.addEventListener('change', async () => {
+      if (!menuPhotoUpload.files || menuPhotoUpload.files.length === 0) {
+        return;
+      }
+
+      if (photoUploadCard && photoUploadProgress) {
+        photoUploadCard.classList.add('uploading');
+        photoUploadProgress.classList.add('active');
+        photoUploadFilename.textContent = `${menuPhotoUpload.files.length} file(s)`;
+      }
+
+      const formData = new FormData();
+      Array.from(menuPhotoUpload.files).forEach((file) => {
+        formData.append('menu_photos', file, file.name);
+      });
+
+      try {
+        const res = await fetch('/menu/photos/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        });
+
+        if (!res.ok) {
+          let message = 'Photo upload failed.';
+          try {
+            const data = await res.json();
+            if (data && data.error) message = data.error;
+            if (data && data.detail) message = `${message}: ${data.detail}`;
+          } catch (err) {}
+          showToast('error', message);
+          return;
+        }
+
+        const data = await res.json();
+        const matched = data.matched || 0;
+        const uploaded = data.uploaded || 0;
+        const unmatched = Array.isArray(data.unmatched) ? data.unmatched.length : 0;
+        showToast('success', `Uploaded ${uploaded} photo(s). Matched: ${matched}. Unmatched: ${unmatched}.`);
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (err) {
+        showToast('error', 'Photo upload failed. Please try again.');
+      } finally {
+        if (photoUploadCard && photoUploadProgress) {
+          setTimeout(() => {
+            photoUploadCard.classList.remove('uploading');
+            photoUploadProgress.classList.remove('active');
+          }, 500);
+        }
+        menuPhotoUpload.value = '';
+      }
+    });
+  }
+
   // Clear all menu items
-  async function clearAllMenu() {
-    if (!confirm('Are you sure you want to delete ALL menu items? This cannot be undone.')) {
-      return;
+  function openClearMenuModal() {
+    if (clearMenuModal) {
+      clearMenuModal.show();
     }
-    
+  }
+
+  async function clearAllMenu() {
     try {
       const res = await fetch('/settings/clear-menu', {
         method: 'POST',
@@ -313,6 +417,18 @@
     }
   }
 
+  if (confirmClearMenuBtn) {
+    confirmClearMenuBtn.addEventListener('click', async () => {
+      if (clearMenuModal) {
+        clearMenuModal.hide();
+      }
+      await clearAllMenu();
+    });
+  }
+
+  window.clearAllMenu = clearAllMenu;
+  window.openClearMenuModal = openClearMenuModal;
+
   const menuEditor = document.getElementById('menuEditor');
   const menuGrid = document.getElementById('menuGrid');
   const menuEditorToggle = document.getElementById('menuEditorToggle');
@@ -326,6 +442,7 @@
   const menuEditIndex = document.getElementById('menuEditIndex');
   const menuEditName = document.getElementById('menuEditName');
   const menuEditDescription = document.getElementById('menuEditDescription');
+  const menuEditImageUrl = document.getElementById('menuEditImageUrl');
   const menuEditPrice = document.getElementById('menuEditPrice');
   const menuEditCategory = document.getElementById('menuEditCategory');
   const menuEditStatus = document.getElementById('menuEditStatus');
@@ -390,6 +507,7 @@
       if (menuEditIndex) menuEditIndex.value = btn.dataset.index || '';
       if (menuEditName) menuEditName.value = btn.dataset.name || '';
       if (menuEditDescription) menuEditDescription.value = btn.dataset.description || '';
+      if (menuEditImageUrl) menuEditImageUrl.value = btn.dataset.imageUrl || '';
       if (menuEditPrice) menuEditPrice.value = btn.dataset.price || '';
       if (menuEditCategory) menuEditCategory.value = btn.dataset.category || '';
       if (menuEditStatus) menuEditStatus.value = btn.dataset.status || 'Live';

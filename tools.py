@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
@@ -188,7 +189,7 @@ def _fetch_menu_items(restaurant_id: str = None):
             cur.execute(
                 sql.SQL(
                     """
-                    SELECT name, description, price, category, status
+                    SELECT id, name, description, price, category, status, (image_data IS NOT NULL) AS has_image
                     FROM {}.menu_items
                     WHERE restaurant_id = %s
                     ORDER BY created_at ASC
@@ -200,12 +201,17 @@ def _fetch_menu_items(restaurant_id: str = None):
 
     items = []
     for row in rows or []:
+        image_url = None
+        if row[6]:  # has_image
+            image_url = f"/menu/photo/{row[0]}"
         items.append({
-            'name': row[0],
-            'description': row[1],
-            'price': row[2],
-            'category': row[3],
-            'status': row[4]
+            'id': str(row[0]),
+            'name': row[1],
+            'description': row[2],
+            'price': row[3],
+            'category': row[4],
+            'status': row[5],
+            'image_url': image_url
         })
     return items
 
@@ -257,8 +263,31 @@ def _replace_menu_items(restaurant_id: str, menu_items):
     if not restaurant_id:
         return
 
+    def normalize_key(value: str) -> str:
+        return re.sub(r'[^a-z0-9]+', '', (value or '').strip().lower())
+
     with get_connection() as conn:
         with conn.cursor() as cur:
+            cur.execute(
+                sql.SQL(
+                    """
+                    SELECT name, image_data, image_mime
+                    FROM {}.menu_items
+                    WHERE restaurant_id = %s
+                    """
+                ).format(sql.Identifier(schema)),
+                [restaurant_id]
+            )
+            image_rows = cur.fetchall()
+            image_map = {}
+            for row in image_rows or []:
+                key = normalize_key(row[0])
+                if key:
+                    image_map[key] = {
+                        'image_data': row[1],
+                        'image_mime': row[2]
+                    }
+
             cur.execute(
                 sql.SQL("DELETE FROM {}.menu_items WHERE restaurant_id = %s").format(sql.Identifier(schema)),
                 [restaurant_id]
@@ -270,11 +299,17 @@ def _replace_menu_items(restaurant_id: str, menu_items):
                 name = (item.get('name') or '').strip()
                 if not name:
                     continue
+
+                key = normalize_key(name)
+                preserved = image_map.get(key, {})
+                image_data = preserved.get('image_data')
+                image_mime = preserved.get('image_mime')
+
                 cur.execute(
                     sql.SQL(
                         """
-                        INSERT INTO {}.menu_items (restaurant_id, name, description, price, category, status)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        INSERT INTO {}.menu_items (restaurant_id, name, description, price, category, status, image_data, image_mime)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                         """
                     ).format(sql.Identifier(schema)),
                     [
@@ -283,7 +318,9 @@ def _replace_menu_items(restaurant_id: str, menu_items):
                         (item.get('description') or '').strip(),
                         (item.get('price') or '').strip(),
                         (item.get('category') or '').strip(),
-                        (item.get('status') or '').strip()
+                        (item.get('status') or '').strip(),
+                        image_data,
+                        image_mime
                     ]
                 )
 

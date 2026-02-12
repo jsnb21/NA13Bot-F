@@ -128,17 +128,19 @@ def init_db():
             cur.execute(
                 sql.SQL(
                     """
-                    CREATE TABLE IF NOT EXISTS {}.menu_items (
-                      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                      restaurant_id UUID,
-                      name        TEXT NOT NULL,
-                      description TEXT,
-                      price       TEXT,
-                      category    TEXT,
-                      status      TEXT,
-                      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-                      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-                    );
+                                        CREATE TABLE IF NOT EXISTS {}.menu_items (
+                                            id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                            restaurant_id UUID,
+                                            name        TEXT NOT NULL,
+                                            description TEXT,
+                                            price       TEXT,
+                                            category    TEXT,
+                                            status      TEXT,
+                                            image_data  BYTEA,
+                                            image_mime  TEXT,
+                                            created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+                                            updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+                                        );
                     """
                 ).format(sql.Identifier(schema))
             )
@@ -190,6 +192,18 @@ def init_db():
             )
             cur.execute(
                 sql.SQL("ALTER TABLE {}.menu_items ADD COLUMN IF NOT EXISTS restaurant_id UUID")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.menu_items ADD COLUMN IF NOT EXISTS image_url TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.menu_items ADD COLUMN IF NOT EXISTS image_data BYTEA")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.menu_items ADD COLUMN IF NOT EXISTS image_mime TEXT")
                 .format(sql.Identifier(schema))
             )
 

@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response
 from flask_turbo import Turbo
 from tools import save_config, load_config, add_user, verify_user, user_exists, get_user, update_user_meta
-from config import init_db
+from config import init_db, get_connection, get_db_schema
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
@@ -20,6 +20,8 @@ from datetime import datetime, timezone
 from chatbot.routes import chatbot_bp
 from chatbot.training import build_training_context
 import google.genai as genai
+import base64
+import psycopg
 
 # after app is created, before routes
 init_db()
@@ -595,6 +597,7 @@ def menu_add_item():
     price = request.form.get('price', '').strip()
     category = request.form.get('category', '').strip() or 'Uncategorized'
     status = request.form.get('status', '').strip() or 'Live'
+    image_url = request.form.get('image_url', '').strip()
 
     if not name:
         return redirect(url_for('menu'))
@@ -605,7 +608,8 @@ def menu_add_item():
         'description': description,
         'price': price,
         'category': category,
-        'status': status
+        'status': status,
+        'image_url': image_url
     })
     cfg['menu_items'] = items
     save_config(cfg, restaurant_id)
@@ -636,11 +640,17 @@ def menu_update_item():
         'description': request.form.get('description', '').strip(),
         'price': request.form.get('price', '').strip(),
         'category': request.form.get('category', '').strip() or 'Uncategorized',
-        'status': request.form.get('status', '').strip() or 'Live'
+        'status': request.form.get('status', '').strip() or 'Live',
+        'image_url': request.form.get('image_url', '').strip()
     }
     cfg['menu_items'] = items
     save_config(cfg, restaurant_id)
     return redirect(url_for('menu'))
+
+
+def _normalize_menu_key(value: str) -> str:
+    text = (value or '').strip().lower()
+    return re.sub(r'[^a-z0-9]+', '', text)
 
 
 @app.route('/menu/upload', methods=['POST'])
@@ -681,6 +691,18 @@ def menu_upload_menu_file():
                 unique_items.append(item)
 
         cfg = load_config(restaurant_id)
+        existing_items = cfg.get('menu_items', [])
+        image_map = {}
+        for item in existing_items:
+            key = _normalize_menu_key(item.get('name', ''))
+            if key and item.get('image_url'):
+                image_map[key] = item.get('image_url')
+
+        for item in unique_items:
+            key = _normalize_menu_key(item.get('name', ''))
+            if key and key in image_map:
+                item['image_url'] = image_map[key]
+
         cfg['menu_items'] = unique_items
         save_config(cfg, restaurant_id)
 
@@ -690,6 +712,119 @@ def menu_upload_menu_file():
     except Exception as exc:
         app.logger.exception('Menu upload failed')
         return jsonify({'error': 'Menu upload failed', 'detail': str(exc)}), 500
+
+
+@app.route('/menu/photos/upload', methods=['POST'])
+@login_required
+def menu_upload_photos():
+    try:
+        restaurant_id = get_current_restaurant_id()
+        files = request.files.getlist('menu_photos')
+        if not files:
+            return jsonify({'error': 'No files provided'}), 400
+
+        cfg = load_config(restaurant_id)
+        items = cfg.get('menu_items', [])
+        name_index = {}
+        for idx, item in enumerate(items):
+            key = _normalize_menu_key(item.get('name', ''))
+            if key:
+                name_index[key] = idx
+
+        matched = 0
+        unmatched = []
+        uploaded_count = 0
+
+        schema = get_db_schema()
+        for file in files:
+            if not file or not file.filename:
+                continue
+            if not allowed_file(file.filename):
+                unmatched.append(file.filename)
+                continue
+
+            safe_name = secure_filename(file.filename)
+            if not safe_name:
+                unmatched.append(file.filename)
+                continue
+
+            # Read file bytes and get MIME type
+            mime_type = file.content_type or 'application/octet-stream'
+            file_bytes = file.read()
+            uploaded_count += 1
+
+            # Match filename to menu item
+            key = _normalize_menu_key(Path(file.filename).stem)
+            if key in name_index:
+                idx = name_index[key]
+                item_id = items[idx].get('id')
+                
+                if item_id:
+                    # Store in database
+                    with get_connection() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                psycopg.sql.SQL(
+                                    """
+                                    UPDATE {}.menu_items
+                                    SET image_data = %s, image_mime = %s
+                                    WHERE id = %s AND restaurant_id = %s
+                                    """
+                                ).format(psycopg.sql.Identifier(schema)),
+                                [file_bytes, mime_type, item_id, restaurant_id]
+                            )
+                matched += 1
+            else:
+                unmatched.append(file.filename)
+
+        cfg['menu_items'] = items
+        save_config(cfg, restaurant_id)
+
+        return jsonify({
+            'uploaded': uploaded_count,
+            'matched': matched,
+            'unmatched': unmatched
+        })
+    except Exception as exc:
+        app.logger.exception('Menu photo upload failed')
+        return jsonify({'error': 'Menu photo upload failed', 'detail': str(exc)}), 500
+
+
+# Menu Photo Serving Route
+@app.route('/menu/photo/<photo_id>', methods=['GET'])
+@login_required
+def menu_get_photo(photo_id):
+    """Serve a menu item photo from the database."""
+    try:
+        restaurant_id = get_current_restaurant_id()
+        schema = get_db_schema()
+        
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    psycopg.sql.SQL(
+                        """
+                        SELECT image_data, image_mime
+                        FROM {}.menu_items
+                        WHERE id = %s AND restaurant_id = %s
+                        """
+                    ).format(psycopg.sql.Identifier(schema)),
+                    [photo_id, restaurant_id]
+                )
+                row = cur.fetchone()
+
+        if not row or not row[0]:
+            return jsonify({'error': 'Photo not found'}), 404
+
+        image_data = row[0]
+        mime_type = row[1] or 'image/jpeg'
+
+        response = Response(image_data, mimetype=mime_type)
+        response.headers['Cache-Control'] = 'public, max-age=31536000'
+        return response
+    except Exception as exc:
+        app.logger.exception('Failed to fetch menu photo')
+        return jsonify({'error': 'Failed to fetch photo'}), 500
 
 # Order Management Routes
 from tools import save_order, get_orders, update_order_status

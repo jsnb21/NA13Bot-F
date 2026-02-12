@@ -107,6 +107,62 @@ function formatMessage(text) {
     return withItalic.replace(/\n/g, '<br>');
 }
 
+function extractPhotoUrl(line) {
+    // Match: database photo URLs (/menu/photo/{uuid}), external URLs, or filesystem URLs with extensions
+    const match = line.match(/(?:\/menu\/photo\/[a-f0-9\-]+|https?:\/\/[^\s]+|\/static\/uploads\/[^\s]+?\.(?:png|jpe?g|gif|svg))/i);
+    if (!match) return '';
+    return match[0].replace(/[),.!?]+$/, '');
+}
+
+function buildBotBubbleContent(text) {
+    const wrapper = document.createElement('div');
+    const normalized = (text || '').replace(/<br\s*\/?>/gi, '\n');
+    const lines = normalized.split('\n');
+
+    lines.forEach((rawLine) => {
+        const line = rawLine.trim();
+        if (!line) return;
+
+        const photoUrl = extractPhotoUrl(line);
+        if (photoUrl) {
+            const captionText = line
+                .replace(photoUrl, '')
+                .replace(/\s*•?\s*photo:\s*/i, '')
+                .replace(/\s*[:\-–]\s*$/i, '')
+                .trim();
+            const card = document.createElement('div');
+            card.className = 'menu-photo-card';
+
+            if (captionText) {
+                const caption = document.createElement('div');
+                caption.className = 'menu-photo-caption';
+                caption.innerHTML = formatMessage(captionText);
+                card.appendChild(caption);
+            }
+
+            const img = document.createElement('img');
+            img.className = 'menu-photo-image';
+            img.src = photoUrl;
+            img.alt = captionText || 'Menu photo';
+            img.loading = 'lazy';
+            card.appendChild(img);
+            wrapper.appendChild(card);
+            return;
+        }
+
+        const textLine = document.createElement('div');
+        textLine.className = 'chat-line';
+        textLine.innerHTML = formatMessage(line);
+        wrapper.appendChild(textLine);
+    });
+
+    if (!wrapper.childNodes.length) {
+        wrapper.innerHTML = formatMessage(text || '');
+    }
+
+    return wrapper;
+}
+
 function postMessage(text, from = 'user') {
     const container = document.getElementById('messages');
     const row = document.createElement('div');
@@ -126,7 +182,11 @@ function postMessage(text, from = 'user') {
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble ' + (from === 'user' ? 'user' : 'bot');
-    bubble.innerHTML = formatMessage(text);
+    if (from === 'bot') {
+        bubble.appendChild(buildBotBubbleContent(text));
+    } else {
+        bubble.innerHTML = formatMessage(text);
+    }
 
     if (from === 'user') {
         row.appendChild(bubble);
