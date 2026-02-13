@@ -1,3 +1,81 @@
+"""
+NA13Bot-F - Main Flask Application
+====================================
+Core Flask application entry point for the multi-tenant restaurant AI chatbot system.
+Handles all HTTP routing, session management, file uploads, and coordination between
+frontend, database, and AI services.
+
+Key Responsibilities:
+  - Flask app initialization and configuration
+  - Authentication routes (signup, login, OTP verification)
+  - Admin dashboard for restaurant owners
+  - Chatbot interface for customers
+  - File upload management (logos, training data, menu items)
+  - Training data processing and indexing
+  - Database initialization
+  - Session and cookie management
+  - AI training data integration
+
+Main Page Routes:
+  - GET / - Redirect to dashboard/login
+  - GET /login - Login page
+  - GET /signup - Signup page
+  - GET /dashboard - Admin dashboard
+  - GET /chatbot - Customer chatbot interface
+  - GET /settings - Settings page
+  - GET /ai-training - AI training management
+  - GET /menu - Menu management
+  - GET /orders - Order history
+  - GET /reports - Analytics and reports
+
+API Routes:
+  - POST /upload-logo - Logo upload (admin)
+  - POST /upload-training-file - Training file upload
+  - POST /delete-training-file - Remove training file
+  - GET /get-trained-brands - List trained restaurants
+  - POST /save-settings - Save restaurant configuration
+  - POST /save-menu-description - Update menu text
+  - POST /api/* - Chatbot API endpoints (see chatbot/routes.py)
+
+Features:
+  - Multi-tenant restaurant support with isolated data
+  - OTP-based authentication with 5-minute TTL
+  - Flask-Turbo for seamless real-time navigation
+  - Secure file handling with validation and sanitization
+  - Training data manifest management
+  - PDF processing support (via PyPDF)
+  - CSV/JSON/DOCX file parsing
+  - Database-backed configuration storage
+  - Session-based access control
+
+Configuration:
+  - FLASK_SECRET: Session encryption key (from env or default)
+  - ALLOWED_EXT: Logo file extensions (png, jpg, jpeg, gif, svg)
+  - TRAINING_ALLOWED_EXT: Training file extensions (txt, pdf, docx, json, csv)
+  - MAX_TRAINING_FILE_MB: Maximum training file size (50MB)
+  - OTP_TTL_SECONDS: OTP validity (300 seconds / 5 minutes)
+
+Key Functions:
+  - allowed_file(): Validate logo file extensions
+  - training_allowed_file(): Validate training file extensions
+  - get_training_dir(): Get restaurant training directory path
+  - get_training_manifest_path(): Get manifest.json path
+  - load_training_manifest(): Load training file metadata
+  - save_training_manifest(): Save training file metadata
+  - save_training_upload_bytes(): Save training file to disk
+  - extract_pdf_text(): Parse PDF files
+  - extract_docx_text(): Parse DOCX files
+  - extract_csv_text(): Parse CSV files
+
+Dependencies:
+  - Flask: Web framework
+  - Flask-Turbo: Real-time page updates
+  - Jinja2: Template rendering
+  - PyPDF: PDF processing
+  - psycopg: PostgreSQL driver
+  - google.genai: Gemini AI API
+"""
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response
 from flask_turbo import Turbo
 from tools import save_config, load_config, add_user, verify_user, user_exists, get_user, update_user_meta

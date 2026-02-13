@@ -1,3 +1,33 @@
+"""
+Chatbot System Prompt Builder
+==============================
+Generates context-aware system prompts for the Gemini chatbot tailored to
+restaurant-specific information and operational requirements.
+
+Main Function:
+  - build_system_prompt(): Constructs the complete system prompt for the AI
+
+Prompt Features:
+  - Restaurant-specific personalization (name, menu, training data)
+  - Menu information integration for product knowledge
+  - Structured order flow with clear state management:
+    * Item selection and confirmation
+    * Quantity tracking
+    * Total calculation
+  - Order finalization trigger detection
+  - Professional customer service guidelines
+  - Special request handling
+  - Polite redirection for off-topic queries
+
+Parameters:
+  - establishment_name: Name of the restaurant
+  - menu_text: Complete menu with items and prices
+  - training_context: Optional additional training data for context
+
+Returns:
+  - Formatted prompt string for Gemini API
+"""
+
 def build_system_prompt(establishment_name, menu_text, training_context=None):
     """Build context-aware system prompt."""
     training_block = ""

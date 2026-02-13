@@ -1,3 +1,36 @@
+"""
+Chatbot API Routes Module
+=========================
+Defines Flask API endpoints for chatbot functionality. Handles incoming chat
+messages, processes AI responses, extracts orders, and manages conversation flow.
+
+Main Components:
+  - extract_order_items(): Parses chatbot responses to extract ordered items
+  - Flask Blueprint Routes:
+    * /api/config - Retrieve restaurant configuration
+    * /api/models - List available Gemini models
+    * /api/chat - Handle chat messages and generate responses
+
+Key Features:
+  - Multi-turn conversation with history tracking
+  - Automatic order extraction from AI responses
+  - Dynamic menu formatting with prices and descriptions
+  - Restaurant-specific context building
+  - Currency symbol support
+  - Pattern-based order item parsing:
+    * "2x Item Name" format
+    * "Item Name (price)" format
+    * Quantity tracking
+  - Training data integration for context-aware responses
+  - Order placement trigger detection
+
+Dependencies:
+  - GeminiChatbot: AI response generation
+  - build_system_prompt: Prompt construction
+  - build_training_context: Training data retrieval
+  - Flask session: User authentication and restaurant context
+"""
+
 from flask import Blueprint, request, jsonify, session
 from tools import load_config, save_order
 from chatbot.ai import GeminiChatbot

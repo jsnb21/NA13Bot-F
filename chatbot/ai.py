@@ -1,3 +1,31 @@
+"""
+Google Gemini AI Integration Module
+====================================
+Provides the GeminiChatbot class for integrating with Google's Gemini AI API.
+Handles API communication, response generation, and error management.
+
+Main Class:
+  - GeminiChatbot: Wrapper for Google Gemini API client
+
+Key Functions:
+  - get_response(): Generates AI responses using Gemini with conversation history
+  - list_models(): Lists available Gemini models
+
+Features:
+  - Conversation history support for multi-turn dialogue
+  - Configurable temperature, token limits, and sampling parameters
+  - Comprehensive error handling:
+    * Rate limiting (429 errors)
+    * Authentication issues (401 errors)
+    * API quota exhaustion
+  - Graceful fallback messages for API failures
+
+Configuration:
+  - Uses GEMINI_API_KEY from environment or config.json
+  - Model: gemini-2.5-flash
+  - Max tokens: 500, Temperature: 0.7
+"""
+
 import google.genai as genai
 from config import get_google_api_key
 

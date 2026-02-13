@@ -1,3 +1,94 @@
+"""
+Database Configuration & Initialization Module
+===============================================
+Handles all database setup, connection management, schema initialization, and
+configuration file operations. Supports PostgreSQL with customizable schemas
+and multi-tenant data isolation.
+
+Key Responsibilities:
+  - Database connection pooling and management
+  - Environment variable and config.json loading
+  - Database schema initialization and migrations
+  - Table creation for multi-tenant operation
+  - Index creation for performance optimization
+  - Google Gemini API key retrieval and validation
+  - Schema support for custom database namespaces
+
+Database Tables:
+  1. accounts
+     - User accounts with email, password hashing, and OTP metadata
+     - Multi-tenant: restaurant_id for isolation
+     - Stores user role and metadata (JSONB)
+  
+  2. brand_settings
+     - Restaurant configuration and branding
+     - Restaurant-specific settings (name, logo, colors, hours)
+     - Menu text and system instructions
+     - Currency and display preferences
+  
+  3. menu_items
+     - Restaurant menu items with pricing and descriptions
+     - Image storage (BYTEA with MIME type)
+     - Category and status tracking
+     - Per-restaurant isolation with indexed queries
+  
+  4. orders
+     - Customer orders with items and totals
+     - Order status tracking (pending, confirmed, completed)
+     - Timestamp tracking for analytics
+     - Multi-tenant isolation by restaurant_id
+
+Indexes:
+  - menu_items_restaurant_id_idx: Fast menu queries by restaurant
+  - menu_items_restaurant_category_idx: Category filtering performance
+  - menu_items_restaurant_status_idx: Status-based queries
+  - orders_restaurant_id_idx: Fast order retrieval
+  - orders_restaurant_status_idx: Order status filtering
+
+Key Functions:
+  - get_connection(): Get PostgreSQL connection with env var precedence
+  - load_config(): Load JSON configuration file
+  - get_db_schema(): Get current database schema (custom or public)
+  - init_db(): Initialize database schema and create all tables
+  - get_google_api_key(): Retrieve Gemini API key with fallback logic
+
+Environment Variables (Precedence Order):
+  1. DATABASE_URL - Full PostgreSQL connection string
+  2. DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD - Individual components
+  3. DB_SCHEMA - Custom schema name (default: "public")
+  4. GOOGLE_API_KEY or google_api_key - Gemini API key
+
+Configuration File (config.json):
+  {
+    "db": {
+      "host": "localhost",
+      "port": 5432,
+      "name": "na13bot",
+      "user": "postgres",
+      "password": "password",
+      "schema": "public"
+    },
+    "google_api_key": "your-api-key-here"
+  }
+
+Migration Support:
+  - Automatic schema creation for non-public schemas
+  - Incremental ALTER TABLE for backward compatibility
+  - Column existence checks before adding
+  - Constraint management (PRIMARY KEY changes)
+  - Default value updates for existing data
+
+Security & Isolation:
+  - UUIDs for all primary keys (gen_random_uuid)
+  - PostgreSQL extension: pgcrypto for UUID generation
+  - Multi-tenant isolation via restaurant_id
+  - Search path isolation per schema
+  - JSONB storage for flexible metadata
+
+Extensions:
+  - pgcrypto: UUID generation and crypto functions
+"""
+
 import os
 import json
 from pathlib import Path

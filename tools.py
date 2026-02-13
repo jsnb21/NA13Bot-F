@@ -1,3 +1,94 @@
+"""
+Utility Functions & Database Operations Module
+===============================================
+Provides helper functions for user management, configuration operations,
+database interactions, and order/payment processing. Acts as the bridge between
+the Flask application and PostgreSQL database.
+
+Key Responsibilities:
+  - User authentication and account management
+  - Configuration loading/saving with database sync
+  - Brand settings (restaurant information, branding)
+  - Menu items management and database operations
+  - Order creation and tracking
+  - Password hashing and verification
+  - Database queries and data validation
+
+User Management Functions:
+  - add_user(email, password, restaurant_id): Create new account
+  - verify_user(email, password): Authenticate user credentials
+  - user_exists(email): Check if email exists
+  - get_user(email): Fetch user account details
+  - update_user_meta(email, meta): Update user metadata (JSONB)
+  - is_user_registered(email): Check user registration status
+  - get_current_user_restaurant(email): Get user's restaurant_id
+
+Configuration Functions:
+  - load_config(restaurant_id): Load restaurant config (JSON + DB)
+  - save_config(data, restaurant_id): Save config to JSON and DB
+  - _load_json_config(): Read config.json file
+  - _save_json_config(data): Write config.json file
+  - _extract_brand_data(data): Extract brand fields from config
+  - _fetch_brand_settings(restaurant_id): Query database for branding
+  - _upsert_brand_settings(restaurant_id, data): Create/update branding
+  - _fetch_menu_items(restaurant_id): Query database for menu
+  - _replace_menu_items(restaurant_id, items): Update menu items
+
+Brand Settings Fields:
+  - establishment_name: Restaurant name
+  - logo_url: URL to restaurant logo
+  - color_hex, main_color, sub_color: Color scheme
+  - font_family, font_color: Typography
+  - menu_text: Full menu content
+  - currency_code, currency_symbol: Currency info (default: ₱)
+  - chatbot_avatar: AI avatar image URL
+  - business_name, business_email, business_phone, business_address
+  - open_time, close_time: Operating hours
+  - tax_rate: Tax percentage
+  - image_urls: Additional images (JSONB)
+
+Order Management Functions:
+  - save_order(restaurant_id, customer_name, items, total_amount): Create order
+  - get_order(order_id): Fetch order details
+  - get_orders(restaurant_id, limit): Get recent orders
+  - update_order_status(order_id, status): Update order state
+
+Payment Functions:
+  - initiate_payment(order_id, amount): Start payment processing
+  - verify_payment(reference): Check payment status
+  - complete_order(order_id): Finalize completed order
+
+Password Security:
+  - Uses werkzeug.security for hashing (PBKDF2)
+  - Salt is automatically generated and stored
+  - check_password_hash() for secure verification
+
+Configuration Priority:
+  1. Environment variables (DB connection)
+  2. config.json file (non-brand settings, API keys)
+  3. PostgreSQL database (restaurant-specific branding, menu, orders)
+  4. Fallback defaults (currency_symbol = ₱)
+
+Data Types:
+  - restaurant_id: UUID (unique restaurant identifier)
+  - email: TEXT UNIQUE (user identifier)
+  - password_hash: PBKDF2 with salt
+  - Timestamps: TIMESTAMPTZ (timezone-aware)
+  - Metadata: JSONB (flexible JSON storage)
+
+Error Handling:
+  - Graceful fallback if database is unavailable
+  - JSON config used as fallback for missing DB data
+  - Safe email validation
+  - Password requirement enforcement
+
+Dependencies:
+  - werkzeug.security: Password hashing/verification
+  - psycopg: PostgreSQL database driver
+  - datetime: Timestamp management
+  - json/pathlib: File operations
+"""
+
 import json
 import re
 from pathlib import Path

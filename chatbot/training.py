@@ -1,3 +1,54 @@
+"""
+Training Data Management Module
+================================
+Handles loading, processing, and retrieval of custom training data for
+restaurant-specific AI knowledge. Implements semantic search based on
+token matching for context-aware responses.
+
+Core Components:
+  - Training data storage and manifest management
+  - File handling for TXT, JSON, CSV formats
+  - Text chunking with overlap for context preservation
+  - Token-based semantic search
+  - Context retrieval for chatbot prompts
+
+Key Functions:
+  - get_training_dir(): Get restaurant-specific training directory
+  - get_training_manifest_path(): Access training manifest
+  - load_training_manifest(): Load file metadata from manifest.json
+  - build_training_context(): Retrieve relevant training chunks for queries
+  - _read_text_file(): Safe file reading with error handling
+  - _normalize_text(): Clean and normalize text data
+  - _chunk_text(): Split text into overlapping chunks for context
+  - _tokenize(): Extract searchable tokens from queries
+
+Features:
+  - Multi-restaurant isolation (restaurant_id based)
+  - Semantic search scoring based on token frequency
+  - Configurable chunk size (default 800 chars) with overlap (100 chars)
+  - Manifest-based file tracking with original names
+  - Safe file operations with UTF-8 handling
+  - Query-based chunk scoring and ranking
+  - Configurable result limiting (top N chunks)
+
+Data Structure:
+  training_data/
+  ├── {restaurant_id}/
+  │   ├── manifest.json (file metadata)
+  │   ├── {uuid}.txt (training content)
+  │   ├── {uuid}.json
+  │   └── {uuid}.csv
+
+Manifest Entry Format:
+  {
+    "id": "file_uuid",
+    "original_name": "filename.txt",
+    "stored_name": "hash.txt",
+    "uploaded_at": "ISO timestamp",
+    "size_bytes": 1024
+  }
+"""
+
 import json
 import re
 from pathlib import Path
