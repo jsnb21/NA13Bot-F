@@ -76,7 +76,7 @@ Dependencies:
   - google.genai: Gemini AI API
 """
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response, make_response
 from flask_turbo import Turbo
 from tools import save_config, load_config, add_user, verify_user, user_exists, get_user, update_user_meta
 from config import init_db, get_connection, get_db_schema
@@ -98,7 +98,8 @@ except Exception:
 import time
 import secrets
 import uuid
-from datetime import datetime, timezone
+import hashlib
+from datetime import datetime, timezone, timedelta
 from chatbot.routes import chatbot_bp
 from chatbot.training import build_training_context
 import google.genai as genai
@@ -625,6 +626,103 @@ def verify_otp(email: str, code: str, purpose: str):
     if otp.get('code') != code:
         return False, 'Invalid OTP.'
     return True, None
+
+
+def generate_device_token():
+    """Generate a secure random token for device authentication."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_device_token(token: str):
+    """Hash a device token for secure storage."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def create_device_token(email: str):
+    """Create and store a device token for a user."""
+    from config import get_connection, get_db_schema
+    from psycopg import sql
+    
+    token = generate_device_token()
+    token_hash = hash_device_token(token)
+    expires_at = datetime.utcnow() + timedelta(days=30)
+    
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Create table if it doesn't exist
+                cur.execute(
+                    sql.SQL(
+                        """CREATE TABLE IF NOT EXISTS {}.device_tokens (
+                            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                            email TEXT NOT NULL,
+                            token_hash TEXT NOT NULL,
+                            expires_at TIMESTAMPTZ NOT NULL,
+                            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                        )"""
+                    ).format(sql.Identifier(schema))
+                )
+                
+                # Store the token
+                cur.execute(
+                    sql.SQL(
+                        """INSERT INTO {}.device_tokens (email, token_hash, expires_at)
+                           VALUES (%s, %s, %s)"""
+                    ).format(sql.Identifier(schema)),
+                    [email.lower().strip(), token_hash, expires_at]
+                )
+        return token
+    except Exception as e:
+        print(f"Error creating device token: {e}")
+        return None
+
+
+def verify_device_token(token: str):
+    """Verify a device token and return the associated email if valid."""
+    from config import get_connection, get_db_schema
+    from psycopg import sql
+    
+    if not token:
+        return None
+    
+    token_hash = hash_device_token(token)
+    schema = get_db_schema()
+    
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """SELECT email FROM {}.device_tokens
+                           WHERE token_hash = %s AND expires_at > now()
+                           ORDER BY created_at DESC LIMIT 1"""
+                    ).format(sql.Identifier(schema)),
+                    [token_hash]
+                )
+                row = cur.fetchone()
+                if row:
+                    return row[0]
+    except Exception as e:
+        print(f"Error verifying device token: {e}")
+    
+    return None
+
+
+def cleanup_expired_device_tokens():
+    """Remove expired device tokens from the database."""
+    from config import get_connection, get_db_schema
+    from psycopg import sql
+    
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL("DELETE FROM {}.device_tokens WHERE expires_at < now()").format(sql.Identifier(schema))
+                )
+    except Exception:
+        pass
 
 # Configure Google AI - environment variable only
 def get_google_api_key():
@@ -1587,13 +1685,29 @@ def ai_training_preview(file_id):
 def login():
     cfg = load_config()
     error = None
+    
+    # Check for device token before showing login form
+    device_token = request.cookies.get('device_token')
+    if device_token:
+        email = verify_device_token(device_token)
+        if email and user_exists(email):
+            session['user'] = email
+            session.pop('restaurant_id', None)
+            get_current_restaurant_id()
+            return redirect(url_for('dashboard'))
+    
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
+        remember_device = request.form.get('remember_device') == 'on'
+        
         if not email:
             error = 'Email is required.'
         elif not user_exists(email):
             error = 'No account found with that email.'
         else:
+            # Store remember_device preference in session
+            session['remember_device'] = remember_device
+            
             otp_code = set_otp(email, 'login')
             sent, send_error = send_otp_email(email, otp_code, 'login', cfg)
             otp_hint = otp_code if (should_show_otp_hint() or not sent) else None
@@ -1622,7 +1736,30 @@ def login_verify():
         session['user'] = email
         session.pop('restaurant_id', None)
         get_current_restaurant_id()
-        return redirect(url_for('dashboard'))
+        
+        # Check if user wants to remember this device
+        remember_device = session.pop('remember_device', False)
+        
+        response = make_response(redirect(url_for('dashboard')))
+        
+        if remember_device:
+            # Create and set device token cookie
+            token = create_device_token(email)
+            if token:
+                response.set_cookie(
+                    'device_token',
+                    token,
+                    max_age=30*24*60*60,  # 30 days in seconds
+                    httponly=True,
+                    secure=request.is_secure,
+                    samesite='Lax'
+                )
+        
+        # Clean up expired tokens periodically
+        cleanup_expired_device_tokens()
+        
+        return response
+    
     otp_code = session.get('otp', {}).get('code')
     otp_hint = otp_code if should_show_otp_hint() else None
     return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', error=error, otp_hint=otp_hint)
@@ -1727,7 +1864,10 @@ def signup_verify():
 def logout():
     session.pop('user', None)
     session.pop('restaurant_id', None)
-    return redirect(url_for('login'))
+    response = make_response(redirect(url_for('login')))
+    # Clear device token cookie on logout
+    response.set_cookie('device_token', '', expires=0)
+    return response
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=5000, debug=True)

@@ -23,7 +23,7 @@
     <div class="alert alert-info">Dev OTP: <strong>{{ otp_hint }}</strong></div>
     {% endif %}
 
-    <form method="POST" action="{% if purpose == 'login' %}/login/verify{% else %}/signup/verify{% endif %}">
+    <form method="POST" action="{% if purpose == 'login' %}/login/verify{% else %}/signup/verify{% endif %}" data-turbo="false">
         <input type="hidden" name="email" value="{{ email }}">
         <div class="mb-3">
           <label class="form-label">One-Time Code</label>

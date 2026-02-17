@@ -7,13 +7,20 @@
       <p class="text-secondary small">Login to your Neuronet account</p>
     </div>
 
-    <form method="POST" action="/login">
+    <form method="POST" action="/login" data-turbo="false">
         {% if error %}
         <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
         <div class="mb-3">
           <label class="form-label">Email Address</label>
           <input type="email" name="email" class="form-control" placeholder="admin@neuronet.ai" required>
+        </div>
+
+        <div class="mb-3 form-check">
+          <input type="checkbox" name="remember_device" class="form-check-input" id="rememberDevice">
+          <label class="form-check-label small text-secondary" for="rememberDevice">
+            Remember this device for 30 days
+          </label>
         </div>
 
         <div class="text-center mb-4">
