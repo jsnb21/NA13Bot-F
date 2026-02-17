@@ -111,6 +111,15 @@ app.secret_key = os.environ.get('FLASK_SECRET', 'dev-secret')
 # Initialize Turbo for seamless page navigation
 turbo = Turbo(app)
 
+# Add custom Jinja2 filter for regex operations
+@app.template_filter('regex_findall')
+def regex_findall_filter(text, pattern):
+    """Find all matches of a regex pattern in text"""
+    import re
+    if not text:
+        return []
+    return re.findall(pattern, str(text))
+
 app.register_blueprint(chatbot_bp)
 # upload dir for logo files
 UPLOAD_DIR = Path(__file__).parent / 'static' / 'uploads'
@@ -289,13 +298,23 @@ def parse_menu_txt_with_ai(content: str):
     try:
         client = genai.Client(api_key=api_key)
         system_instruction = (
-            "Extract restaurant menu items from the provided text. "
+            "Extract ALL restaurant menu items from the provided text. DO NOT SKIP ANY ITEMS. "
             "Return JSON only: an array of objects with keys "
             "name, description, price, category, status. "
             "Use empty string when a field is missing. "
             "Preserve currency symbols if present in the price. "
-            "If a section heading (e.g., APPETIZERS) appears, use it as category. "
-            "Default status to Live."
+            "If a section heading (e.g., APPETIZERS, ESPRESSO BEVERAGE) appears, use it as category. "
+            "Default status to Live. "
+            "DESCRIPTION RULES: The description should contain actual descriptive text about the item. "
+            "Do NOT put standalone numbers (like calories, nutritional values) in the description. "
+            "If there's no descriptive text, leave description as empty string. "
+            "CRITICAL PRICING VARIANTS: If an item has multiple prices (sizes T/G/V, quantities 1ea/SET, portions, etc.), "
+            "you MUST format the description field EXACTLY as: 'Options: T=160, G=165, V=180' or 'Options: 1ea=150, SET=280'. "
+            "Use the format 'Options: LABEL=PRICE, LABEL=PRICE' where LABEL is the variant (size/quantity/type) and PRICE is the number. "
+            "Always use 'Options:' as the prefix, preserve the original labels (T, G, V, 1ea, SET, Small, Large, etc.). "
+            "Put the lowest price in the price field. "
+            "Create ONE item per menu item name, not separate items per variant. "
+            "COMPLETENESS: Extract EVERY item in the text. Count them if needed to ensure none are missing."
         )
         response = client.models.generate_content(
             model='gemini-2.5-flash',
@@ -304,7 +323,7 @@ def parse_menu_txt_with_ai(content: str):
                 system_instruction=system_instruction,
                 response_mime_type='application/json',
                 temperature=0.2,
-                max_output_tokens=1200
+                max_output_tokens=8000
             )
         )
         text = (response.text or '').strip()
@@ -342,6 +361,51 @@ def parse_menu_txt_with_ai(content: str):
         return items
     except Exception:
         return []
+
+
+def extract_image_text_with_ai(data_bytes: bytes, mime_type: str):
+    if not data_bytes:
+        return ''
+    api_key = get_google_api_key()
+    if not api_key:
+        return ''
+    try:
+        client = genai.Client(api_key=api_key)
+        prompt = (
+            "Extract ALL text from this restaurant menu image. This is CRITICAL - you must not skip any items.\n\n"
+            "Instructions:\n"
+            "- Extract EVERY SINGLE menu item visible in the image\n"
+            "- Preserve the exact text as it appears\n"
+            "- Keep each menu item on its own line\n"
+            "- Preserve section headings (ESPRESSO, TEA, etc) in ALL CAPS\n"
+            "- Include all prices and size labels (T, G, V, Small, Medium, Large, etc)\n"
+            "- If items are in columns, read left to right, top to bottom\n"
+            "- If text is small or faint, still extract it\n"
+            "- Double-check you haven't missed any items\n\n"
+            "Return ONLY the extracted text, nothing else. BE COMPLETE."
+        )
+        encoded = base64.b64encode(data_bytes).decode('ascii')
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[{
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {"inline_data": {"mime_type": mime_type, "data": encoded}}
+                ]
+            }],
+            config=genai.types.GenerateContentConfig(
+                temperature=0.1,
+                max_output_tokens=8000
+            )
+        )
+        text = (response.text or '').strip()
+        if not text:
+            print("Warning: Gemini API returned empty response for image extraction")
+        return text
+    except Exception as e:
+        print(f"Error extracting text from image: {str(e)}")
+        return ''
 
 
 def extract_pdf_text(data_bytes: bytes):
@@ -738,22 +802,32 @@ def menu_upload_menu_file():
         if not file or not file.filename:
             return jsonify({'error': 'No file provided'}), 400
         filename = file.filename.lower()
-        if not (filename.endswith('.txt') or filename.endswith('.pdf')):
-            return jsonify({'error': 'Only .txt or .pdf files are supported'}), 400
+        is_txt = filename.endswith('.txt')
+        is_pdf = filename.endswith('.pdf')
+        is_png = filename.endswith('.png')
+        if not (is_txt or is_pdf or is_png):
+            return jsonify({'error': 'Only .txt, .pdf, or .png files are supported'}), 400
 
         data_bytes = file.read()
         content = ''
-        is_pdf = filename.endswith('.pdf')
+        
         if is_pdf:
             content = extract_pdf_text(data_bytes)
             if not content:
                 return jsonify({'error': 'Unable to extract text from PDF'}), 400
+        elif is_png:
+            mime_type = file.content_type or 'image/png'
+            content = extract_image_text_with_ai(data_bytes, mime_type)
+            if not content:
+                return jsonify({'error': 'Unable to extract text from PNG. The AI service may be unavailable or the image may not contain readable text. Please try again or use a .txt or .pdf file instead.'}), 400
         else:
             content = data_bytes.decode('utf-8', errors='ignore')
 
+        # Parse the extracted text into structured items
         items = parse_menu_txt_with_ai(content)
-        if not items and not is_pdf:
+        if not items:
             items = parse_menu_txt(content)
+        
         if not items:
             return jsonify({'error': 'No menu items found in file'}), 400
 
