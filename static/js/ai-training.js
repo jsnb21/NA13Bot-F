@@ -24,6 +24,8 @@
   const selectAll = document.getElementById('selectAll');
   const selectedCount = document.getElementById('selectedCount');
   const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const retrainBtn = document.getElementById('retrainBtn');
+    const historyBody = document.getElementById('trainingHistoryBody');
     const previewModal = document.getElementById('previewModal');
     const previewTitle = document.getElementById('previewTitle');
     const previewMeta = document.getElementById('previewMeta');
@@ -32,6 +34,8 @@
 
   const FILES_ENDPOINT = '/ai-training/files';
   const UPLOAD_ENDPOINT = '/ai-training/upload';
+    const HISTORY_ENDPOINT = '/ai-training/history';
+    const RETRAIN_ENDPOINT = '/ai-training/retrain';
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
   const ALLOWED_EXTENSIONS = ['txt', 'pdf', 'docx', 'json', 'csv'];
 
@@ -93,6 +97,36 @@ function formatDate(iso) {
         return 'Unknown';
     }
     return date.toLocaleString();
+}
+
+function formatDuration(durationMs) {
+    if (durationMs === null || durationMs === undefined) {
+        return '—';
+    }
+    if (durationMs < 1000) {
+        return '<1 sec';
+    }
+    const totalSeconds = Math.round(durationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (minutes > 0) {
+        return `${minutes} min ${seconds} sec`;
+    }
+    return `${seconds} sec`;
+}
+
+function getStatusBadge(status) {
+    const normalized = (status || '').toLowerCase();
+    if (normalized === 'completed') {
+        return '<span class="badge bg-success">Completed</span>';
+    }
+    if (normalized === 'failed') {
+        return '<span class="badge bg-danger">Failed</span>';
+    }
+    if (normalized === 'in_progress') {
+        return '<span class="badge bg-warning">In Progress</span>';
+    }
+    return '<span class="badge bg-secondary">Pending</span>';
 }
 
 function getFileIcon(filename) {
@@ -285,7 +319,46 @@ function renderFiles(files) {
     filesCount.textContent = `${files.length}`;
     totalSize.textContent = formatBytes(totalBytes);
     bulkActions.style.display = files.length > 0 ? 'flex' : 'none';
+    if (retrainBtn) {
+        retrainBtn.disabled = files.length === 0;
+    }
     updateBulkActions();
+}
+
+function renderHistory(entries) {
+    if (!historyBody) {
+        return;
+    }
+    historyBody.innerHTML = '';
+    if (!entries || entries.length === 0) {
+        const empty = document.createElement('tr');
+        empty.innerHTML = '<td colspan="4" class="text-muted text-center">No activity yet</td>';
+        historyBody.appendChild(empty);
+        return;
+    }
+    entries.forEach(entry => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${formatDate(entry.started_at)}</td>
+            <td>${entry.action || '—'}</td>
+            <td>${getStatusBadge(entry.status)}</td>
+            <td>${formatDuration(entry.duration_ms)}</td>
+        `;
+        historyBody.appendChild(row);
+    });
+}
+
+async function fetchHistory() {
+    if (!historyBody) {
+        return;
+    }
+    const res = await fetch(HISTORY_ENDPOINT, { credentials: 'same-origin' });
+    if (!res.ok) {
+        renderHistory([]);
+        return;
+    }
+    const data = await res.json();
+    renderHistory(data.history || []);
 }
 
 async function fetchFiles() {
@@ -394,6 +467,7 @@ function uploadFiles(fileList) {
             }, 2000);
             trainingFiles.value = '';
             fetchFiles();
+            fetchHistory();
         } else {
             fileArray.forEach(file => {
                 updateUploadItem(file.name, 0, 'error');
@@ -461,6 +535,7 @@ async function removeFile(fileId) {
     if (res.ok) {
         showToast('success', 'File deleted successfully');
         fetchFiles();
+        fetchHistory();
     } else {
         showToast('error', 'Unable to remove file');
     }
@@ -506,10 +581,37 @@ deleteSelectedBtn.addEventListener('click', async () => {
         showToast('success', `Deleted ${selectedFiles.size} file(s)`);
         selectedFiles.clear();
         fetchFiles();
+        fetchHistory();
     } catch (err) {
         showToast('error', 'Failed to delete some files');
     }
 });
+
+if (retrainBtn) {
+    retrainBtn.addEventListener('click', async () => {
+        if (retrainBtn.disabled) {
+            return;
+        }
+        retrainBtn.disabled = true;
+        showToast('warning', 'Retraining started...');
+        try {
+            const res = await fetch(RETRAIN_ENDPOINT, {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Retraining failed');
+            }
+            showToast('success', 'Retraining completed');
+            fetchHistory();
+        } catch (err) {
+            showToast('error', err.message || 'Retraining failed');
+        } finally {
+            retrainBtn.disabled = false;
+        }
+    });
+}
 
 // Template downloads
 function downloadTemplate(type) {
@@ -618,4 +720,5 @@ document.addEventListener('keydown', (e) => {
 // Initial load
 window.aiTrainingRefresh = fetchFiles;
 fetchFiles();
+fetchHistory();
 })();

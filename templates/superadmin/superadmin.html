@@ -102,29 +102,29 @@
     <div class="col-md-3">
       <div class="stat-card">
         <div class="stat-label">Total Tenants</div>
-        <div class="stat-value">124</div>
-        <div class="small text-success mt-2"><i class="fas fa-caret-up"></i> +12% this month</div>
+        <div class="stat-value" id="totalTenants">—</div>
+        <div class="small text-muted mt-2">Registered</div>
       </div>
     </div>
     <div class="col-md-3">
       <div class="stat-card">
-        <div class="stat-label">Avg. Latency</div>
-        <div class="stat-value">420<span style="font-size: 1rem">ms</span></div>
-        <div class="small text-muted mt-2">Global p50</div>
+        <div class="stat-label">Active Tenants</div>
+        <div class="stat-value" id="activeTenants">—</div>
+        <div class="small text-muted mt-2">Last 30 days</div>
       </div>
     </div>
     <div class="col-md-3">
       <div class="stat-card">
-        <div class="stat-label">Model Health</div>
-        <div class="stat-value text-success">99.9%</div>
-        <div class="small text-muted mt-2">Gemini 2.0 Stable</div>
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value" id="totalOrders">—</div>
+        <div class="small text-muted mt-2">Platform-wide</div>
       </div>
     </div>
     <div class="col-md-3">
       <div class="stat-card">
-        <div class="stat-label">Token Usage</div>
-        <div class="stat-value">1.2M</div>
-        <div class="small text-warning mt-2">82% of monthly cap</div>
+        <div class="stat-label">Menu Items</div>
+        <div class="stat-value" id="totalMenuItems">—</div>
+        <div class="small text-muted mt-2">Across all tenants</div>
       </div>
     </div>
   </div>
@@ -136,7 +136,7 @@
           <h5 class="fw-bold mb-0">Active Tenants</h5>
           <div class="input-group w-50">
             <span class="input-group-text bg-light border-0"><i class="fas fa-search"></i></span>
-            <input type="text" class="form-control bg-light border-0" placeholder="Search restaurants...">
+            <input type="text" id="searchInput" class="form-control bg-light border-0" placeholder="Search restaurants..." oninput="filterRestaurants()">
           </div>
         </div>
         
@@ -150,30 +150,7 @@
                 <th class="text-end">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div class="fw-bold">Sushi Corner</div>
-                  <div class="text-muted extra-small" style="font-size: 0.7rem;">ID: c1a2b3c4</div>
-                </td>
-                <td><span class="badge-pill bg-warning-subtle">PREMIUM</span></td>
-                <td><span class="badge-pill bg-success-subtle">ACTIVE</span></td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-light border btn-action">Manage</button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="fw-bold">La Piazza</div>
-                  <div class="text-muted" style="font-size: 0.7rem;">ID: e7b1f9a2</div>
-                </td>
-                <td><span class="badge-pill bg-light text-dark border">BASIC</span></td>
-                <td><span class="badge-pill bg-success-subtle">ACTIVE</span></td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-light border btn-action">Manage</button>
-                </td>
-              </tr>
-            </tbody>
+            <tbody id="restaurantTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -181,49 +158,185 @@
 
     <div class="col-lg-4">
       <div class="surface">
-        <h5 class="fw-bold mb-3">Model Governance</h5>
+        <h5 class="fw-bold mb-3">System Prompt Master</h5>
+        <p class="small text-muted mb-3">Configure the global system prompt that applies to all restaurant chatbots.</p>
         
-        <div class="mb-4">
-          <label class="form-label">Global Model Deployment</label>
-          <select class="form-select mb-2">
-            <option selected>Gemini 2.0 Flash</option>
-            <option>Gemini 1.5 Pro</option>
-          </select>
-          <button class="btn btn-sm text-white w-100" style="background: var(--brand-dark)">Deploy Update</button>
+        <div class="mb-3">
+          <label class="form-label small">Global System Prompt</label>
+          <textarea id="globalSystemPrompt" class="form-control mb-3" rows="8" style="font-size: 0.85rem;" placeholder="Enter system prompt instructions for all chatbots..."></textarea>
         </div>
-
-        <hr class="my-4">
-
-        <h6 class="fw-bold small mb-3">System Prompt Master</h6>
-        <textarea class="form-control mb-3" rows="4" style="font-size: 0.85rem;">{{ system_prompt or 'You are a helpful restaurant assistant powered by Neuronet A.I...' }}</textarea>
-        <button class="btn btn-sm btn-outline-dark w-100 btn-action">Sync All Tenants</button>
+        <button class="btn btn-sm text-white w-100 btn-action" style="background: var(--brand-dark)" onclick="saveGlobalSystemPrompt()">Save & Sync All Tenants</button>
+        <div id="promptSaveStatus" class="small mt-2 text-center" style="min-height: 20px;"></div>
       </div>
     </div>
   </div>
 
 </div>
+
+<script>
+async function loadPlatformStats() {
+  try {
+    const res = await fetch('/api/superadmin/stats');
+    if (!res.ok) return;
+    const data = await res.json();
+    document.getElementById('totalTenants').textContent = data.total_restaurants || 0;
+    document.getElementById('activeTenants').textContent = data.active_restaurants || 0;
+    document.getElementById('totalOrders').textContent = (data.total_orders || 0).toLocaleString();
+    document.getElementById('totalMenuItems').textContent = (data.total_menu_items || 0).toLocaleString();
+  } catch (e) {
+    console.error('Failed to load platform stats:', e);
+  }
+}
+
+let allRestaurants = [];
+
+async function loadRestaurants() {
+  try {
+    const res = await fetch('/api/superadmin/restaurants');
+    if (!res.ok) return;
+    const data = await res.json();
+    allRestaurants = data.restaurants || [];
+    renderRestaurants(allRestaurants);
+  } catch (e) {
+    console.error('Failed to load restaurants:', e);
+  }
+}
+
+function renderRestaurants(restaurants) {
+  const tbody = document.getElementById('restaurantTableBody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = '';
+  
+  if (!restaurants || restaurants.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No restaurants found</td></tr>';
+    return;
+  }
+  
+  restaurants.forEach(resto => {
+    const row = document.createElement('tr');
+    const statusBadge = resto.status === 'Active' 
+      ? '<span class="badge-pill bg-success-subtle">ACTIVE</span>' 
+      : '<span class="badge-pill bg-light text-dark border">INACTIVE</span>';
+    
+    const shortId = (resto.restaurant_id || '').substring(0, 8);
+    
+    row.innerHTML = `
+      <td>
+        <div class="fw-bold">${resto.establishment_name || 'Unnamed'}</div>
+        <div class="text-muted extra-small" style="font-size: 0.7rem;">ID: ${shortId}</div>
+      </td>
+      <td><span class="badge-pill bg-light text-dark border">BASIC</span></td>
+      <td>${statusBadge}</td>
+      <td class="text-end">
+        <button class="btn btn-sm btn-light border btn-action" onclick="manageRestaurant('${resto.restaurant_id}')">Manage</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function filterRestaurants() {
+  const searchInput = document.getElementById('searchInput');
+  const query = (searchInput?.value || '').toLowerCase().trim();
+  
+  if (!query) {
+    renderRestaurants(allRestaurants);
+    return;
+  }
+  
+  const filtered = allRestaurants.filter(resto => {
+    const name = (resto.establishment_name || '').toLowerCase();
+    const id = (resto.restaurant_id || '').toLowerCase();
+    const email = (resto.business_email || '').toLowerCase();
+    return name.includes(query) || id.includes(query) || email.includes(query);
+  });
+  
+  renderRestaurants(filtered);
+}
+
+async function manageRestaurant(restaurantId) {
+  try {
+    const res = await fetch(`/api/superadmin/manage/${restaurantId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!res.ok) {
+      alert('Failed to switch to restaurant management');
+      return;
+    }
+    
+    const data = await res.json();
+    if (data.success && data.redirect) {
+      window.location.href = data.redirect;
+    }
+  } catch (e) {
+    console.error('Failed to manage restaurant:', e);
+    alert('Error switching to restaurant');
+  }
+}
+
+async function loadGlobalSystemPrompt() {
+  try {
+    const res = await fetch('/api/superadmin/system-prompt');
+    if (!res.ok) return;
+    const data = await res.json();
+    const textarea = document.getElementById('globalSystemPrompt');
+    if (textarea && data.prompt) {
+      textarea.value = data.prompt;
+    }
+  } catch (e) {
+    console.error('Failed to load global system prompt:', e);
+  }
+}
+
+async function saveGlobalSystemPrompt() {
+  const textarea = document.getElementById('globalSystemPrompt');
+  const statusDiv = document.getElementById('promptSaveStatus');
+  
+  if (!textarea || !statusDiv) return;
+  
+  const prompt = textarea.value.trim();
+  
+  try {
+    statusDiv.textContent = 'Saving...';
+    statusDiv.className = 'small mt-2 text-center text-muted';
+    
+    const res = await fetch('/api/superadmin/system-prompt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    
+    if (!res.ok) {
+      statusDiv.textContent = 'Failed to save';
+      statusDiv.className = 'small mt-2 text-center text-danger';
+      return;
+    }
+    
+    const data = await res.json();
+    if (data.success) {
+      statusDiv.textContent = '✓ Saved successfully';
+      statusDiv.className = 'small mt-2 text-center text-success';
+      setTimeout(() => {
+        statusDiv.textContent = '';
+      }, 3000);
+    } else {
+      statusDiv.textContent = 'Failed to save';
+      statusDiv.className = 'small mt-2 text-center text-danger';
+    }
+  } catch (e) {
+    console.error('Failed to save global system prompt:', e);
+    statusDiv.textContent = 'Error saving';
+    statusDiv.className = 'small mt-2 text-center text-danger';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadPlatformStats();
+  loadRestaurants();
+  loadGlobalSystemPrompt();
+});
+</script>
 {% endblock %}
-
-<!-- Additional admin-container snippet added by user -->
-<div class="admin-container mt-5">
-  <div class="mb-5"> 
-    <h2 class="fw-bold" style="color: var(--brand-dark)">Platform Overview</h2>
-    <p class="text-secondary">Managing governance for <strong>Neuronet A.I</strong> Ecosystem</p>
-  </div>
-
-  <div class="row g-4 mb-5">
-    </div>
-
-  <div class="row g-5"> <div class="col-xl-8 col-lg-7">
-      <div class="auth-card shadow-sm border-0 w-100" style="max-width: none;">
-        <div class="p-2">
-           </div>
-      </div>
-    </div>
-
-    <div class="col-xl-4 col-lg-5">
-      <div class="auth-card shadow-sm border-0 w-100" style="max-width: none;">
-        </div>
-    </div>
-  </div>
-</div>

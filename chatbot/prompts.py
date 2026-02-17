@@ -30,13 +30,22 @@ Returns:
 
 def build_system_prompt(establishment_name, menu_text, training_context=None):
     """Build context-aware system prompt."""
+    # Load global system prompt if available
+    global_prompt = ""
+    try:
+        from tools import load_global_system_prompt
+        global_prompt = load_global_system_prompt()
+    except Exception:
+        pass
+    
     training_block = ""
     if training_context:
         training_block = f"""
 TRAINING DATA (reference only):
 {training_context}
 """
-    return f"""You are {establishment_name}'s order assistant chatbot.
+    
+    base_prompt = f"""You are {establishment_name}'s order assistant chatbot.
 
 MENU:
 {menu_text}
@@ -71,3 +80,11 @@ When customer is done ordering (says "no" after being asked if they want more, O
 IMPORTANT: When you've asked "Is there anything else?" and they respond with "no" or similar, this means FINALIZE THE ORDER, not restart the conversation.
 
 Keep responses under 3-4 sentences when possible."""
+    
+    # Prepend global prompt if it exists
+    if global_prompt:
+        return f"""{global_prompt}
+
+{base_prompt}"""
+    
+    return base_prompt

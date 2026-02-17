@@ -88,6 +88,7 @@ Dependencies:
 
 import json
 import re
+from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
 from datetime import datetime, timezone
@@ -99,6 +100,33 @@ def normalize_email(email: str) -> str:
     if not email:
         return ''
     return email.strip().lower()
+
+
+def load_global_system_prompt():
+    """Load the global system prompt for all restaurants."""
+    config_path = Path(__file__).parent / 'config.json'
+    try:
+        if config_path.exists():
+            data = json.loads(config_path.read_text())
+            return data.get('global_system_prompt', '')
+    except Exception:
+        pass
+    return ''
+
+
+def save_global_system_prompt(prompt: str):
+    """Save the global system prompt for all restaurants."""
+    config_path = Path(__file__).parent / 'config.json'
+    try:
+        data = {}
+        if config_path.exists():
+            data = json.loads(config_path.read_text())
+        data['global_system_prompt'] = prompt
+        config_path.write_text(json.dumps(data, indent=2))
+        return True
+    except Exception as e:
+        print(f"Error saving global system prompt: {e}")
+        return False
 
 def load_config(restaurant_id: str = None):
     cfg = {}
@@ -614,3 +642,99 @@ def update_order_status(order_id: str, status: str):
                 return True
     except Exception:
         return False
+
+
+def get_all_restaurants():
+    """Get list of all restaurants with their basic info."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """
+                        SELECT DISTINCT 
+                            b.restaurant_id,
+                            b.establishment_name,
+                            b.business_email,
+                            b.updated_at,
+                            b.currency_symbol,
+                            (SELECT COUNT(*) FROM {}.menu_items m WHERE m.restaurant_id = b.restaurant_id) as menu_count,
+                            (SELECT COUNT(*) FROM {}.orders o WHERE o.restaurant_id = b.restaurant_id) as order_count
+                        FROM {}.brand_settings b
+                        WHERE b.restaurant_id IS NOT NULL
+                        ORDER BY b.updated_at DESC
+                        """
+                    ).format(
+                        sql.Identifier(schema),
+                        sql.Identifier(schema),
+                        sql.Identifier(schema)
+                    )
+                )
+                rows = cur.fetchall()
+                return [
+                    {
+                        'restaurant_id': str(row[0]) if row[0] else None,
+                        'establishment_name': row[1] or 'Unnamed Restaurant',
+                        'business_email': row[2] or '',
+                        'updated_at': row[3].isoformat() if row[3] else None,
+                        'currency_symbol': row[4] or '₱',
+                        'menu_count': int(row[5]) if row[5] else 0,
+                        'order_count': int(row[6]) if row[6] else 0,
+                        'status': 'Active' if row[5] or row[6] else 'Inactive'
+                    }
+                    for row in rows
+                ]
+    except Exception as e:
+        print(f"Error fetching restaurants: {e}")
+        return []
+
+
+def get_platform_stats():
+    """Get platform-wide statistics."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Total restaurants
+                cur.execute(
+                    sql.SQL("SELECT COUNT(DISTINCT restaurant_id) FROM {}.brand_settings WHERE restaurant_id IS NOT NULL")
+                    .format(sql.Identifier(schema))
+                )
+                total_restaurants = cur.fetchone()[0] or 0
+
+                # Total orders
+                cur.execute(
+                    sql.SQL("SELECT COUNT(*) FROM {}.orders").format(sql.Identifier(schema))
+                )
+                total_orders = cur.fetchone()[0] or 0
+
+                # Total menu items
+                cur.execute(
+                    sql.SQL("SELECT COUNT(*) FROM {}.menu_items").format(sql.Identifier(schema))
+                )
+                total_menu_items = cur.fetchone()[0] or 0
+
+                # Active restaurants (with recent orders in last 30 days)
+                cur.execute(
+                    sql.SQL(
+                        """SELECT COUNT(DISTINCT restaurant_id) FROM {}.orders 
+                           WHERE created_at >= NOW() - INTERVAL '30 days'"""
+                    ).format(sql.Identifier(schema))
+                )
+                active_restaurants = cur.fetchone()[0] or 0
+
+                return {
+                    'total_restaurants': int(total_restaurants),
+                    'total_orders': int(total_orders),
+                    'total_menu_items': int(total_menu_items),
+                    'active_restaurants': int(active_restaurants)
+                }
+    except Exception as e:
+        print(f"Error fetching platform stats: {e}")
+        return {
+            'total_restaurants': 0,
+            'total_orders': 0,
+            'total_menu_items': 0,
+            'active_restaurants': 0
+        }

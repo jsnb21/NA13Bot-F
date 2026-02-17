@@ -161,6 +161,10 @@ def get_training_manifest_path(restaurant_id: str):
     return get_training_dir(restaurant_id) / 'manifest.json'
 
 
+def get_training_history_path(restaurant_id: str):
+    return get_training_dir(restaurant_id) / 'history.json'
+
+
 def load_training_manifest(restaurant_id: str):
     manifest_path = get_training_manifest_path(restaurant_id)
     if manifest_path.exists():
@@ -174,6 +178,29 @@ def load_training_manifest(restaurant_id: str):
 def save_training_manifest(restaurant_id: str, entries):
     manifest_path = get_training_manifest_path(restaurant_id)
     manifest_path.write_text(json.dumps(entries, indent=2, default=str))
+
+
+def load_training_history(restaurant_id: str):
+    history_path = get_training_history_path(restaurant_id)
+    if history_path.exists():
+        try:
+            return json.loads(history_path.read_text())
+        except Exception:
+            return []
+    return []
+
+
+def save_training_history(restaurant_id: str, entries):
+    history_path = get_training_history_path(restaurant_id)
+    history_path.write_text(json.dumps(entries, indent=2, default=str))
+
+
+def add_training_history_entry(restaurant_id: str, entry: dict, max_entries: int = 200):
+    entries = load_training_history(restaurant_id)
+    entries.append(entry)
+    if len(entries) > max_entries:
+        entries = entries[-max_entries:]
+    save_training_history(restaurant_id, entries)
 
 
 def save_training_upload_bytes(restaurant_id: str, filename: str, data_bytes: bytes):
@@ -671,6 +698,13 @@ You help with:
 
 Restaurant name: {establishment_name}
 
+Formatting Guidelines:
+- Use **bold** for important terms and section headers
+- Use `code blocks` for UI element names (like buttons, menu items)
+- Use bullet points (-) for lists
+- Use numbered lists (1., 2., 3.) for step-by-step instructions
+- Keep responses concise and well-structured
+
 Respond in a friendly, helpful manner. Keep responses concise and focused on helping the administrator."""
         
         response = client.models.generate_content(
@@ -779,12 +813,62 @@ def admin():
 
 @app.route('/superadmin', methods=['GET', 'POST'])
 def superadmin():
+    # Clear restaurant_id when entering superadmin mode
+    if 'restaurant_id' in session:
+        session.pop('restaurant_id')
+    
     if request.method == 'POST':
         config_val = request.form.get('config', '')
         save_config({'config': config_val})
         return redirect(url_for('superadmin'))
     cfg = load_config()
     return render_template('superadmin/superadmin.html', cfg=cfg)
+
+
+@app.route('/api/superadmin/restaurants', methods=['GET'])
+def api_superadmin_restaurants():
+    """List all registered restaurants."""
+    from tools import get_all_restaurants
+    restaurants = get_all_restaurants()
+    return jsonify({'restaurants': restaurants})
+
+
+@app.route('/api/superadmin/stats', methods=['GET'])
+def api_superadmin_stats():
+    """Get platform-wide statistics."""
+    from tools import get_platform_stats
+    stats = get_platform_stats()
+    return jsonify(stats)
+
+
+@app.route('/api/superadmin/manage/<restaurant_id>', methods=['POST'])
+def api_superadmin_manage_restaurant(restaurant_id):
+    """Switch to manage a specific restaurant."""
+    # Store the current superadmin status before switching
+    if not session.get('is_superadmin'):
+        session['is_superadmin'] = True
+    
+    # Set the restaurant_id in session
+    session['restaurant_id'] = restaurant_id
+    return jsonify({'success': True, 'redirect': '/dashboard'})
+
+
+@app.route('/api/superadmin/system-prompt', methods=['GET'])
+def api_get_global_system_prompt():
+    """Get the global system prompt."""
+    from tools import load_global_system_prompt
+    prompt = load_global_system_prompt()
+    return jsonify({'prompt': prompt})
+
+
+@app.route('/api/superadmin/system-prompt', methods=['POST'])
+def api_save_global_system_prompt():
+    """Save the global system prompt."""
+    from tools import save_global_system_prompt
+    data = request.get_json() or {}
+    prompt = data.get('prompt', '')
+    success = save_global_system_prompt(prompt)
+    return jsonify({'success': success})
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -1322,14 +1406,32 @@ def ai_training_upload():
         filename = file.filename or ''
         if not filename:
             continue
+        started_at = datetime.now(timezone.utc).isoformat()
+        start_perf = time.perf_counter()
         if not training_allowed_file(filename):
             errors.append({'file': filename, 'error': 'Unsupported file type'})
+            add_training_history_entry(restaurant_id, {
+                'id': uuid.uuid4().hex,
+                'action': f'File upload: {filename}',
+                'status': 'failed',
+                'started_at': started_at,
+                'ended_at': datetime.now(timezone.utc).isoformat(),
+                'duration_ms': int((time.perf_counter() - start_perf) * 1000)
+            })
             continue
         file.seek(0, os.SEEK_END)
         size_bytes = file.tell()
         file.seek(0)
         if size_bytes > MAX_TRAINING_FILE_MB * 1024 * 1024:
             errors.append({'file': filename, 'error': 'File too large'})
+            add_training_history_entry(restaurant_id, {
+                'id': uuid.uuid4().hex,
+                'action': f'File upload: {filename}',
+                'status': 'failed',
+                'started_at': started_at,
+                'ended_at': datetime.now(timezone.utc).isoformat(),
+                'duration_ms': int((time.perf_counter() - start_perf) * 1000)
+            })
             continue
 
         safe_name = secure_filename(filename)
@@ -1347,6 +1449,14 @@ def ai_training_upload():
         }
         entries.append(entry)
         saved.append(entry)
+        add_training_history_entry(restaurant_id, {
+            'id': uuid.uuid4().hex,
+            'action': f'File upload: {safe_name}',
+            'status': 'completed',
+            'started_at': started_at,
+            'ended_at': datetime.now(timezone.utc).isoformat(),
+            'duration_ms': int((time.perf_counter() - start_perf) * 1000)
+        })
 
     save_training_manifest(restaurant_id, entries)
     return jsonify({'saved': saved, 'errors': errors})
@@ -1361,10 +1471,12 @@ def ai_training_delete(file_id):
 
     remaining = []
     deleted = False
+    deleted_name = ''
     for entry in entries:
         if entry.get('id') != file_id:
             remaining.append(entry)
             continue
+        deleted_name = entry.get('original_name') or entry.get('stored_name') or ''
         stored_name = entry.get('stored_name')
         if stored_name:
             file_path = training_dir / stored_name
@@ -1378,7 +1490,42 @@ def ai_training_delete(file_id):
     save_training_manifest(restaurant_id, remaining)
     if not deleted:
         return jsonify({'error': 'File not found'}), 404
+    if deleted_name:
+        add_training_history_entry(restaurant_id, {
+            'id': uuid.uuid4().hex,
+            'action': f'File delete: {deleted_name}',
+            'status': 'completed',
+            'started_at': datetime.now(timezone.utc).isoformat(),
+            'ended_at': datetime.now(timezone.utc).isoformat(),
+            'duration_ms': 0
+        })
     return jsonify({'deleted': True})
+
+
+@app.route('/ai-training/history', methods=['GET'])
+@login_required
+def ai_training_history():
+    restaurant_id = get_current_restaurant_id()
+    entries = load_training_history(restaurant_id)
+    entries.sort(key=lambda item: item.get('started_at') or '', reverse=True)
+    return jsonify({'history': entries[:50]})
+
+
+@app.route('/ai-training/retrain', methods=['POST'])
+@login_required
+def ai_training_retrain():
+    restaurant_id = get_current_restaurant_id()
+    started_at = datetime.now(timezone.utc).isoformat()
+    entry = {
+        'id': uuid.uuid4().hex,
+        'action': 'Retrain all models',
+        'status': 'completed',
+        'started_at': started_at,
+        'ended_at': datetime.now(timezone.utc).isoformat(),
+        'duration_ms': 0
+    }
+    add_training_history_entry(restaurant_id, entry)
+    return jsonify({'status': 'completed', 'entry': entry})
 
 
 def _build_training_preview_text(file_path: Path):

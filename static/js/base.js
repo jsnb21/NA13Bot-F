@@ -28,7 +28,18 @@ function appendMessage(who, text){
     div.className = 'chat-msg ' + (who==='user' ? 'user' : 'bot');
     const b = document.createElement('div');
     b.className = 'bubble';
-    b.textContent = text;
+    
+    // For bot messages, parse markdown; for user messages, keep plain text
+    if(who === 'bot' && typeof marked !== 'undefined'){
+        try{
+            b.innerHTML = marked.parse(text);
+        }catch(e){
+            b.textContent = text;
+        }
+    }else{
+        b.textContent = text;
+    }
+    
     div.appendChild(b);
     adminChatBody.appendChild(div);
     adminChatBody.scrollTop = adminChatBody.scrollHeight;
@@ -53,6 +64,11 @@ async function sendChat(){
 
 if(adminChatSend) adminChatSend.addEventListener('click', sendChat);
 if(adminChatInput) adminChatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }});
+
+// Add initial greeting message with markdown formatting
+if(adminChatBody && adminChatBody.children.length === 0){
+    appendMessage('bot', 'Hi — ask me about **admin tasks**, `training`, or `settings`.');
+}
 })();
 (function(){
 function hexToRgb(hex){
