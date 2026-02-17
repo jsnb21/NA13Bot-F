@@ -1,6 +1,12 @@
 // Global variable to store report data for export
 window.reportData = {};
 
+function setReportsLoading(isLoading) {
+    const loadingEl = document.getElementById('reportsLoading');
+    if (!loadingEl) return;
+    loadingEl.style.display = isLoading ? 'flex' : 'none';
+}
+
 function exportReportAsCSV() {
     const data = window.reportData;
     if (!data.orders || data.orders.length === 0) {
@@ -74,6 +80,7 @@ document.addEventListener('turbo:load', function() {
     window.symbol = window.symbol || '₱';
     
     // Fetch real data from API
+    setReportsLoading(true);
     fetch('/api/orders/list')
         .then(response => response.json())
         .then(data => {
@@ -271,6 +278,9 @@ document.addEventListener('turbo:load', function() {
         .catch(err => {
             console.error('Error loading reports data:', err);
             showNoDataState();
+        })
+        .finally(() => {
+            setReportsLoading(false);
         });
     
     // Export Report button handler

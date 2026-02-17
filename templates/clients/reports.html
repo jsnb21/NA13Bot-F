@@ -9,7 +9,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4" >
+<div class="container-fluid px-4 reports-page" >
+    <div id="reportsLoading" class="reports-loading" aria-live="polite">
+        <div class="reports-loading-inner">
+            <div class="reports-spinner"></div>
+            <div class="reports-loading-text">Loading reports...</div>
+        </div>
+    </div>
     <div class="page-header">
         <div>
             <h2 class="page-title">Reports</h2>
