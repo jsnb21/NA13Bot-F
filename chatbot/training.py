@@ -49,14 +49,25 @@ Manifest Entry Format:
   }
 """
 
+import io
 import json
 import re
 from pathlib import Path
 
-TRAINING_DIR = Path(__file__).parent / 'training_data'
+try:
+    from pypdf import PdfReader
+except Exception:
+    PdfReader = None
+
+try:
+    from docx import Document
+except Exception:
+    Document = None
+
+TRAINING_DIR = Path(__file__).resolve().parent.parent / 'training_data'
 TRAINING_DIR.mkdir(parents=True, exist_ok=True)
 
-TEXT_EXTENSIONS = {'.txt', '.json', '.csv'}
+TEXT_EXTENSIONS = {'.txt', '.json', '.csv', '.pdf', '.docx'}
 
 
 def get_training_dir(restaurant_id: str):
@@ -88,6 +99,54 @@ def _read_text_file(path: Path):
         return path.read_text(encoding='utf-8', errors='ignore')
     except Exception:
         return ''
+
+
+def _read_pdf_text(path: Path):
+    if not PdfReader:
+        return ''
+    try:
+        data = path.read_bytes()
+        reader = PdfReader(io.BytesIO(data))
+    except Exception:
+        return ''
+    parts = []
+    for page in reader.pages:
+        try:
+            text = page.extract_text() or ''
+        except Exception:
+            text = ''
+        if text:
+            parts.append(text)
+    return '\n'.join(parts)
+
+
+def _read_docx_text(path: Path):
+    if not Document:
+        return ''
+    try:
+        doc = Document(str(path))
+    except Exception:
+        return ''
+    parts = []
+    for paragraph in doc.paragraphs:
+        text = (paragraph.text or '').strip()
+        if text:
+            parts.append(text)
+    for table in doc.tables:
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells if cell.text]
+            if cells:
+                parts.append(' | '.join(cells))
+    return '\n'.join(parts)
+
+
+def _read_training_text(path: Path):
+    suffix = path.suffix.lower()
+    if suffix == '.pdf':
+        return _read_pdf_text(path)
+    if suffix == '.docx':
+        return _read_docx_text(path)
+    return _read_text_file(path)
 
 
 def _normalize_text(text: str):
@@ -133,7 +192,7 @@ def build_training_context(restaurant_id: str, query: str, max_chunks: int = 3):
             continue
         if file_path.suffix.lower() not in TEXT_EXTENSIONS:
             continue
-        raw_text = _read_text_file(file_path)
+        raw_text = _read_training_text(file_path)
         normalized = _normalize_text(raw_text)
         if not normalized:
             continue

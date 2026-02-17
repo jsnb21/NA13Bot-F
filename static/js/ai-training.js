@@ -24,6 +24,11 @@
   const selectAll = document.getElementById('selectAll');
   const selectedCount = document.getElementById('selectedCount');
   const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+    const previewModal = document.getElementById('previewModal');
+    const previewTitle = document.getElementById('previewTitle');
+    const previewMeta = document.getElementById('previewMeta');
+    const previewBody = document.getElementById('previewBody');
+    const previewClose = document.getElementById('previewClose');
 
   const FILES_ENDPOINT = '/ai-training/files';
   const UPLOAD_ENDPOINT = '/ai-training/upload';
@@ -255,7 +260,7 @@ function renderFiles(files) {
         previewBtn.innerHTML = '<i class="fa fa-eye"></i> Preview';
         previewBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            showToast('warning', 'Preview feature coming soon!');
+            openPreview(file);
         });
 
         const removeBtn = document.createElement('button');
@@ -398,6 +403,51 @@ function uploadFiles(fileList) {
     };
 
     xhr.send(formData);
+}
+
+function openPreviewModal() {
+    if (!previewModal) {
+        return;
+    }
+    previewModal.classList.add('open');
+    previewModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closePreviewModal() {
+    if (!previewModal) {
+        return;
+    }
+    previewModal.classList.remove('open');
+    previewModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+}
+
+async function openPreview(file) {
+    if (!file || !previewModal || !previewBody) {
+        showToast('error', 'Preview is unavailable.');
+        return;
+    }
+
+    previewTitle.textContent = file.original_name || 'File Preview';
+    previewMeta.textContent = 'Loading preview...';
+    previewBody.textContent = '';
+    openPreviewModal();
+
+    try {
+        const res = await fetch(`${FILES_ENDPOINT}/${file.id}/preview`, { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Preview failed');
+        }
+        const ext = (data.ext || '').replace('.', '').toUpperCase() || 'FILE';
+        const sizeText = formatBytes(file.size_bytes || 0);
+        previewMeta.textContent = `${ext} • ${sizeText}${data.truncated ? ' (truncated)' : ''}`;
+        previewBody.textContent = data.preview || 'No preview available for this file.';
+    } catch (err) {
+        closePreviewModal();
+        showToast('error', err.message || 'Preview failed');
+    }
 }
 
 async function removeFile(fileId) {
@@ -547,6 +597,22 @@ uploadZone.addEventListener('click', () => {
 // File input change handler
 trainingFiles.addEventListener('change', () => {
     uploadFiles(trainingFiles.files);
+});
+
+if (previewClose) {
+    previewClose.addEventListener('click', closePreviewModal);
+}
+if (previewModal) {
+    previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal) {
+            closePreviewModal();
+        }
+    });
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && previewModal && previewModal.classList.contains('open')) {
+        closePreviewModal();
+    }
 });
 
 // Initial load

@@ -91,6 +91,10 @@ try:
     from pypdf import PdfReader
 except Exception:
     PdfReader = None
+try:
+    from docx import Document
+except Exception:
+    Document = None
 import time
 import secrets
 import uuid
@@ -426,6 +430,26 @@ def extract_pdf_text(data_bytes: bytes):
             text = ''
         if text:
             parts.append(text)
+    return '\n'.join(parts)
+
+
+def extract_docx_text(data_bytes: bytes):
+    if not Document:
+        return ''
+    try:
+        doc = Document(io.BytesIO(data_bytes))
+    except Exception:
+        return ''
+    parts = []
+    for paragraph in doc.paragraphs:
+        text = (paragraph.text or '').strip()
+        if text:
+            parts.append(text)
+    for table in doc.tables:
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells if cell.text]
+            if cells:
+                parts.append(' | '.join(cells))
     return '\n'.join(parts)
 
 def login_required(f):
@@ -1351,6 +1375,61 @@ def ai_training_delete(file_id):
     if not deleted:
         return jsonify({'error': 'File not found'}), 404
     return jsonify({'deleted': True})
+
+
+def _build_training_preview_text(file_path: Path):
+    suffix = file_path.suffix.lower()
+    if suffix == '.pdf':
+        return extract_pdf_text(file_path.read_bytes())
+    if suffix == '.docx':
+        return extract_docx_text(file_path.read_bytes())
+    try:
+        raw_text = file_path.read_text(encoding='utf-8', errors='ignore')
+    except Exception:
+        return ''
+    if suffix == '.json':
+        try:
+            parsed = json.loads(raw_text)
+            return json.dumps(parsed, indent=2)
+        except Exception:
+            return raw_text
+    return raw_text
+
+
+@app.route('/ai-training/files/<file_id>/preview', methods=['GET'])
+@login_required
+def ai_training_preview(file_id):
+    restaurant_id = get_current_restaurant_id()
+    entries = load_training_manifest(restaurant_id)
+    training_dir = get_training_dir(restaurant_id)
+
+    entry = next((e for e in entries if e.get('id') == file_id), None)
+    if not entry:
+        return jsonify({'error': 'File not found'}), 404
+
+    stored_name = entry.get('stored_name')
+    if not stored_name:
+        return jsonify({'error': 'File not found'}), 404
+
+    file_path = training_dir / stored_name
+    if not file_path.exists():
+        return jsonify({'error': 'File not found'}), 404
+
+    preview_text = _build_training_preview_text(file_path)
+    if not preview_text:
+        return jsonify({'error': 'Unable to extract preview text'}), 400
+
+    max_chars = 4000
+    truncated = len(preview_text) > max_chars
+    preview = preview_text[:max_chars]
+
+    return jsonify({
+        'id': entry.get('id'),
+        'name': entry.get('original_name'),
+        'ext': file_path.suffix.lower(),
+        'preview': preview,
+        'truncated': truncated
+    })
 
 
 @app.route('/login', methods=['GET', 'POST'])

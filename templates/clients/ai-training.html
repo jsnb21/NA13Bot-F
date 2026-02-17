@@ -182,5 +182,16 @@ A: Yes, check our full menu for marked items</div>
     </div>
 </div>
 
+<div id="previewModal" class="preview-modal" aria-hidden="true">
+    <div class="preview-modal__content" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+        <div class="preview-modal__header">
+            <h5 id="previewTitle" class="mb-0">File Preview</h5>
+            <button id="previewClose" class="preview-close" type="button" aria-label="Close preview">×</button>
+        </div>
+        <div id="previewMeta" class="preview-meta"></div>
+        <pre id="previewBody" class="preview-body"></pre>
+    </div>
+</div>
+
 <script src="{{ url_for('static', filename='js/ai-training.js')}}"></script>
 {% endblock %}

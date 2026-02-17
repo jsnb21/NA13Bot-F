@@ -4,3 +4,4 @@ psycopg[binary]>=3.1
 google.genai
 pypdf>=4.0
 pytesseract
+python-docx>=1.1
