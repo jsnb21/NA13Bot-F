@@ -21,7 +21,7 @@ Features:
   - Graceful fallback messages for API failures
 
 Configuration:
-  - Uses GEMINI_API_KEY from environment or config.json
+    - Uses GEMINI_API_KEY from environment
   - Model: gemini-2.5-flash
   - Max tokens: 500, Temperature: 0.7
 """

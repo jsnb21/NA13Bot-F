@@ -246,10 +246,6 @@
     // Guard: Only initialize if elements exist
     if (!menuUploadInput || !uploadCard) return;
 
-    // Only initialize once by removing listener after first run
-    if (window.menuScriptInitialized) return;
-    window.menuScriptInitialized = true;
-
     // Toast notification function
     function showToast(type, message) {
     let container = document.querySelector('.toast-container');

@@ -24,10 +24,8 @@ User Management Functions:
   - get_current_user_restaurant(email): Get user's restaurant_id
 
 Configuration Functions:
-  - load_config(restaurant_id): Load restaurant config (JSON + DB)
-  - save_config(data, restaurant_id): Save config to JSON and DB
-  - _load_json_config(): Read config.json file
-  - _save_json_config(data): Write config.json file
+    - load_config(restaurant_id): Load restaurant config from DB
+    - save_config(data, restaurant_id): Save config to DB
   - _extract_brand_data(data): Extract brand fields from config
   - _fetch_brand_settings(restaurant_id): Query database for branding
   - _upsert_brand_settings(restaurant_id, data): Create/update branding
@@ -64,10 +62,9 @@ Password Security:
   - check_password_hash() for secure verification
 
 Configuration Priority:
-  1. Environment variables (DB connection)
-  2. config.json file (non-brand settings, API keys)
-  3. PostgreSQL database (restaurant-specific branding, menu, orders)
-  4. Fallback defaults (currency_symbol = ₱)
+    1. Environment variables (DB connection)
+    2. PostgreSQL database (restaurant-specific branding, menu, orders)
+    3. Fallback defaults (currency_symbol = ₱)
 
 Data Types:
   - restaurant_id: UUID (unique restaurant identifier)
@@ -91,17 +88,14 @@ Dependencies:
 
 import json
 import re
-from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
 from datetime import datetime, timezone
 
-CFG_PATH = Path(__file__).parent / 'config.json'
-
 from werkzeug.security import generate_password_hash, check_password_hash
 
 def load_config(restaurant_id: str = None):
-    cfg = _load_json_config()
+    cfg = {}
 
     try:
         brand = _fetch_brand_settings(restaurant_id)
@@ -112,7 +106,7 @@ def load_config(restaurant_id: str = None):
         if menu_items is not None:
             cfg['menu_items'] = menu_items
     except Exception:
-        # Fall back to JSON-only config if DB is unavailable.
+        # Return empty config if the DB is unavailable.
         pass
 
     # Ensure currency_symbol has a proper default (not None)
@@ -122,21 +116,8 @@ def load_config(restaurant_id: str = None):
     return cfg
 
 def save_config(data: dict, restaurant_id: str = None):
-    base_cfg = _load_json_config()
-
     brand_data = _extract_brand_data(data)
     menu_items = data.get('menu_items') if isinstance(data, dict) else None
-
-    # Keep non-brand keys in JSON config (API keys, DB config, etc.).
-    json_update = {}
-    if isinstance(data, dict):
-        for key, value in data.items():
-            if key in BRAND_FIELDS or key == 'menu_items':
-                continue
-            json_update[key] = value
-
-    base_cfg.update(json_update)
-    _save_json_config(base_cfg)
 
     if restaurant_id and (brand_data or menu_items is not None):
         try:
@@ -145,20 +126,9 @@ def save_config(data: dict, restaurant_id: str = None):
             if menu_items is not None:
                 _replace_menu_items(restaurant_id, menu_items)
         except Exception:
-            # Still return True since JSON config was updated.
-            return True
+            return False
 
     return True
-
-
-def _load_json_config():
-    if CFG_PATH.exists():
-        return json.loads(CFG_PATH.read_text())
-    return {}
-
-
-def _save_json_config(data: dict):
-    CFG_PATH.write_text(json.dumps(data, indent=2, default=str))
 
 
 BRAND_FIELDS = {
@@ -195,9 +165,7 @@ def _extract_brand_data(data: dict):
 def _resolve_restaurant_id(restaurant_id: str = None):
     if restaurant_id:
         return str(restaurant_id)
-    cfg = _load_json_config()
-    rid = cfg.get('default_restaurant_id')
-    return str(rid) if rid else None
+    return None
 
 
 def _fetch_brand_settings(restaurant_id: str = None):
@@ -228,30 +196,21 @@ def _fetch_brand_settings(restaurant_id: str = None):
     ]
 
     resolved_id = _resolve_restaurant_id(restaurant_id)
+    if not resolved_id:
+        return {}
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            if resolved_id:
-                cur.execute(
-                    sql.SQL(
-                        "SELECT {} FROM {}.brand_settings WHERE restaurant_id = %s"
-                    ).format(
-                        sql.SQL(', ').join(map(sql.Identifier, columns)),
-                        sql.Identifier(schema)
-                    ),
-                    [resolved_id]
-                )
-                row = cur.fetchone()
-            else:
-                cur.execute(
-                    sql.SQL(
-                        "SELECT {} FROM {}.brand_settings ORDER BY updated_at DESC LIMIT 1"
-                    ).format(
-                        sql.SQL(', ').join(map(sql.Identifier, columns)),
-                        sql.Identifier(schema)
-                    )
-                )
-                row = cur.fetchone()
+            cur.execute(
+                sql.SQL(
+                    "SELECT {} FROM {}.brand_settings WHERE restaurant_id = %s"
+                ).format(
+                    sql.SQL(', ').join(map(sql.Identifier, columns)),
+                    sql.Identifier(schema)
+                ),
+                [resolved_id]
+            )
+            row = cur.fetchone()
 
     if not row:
         return {}
@@ -259,12 +218,6 @@ def _fetch_brand_settings(restaurant_id: str = None):
     data = dict(zip(columns, row))
     if data.get('image_urls') is None:
         data['image_urls'] = []
-
-    if not resolved_id and data.get('restaurant_id'):
-        cfg = _load_json_config()
-        if not cfg.get('default_restaurant_id'):
-            cfg['default_restaurant_id'] = str(data['restaurant_id'])
-            _save_json_config(cfg)
 
     return data
 

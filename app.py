@@ -434,15 +434,13 @@ def verify_otp(email: str, code: str, purpose: str):
         return False, 'Invalid OTP.'
     return True, None
 
-# Configure Google AI - check environment variable or config file
+# Configure Google AI - environment variable only
 def get_google_api_key():
     # First check environment variable
     key = os.environ.get('GOOGLE_API_KEY', '')
     if key:
         return key
-    # Then check config file
-    cfg = load_config()
-    return cfg.get('google_api_key', '') or cfg.get('GOOGLE_API_KEY', '')
+    return ''
 
 @app.route('/')
 def index():

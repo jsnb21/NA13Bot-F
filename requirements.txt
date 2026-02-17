@@ -1,5 +1,5 @@
 Flask>=2.0
-flask-turbo>=0.0.1
+flask-turbo
 psycopg[binary]>=3.1
 google.genai
 pypdf>=4.0

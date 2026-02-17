@@ -2,12 +2,12 @@
 Database Configuration & Initialization Module
 ===============================================
 Handles all database setup, connection management, schema initialization, and
-configuration file operations. Supports PostgreSQL with customizable schemas
+environment-based configuration. Supports PostgreSQL with customizable schemas
 and multi-tenant data isolation.
 
 Key Responsibilities:
   - Database connection pooling and management
-  - Environment variable and config.json loading
+    - Environment variable loading
   - Database schema initialization and migrations
   - Table creation for multi-tenant operation
   - Index creation for performance optimization
@@ -46,8 +46,7 @@ Indexes:
   - orders_restaurant_status_idx: Order status filtering
 
 Key Functions:
-  - get_connection(): Get PostgreSQL connection with env var precedence
-  - load_config(): Load JSON configuration file
+    - get_connection(): Get PostgreSQL connection with env var precedence
   - get_db_schema(): Get current database schema (custom or public)
   - init_db(): Initialize database schema and create all tables
   - get_google_api_key(): Retrieve Gemini API key with fallback logic
@@ -57,19 +56,6 @@ Environment Variables (Precedence Order):
   2. DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD - Individual components
   3. DB_SCHEMA - Custom schema name (default: "public")
   4. GOOGLE_API_KEY or google_api_key - Gemini API key
-
-Configuration File (config.json):
-  {
-    "db": {
-      "host": "localhost",
-      "port": 5432,
-      "name": "na13bot",
-      "user": "postgres",
-      "password": "password",
-      "schema": "public"
-    },
-    "google_api_key": "your-api-key-here"
-  }
 
 Migration Support:
   - Automatic schema creation for non-public schemas
@@ -90,8 +76,6 @@ Extensions:
 """
 
 import os
-import json
-from pathlib import Path
 import psycopg
 from psycopg import sql
 
@@ -99,13 +83,6 @@ try:
     from dotenv import load_dotenv
 except Exception:
     load_dotenv = None
-
-CFG_PATH = Path(__file__).parent / 'config.json'
-
-def load_config():
-    if CFG_PATH.exists():
-        return json.loads(CFG_PATH.read_text())
-    return {}
 
 def get_connection():
     # Load .env if python-dotenv is available
@@ -117,19 +94,18 @@ def get_connection():
     if db_url:
         return psycopg.connect(db_url)
 
-    cfg = load_config().get("db", {})
-    # Env vars take precedence over config.json
+    # Env vars take precedence
     env_host = os.environ.get("DB_HOST")
     env_port = os.environ.get("DB_PORT")
     env_name = os.environ.get("DB_NAME")
     env_user = os.environ.get("DB_USER")
     env_password = os.environ.get("DB_PASSWORD")
 
-    host = env_host or cfg.get("host", "localhost")
-    port = int(env_port) if env_port else cfg.get("port", 5432)
-    name = env_name or cfg.get("name")
-    user = env_user or cfg.get("user")
-    password = env_password or cfg.get("password")
+    host = env_host or "localhost"
+    port = int(env_port) if env_port else 5432
+    name = env_name
+    user = env_user
+    password = env_password
 
     return psycopg.connect(
         host=host,
@@ -140,9 +116,8 @@ def get_connection():
     )
 
 def get_db_schema():
-    cfg = load_config().get("db", {})
     env_schema = os.environ.get("DB_SCHEMA")
-    return env_schema or cfg.get("schema") or "public"
+    return env_schema or "public"
     
 def init_db():
     schema = get_db_schema()
@@ -360,8 +335,6 @@ def get_google_api_key():
 
     Order of precedence:
     1. Environment variables `GOOGLE_API_KEY` or `google_api_key`
-    2. Top-level keys in `config.json` (common variants)
-    3. A wrapped `config` object inside `config.json` (some admin pages save under "config")
     Returns empty string if not found.
     """
     # 1) env vars (check common variants)
@@ -369,23 +342,5 @@ def get_google_api_key():
         val = os.environ.get(env_key)
         if val:
             return val
-
-    # 2) config file
-    cfg = load_config() or {}
-
-    # candidate keys to check in config.json
-    candidates = ('google_api_key', 'GOOGLE_API_KEY', 'googleApiKey', 'api_key')
-
-    # check top-level
-    for k in candidates:
-        if k in cfg and cfg.get(k):
-            return cfg.get(k)
-
-    # check wrapped 'config' object if present
-    wrapped = cfg.get('config') if isinstance(cfg, dict) else None
-    if isinstance(wrapped, dict):
-        for k in candidates:
-            if k in wrapped and wrapped.get(k):
-                return wrapped.get(k)
 
     return ''
