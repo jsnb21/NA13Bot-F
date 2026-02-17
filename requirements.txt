@@ -3,3 +3,4 @@ flask-turbo
 psycopg[binary]>=3.1
 google.genai
 pypdf>=4.0
+pytesseract
