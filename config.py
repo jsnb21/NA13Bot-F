@@ -246,6 +246,7 @@ def init_db():
                     CREATE TABLE IF NOT EXISTS {}.orders (
                       id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                       restaurant_id   UUID NOT NULL,
+                                            order_number    BIGINT,
                       customer_name   TEXT,
                       customer_email  TEXT,
                       items           JSONB,
@@ -282,6 +283,10 @@ def init_db():
                 .format(sql.Identifier(schema))
             )
             cur.execute(
+                sql.SQL("ALTER TABLE {}.orders ADD COLUMN IF NOT EXISTS order_number BIGINT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
                 sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS currency_symbol TEXT")
                 .format(sql.Identifier(schema))
             )
@@ -311,6 +316,12 @@ def init_db():
             cur.execute(
                 sql.SQL(
                     "CREATE INDEX IF NOT EXISTS orders_restaurant_id_idx ON {}.orders (restaurant_id)"
+                ).format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS orders_restaurant_order_number_idx ON {}.orders (restaurant_id, order_number)"
                 ).format(sql.Identifier(schema))
             )
             

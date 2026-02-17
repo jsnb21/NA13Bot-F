@@ -515,20 +515,40 @@ def update_user_meta(email: str, updates: dict):
         return False
 
 
-def save_order(restaurant_id: str, order_data: dict):
-    """Save a new order to the database."""
+def get_next_order_number(restaurant_id: str):
+    """Get the next order number for a restaurant."""
     schema = get_db_schema()
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL(
-                        """INSERT INTO {}.orders (restaurant_id, customer_name, table_number, 
+                        "SELECT COALESCE(MAX(order_number), 0) + 1 FROM {}.orders WHERE restaurant_id = %s"
+                    ).format(sql.Identifier(schema)),
+                    [restaurant_id]
+                )
+                row = cur.fetchone()
+                return int(row[0]) if row and row[0] else 1
+    except Exception:
+        return 1
+
+
+def save_order(restaurant_id: str, order_data: dict, order_number: int = None):
+    """Save a new order to the database."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                next_number = order_number if order_number else get_next_order_number(restaurant_id)
+                cur.execute(
+                    sql.SQL(
+                        """INSERT INTO {}.orders (restaurant_id, order_number, customer_name, table_number, 
                            items, total_amount, status, created_at) 
-                           VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id"""
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id"""
                     ).format(sql.Identifier(schema)),
                     [
                         restaurant_id,
+                        next_number,
                         order_data.get('customer_name', ''),
                         order_data.get('table_number', ''),
                         json.dumps(order_data.get('items', [])),
@@ -538,7 +558,10 @@ def save_order(restaurant_id: str, order_data: dict):
                     ]
                 )
                 order_id = cur.fetchone()[0]
-                return str(order_id)
+                return {
+                    'id': str(order_id),
+                    'order_number': next_number
+                }
     except Exception as e:
         print(f"Error saving order: {e}")
         return None
@@ -552,8 +575,8 @@ def get_orders(restaurant_id: str, limit: int = 50):
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL(
-                        """SELECT id, customer_name, table_number, items, total_amount, 
-                           status, created_at FROM {}.orders 
+                        """SELECT id, order_number, customer_name, table_number, items, total_amount, 
+                               status, created_at FROM {}.orders 
                            WHERE restaurant_id = %s ORDER BY created_at DESC LIMIT %s"""
                     ).format(sql.Identifier(schema)),
                     [restaurant_id, limit]
@@ -562,12 +585,13 @@ def get_orders(restaurant_id: str, limit: int = 50):
                 return [
                     {
                         'id': str(row[0]),
-                        'customer_name': row[1],
-                        'table_number': row[2],
-                        'items': row[3] if isinstance(row[3], list) else json.loads(row[3] or '[]'),
-                        'total_amount': float(row[4]),
-                        'status': row[5],
-                        'created_at': row[6].isoformat() if row[6] else None
+                        'order_number': row[1],
+                        'customer_name': row[2],
+                        'table_number': row[3],
+                        'items': row[4] if isinstance(row[4], list) else json.loads(row[4] or '[]'),
+                        'total_amount': float(row[5]),
+                        'status': row[6],
+                        'created_at': row[7].isoformat() if row[7] else None
                     }
                     for row in rows
                 ]

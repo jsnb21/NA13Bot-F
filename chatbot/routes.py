@@ -32,7 +32,7 @@ Dependencies:
 """
 
 from flask import Blueprint, request, jsonify, session
-from tools import load_config, save_order
+from tools import load_config, save_order, get_next_order_number
 from chatbot.ai import GeminiChatbot
 from chatbot.prompts import build_system_prompt
 from chatbot.training import build_training_context
@@ -98,6 +98,20 @@ def api_models():
         return jsonify({'models': models})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@chatbot_bp.route('/orders/session', methods=['GET'])
+def api_order_session():
+    restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+    if not restaurant_id:
+        return jsonify({'error': 'No restaurant ID provided'}), 400
+
+    order_number = session.get('order_number')
+    if not order_number:
+        order_number = get_next_order_number(restaurant_id)
+        session['order_number'] = order_number
+
+    return jsonify({'order_number': order_number})
     
 @chatbot_bp.route('/chat', methods=['POST'])
 def api_chat():
@@ -217,13 +231,20 @@ def api_place_order():
             return jsonify({'error': 'Order must contain at least one item'}), 400
         
         # Save the order
-        order_id = save_order(restaurant_id, order_data)
-        if not order_id:
+        session_order_number = session.get('order_number')
+        saved = save_order(restaurant_id, order_data, session_order_number)
+        if not saved:
             return jsonify({'error': 'Failed to save order'}), 500
+
+        order_id = saved.get('id')
+        order_number = saved.get('order_number')
+        session['order_number'] = int(order_number or 0) + 1
         
         return jsonify({
             'success': True,
             'order_id': order_id,
+            'order_number': order_number,
+            'next_order_number': session.get('order_number'),
             'message': f'Order #{order_id} confirmed! Thank you for your order.',
             'total': order_data['total_amount']
         }), 201

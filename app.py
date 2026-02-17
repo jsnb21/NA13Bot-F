@@ -1098,13 +1098,17 @@ def api_create_order():
             'status': 'pending'
         }
         
-        order_id = save_order(restaurant_id, order_data)
-        if not order_id:
+        saved = save_order(restaurant_id, order_data)
+        if not saved:
             return jsonify({'error': 'Failed to save order'}), 500
+
+        order_id = saved.get('id')
+        order_number = saved.get('order_number')
         
         return jsonify({
             'success': True,
             'order_id': order_id,
+            'order_number': order_number,
             'message': f'Order #{order_id} placed successfully!'
         }), 201
     except Exception as e:

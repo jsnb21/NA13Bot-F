@@ -17,6 +17,15 @@ let orderState = {
     isCollectingOrder: false
 };
 
+function setOrderNumber(value) {
+    const badge = document.getElementById('order-number');
+    if (!badge) {
+        return;
+    }
+    const normalized = value ? `Order #${value}` : 'Order #--';
+    badge.textContent = normalized;
+}
+
 async function loadConfig() {
     try {
         const res = await fetch('/api/config');
@@ -28,6 +37,19 @@ async function loadConfig() {
     } catch (e) {
         console.error("Failed to load config:", e);
         return {};
+    }
+}
+
+async function loadOrderNumber() {
+    try {
+        const res = await fetch('/api/orders/session');
+        if (!res.ok) {
+            return;
+        }
+        const data = await res.json();
+        setOrderNumber(data.order_number);
+    } catch (e) {
+        console.error('Failed to load order number:', e);
     }
 }
 
@@ -308,6 +330,7 @@ document.getElementById('txt').addEventListener('keydown', (e) => {
 (async function () {
     const cfg = await loadConfig();
     applyConfig(cfg);
+    loadOrderNumber();
 })();
 
 // Quick-reply definitions
