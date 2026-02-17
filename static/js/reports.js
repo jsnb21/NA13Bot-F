@@ -84,9 +84,11 @@ document.addEventListener('turbo:load', function() {
             let orders = Array.isArray(data) ? data : (data.orders || data.data || []);
             
             if (!orders || orders.length === 0) {
-                console.warn('No orders data available');
+                showNoDataState();
                 return;
             }
+
+            clearNoDataState();
             
             // Calculate metrics
             const now = new Date();
@@ -266,7 +268,10 @@ document.addEventListener('turbo:load', function() {
                 });
             }
         })
-        .catch(err => console.error('Error loading reports data:', err));
+        .catch(err => {
+            console.error('Error loading reports data:', err);
+            showNoDataState();
+        });
     
     // Export Report button handler
     const exportBtn = document.getElementById('exportReportBtn');
@@ -276,6 +281,51 @@ document.addEventListener('turbo:load', function() {
     
     window.reportsChartsInitialized = true;
 });
+
+function showNoDataState(message) {
+    const text = message || 'There is not enough data to show analytics yet.';
+    const totalRevEl = document.getElementById('totalRevenueText');
+    if (totalRevEl) {
+        totalRevEl.textContent = text;
+    }
+    updateTopCategories([]);
+    setChartEmptyState('revenueChart', text);
+    setChartEmptyState('ordersChart', text);
+    setChartEmptyState('growthChart', text);
+}
+
+function clearNoDataState() {
+    clearChartEmptyState('revenueChart');
+    clearChartEmptyState('ordersChart');
+    clearChartEmptyState('growthChart');
+}
+
+function setChartEmptyState(canvasId, message) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !canvas.parentElement) return;
+    canvas.style.display = 'none';
+
+    const parent = canvas.parentElement;
+    let existing = parent.querySelector(`.analytics-empty[data-for="${canvasId}"]`);
+    if (!existing) {
+        existing = document.createElement('div');
+        existing.className = 'analytics-empty';
+        existing.dataset.for = canvasId;
+        parent.appendChild(existing);
+    }
+    existing.textContent = message;
+}
+
+function clearChartEmptyState(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !canvas.parentElement) return;
+    const parent = canvas.parentElement;
+    const existing = parent.querySelector(`.analytics-empty[data-for="${canvasId}"]`);
+    if (existing) {
+        existing.remove();
+    }
+    canvas.style.display = '';
+}
 
 function updateSalesSummary(revenueThis, revenueLast, revenueChange, revenuePercent, countThis, countLast, countChange, countPercent, avgThis, avgLast, avgChange, avgPercent) {
     const el = (id) => document.getElementById(id);
@@ -340,7 +390,7 @@ function updateTopCategories(categories) {
     if (!container) return;
     
     if (categories.length === 0) {
-        container.innerHTML = '<p class="text-muted text-center">No category data available</p>';
+        container.innerHTML = '<p class="text-muted text-center">There is not enough data to show analytics yet.</p>';
         return;
     }
     

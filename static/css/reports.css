@@ -15,3 +15,16 @@
     color: #999;
     margin: 15px 0;
 }
+
+.analytics-empty {
+    background: #f8f9fa;
+    border-radius: 6px;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+    text-align: center;
+    padding: 12px;
+    margin-top: 8px;
+}
