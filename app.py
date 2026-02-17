@@ -100,6 +100,9 @@ from chatbot.training import build_training_context
 import google.genai as genai
 import base64
 import psycopg
+import smtplib
+import ssl
+from email.message import EmailMessage
 
 # after app is created, before routes
 init_db()
@@ -484,6 +487,80 @@ def set_otp(email: str, purpose: str):
         'expires_at': time.time() + OTP_TTL_SECONDS
     }
     return code
+
+
+def get_smtp_settings():
+    host = os.environ.get('SMTP_HOST', '').strip()
+    port_raw = os.environ.get('SMTP_PORT', '587').strip()
+    try:
+        port = int(port_raw)
+    except ValueError:
+        port = 587
+    user = os.environ.get('SMTP_USER', '').strip()
+    password = os.environ.get('SMTP_PASSWORD', '').strip()
+    use_tls = os.environ.get('SMTP_USE_TLS', 'true').strip().lower() in ('1', 'true', 'yes', 'on')
+    use_ssl = os.environ.get('SMTP_USE_SSL', 'false').strip().lower() in ('1', 'true', 'yes', 'on')
+    from_email = os.environ.get('SMTP_FROM', '').strip() or user
+    from_name = os.environ.get('SMTP_FROM_NAME', 'Resto AI').strip()
+    return {
+        'host': host,
+        'port': port,
+        'user': user,
+        'password': password,
+        'use_tls': use_tls,
+        'use_ssl': use_ssl,
+        'from_email': from_email,
+        'from_name': from_name
+    }
+
+
+def should_show_otp_hint():
+    return os.environ.get('OTP_DEBUG_SHOW', '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def send_otp_email(to_email: str, code: str, purpose: str, cfg: dict = None):
+    settings = get_smtp_settings()
+    if not settings['host'] or not settings['from_email']:
+        return False, 'SMTP is not configured.'
+
+    cfg = cfg or {}
+    brand = cfg.get('business_name') or cfg.get('establishment_name') or 'Resto AI'
+    ttl_minutes = max(1, int(OTP_TTL_SECONDS / 60))
+    subject = f"Your {brand} verification code"
+    intro = "Use this code to finish signing in" if purpose == 'login' else "Use this code to finish creating your account"
+
+    body = (
+        f"{intro}.\n\n"
+        f"Verification code: {code}\n"
+        f"This code expires in {ttl_minutes} minutes.\n\n"
+        f"If you did not request this, you can ignore this email."
+    )
+
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = f"{settings['from_name']} <{settings['from_email']}>"
+    msg['To'] = to_email
+    msg['Auto-Submitted'] = 'auto-generated'
+    msg.set_content(body)
+
+    context = ssl.create_default_context()
+    try:
+        if settings['use_ssl']:
+            with smtplib.SMTP_SSL(settings['host'], settings['port'], context=context) as server:
+                if settings['user'] and settings['password']:
+                    server.login(settings['user'], settings['password'])
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(settings['host'], settings['port']) as server:
+                if settings['use_tls']:
+                    server.starttls(context=context)
+                if settings['user'] and settings['password']:
+                    server.login(settings['user'], settings['password'])
+                server.send_message(msg)
+    except Exception as exc:
+        return False, str(exc)
+
+    return True, None
 
 
 def verify_otp(email: str, code: str, purpose: str):
@@ -1288,7 +1365,19 @@ def login():
             error = 'No account found with that email.'
         else:
             otp_code = set_otp(email, 'login')
-            return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', otp_hint=otp_code)
+            sent, send_error = send_otp_email(email, otp_code, 'login', cfg)
+            otp_hint = otp_code if (should_show_otp_hint() or not sent) else None
+            notice = 'We sent a verification code to your email.' if sent else None
+            warning = None if sent else f"Email delivery failed: {send_error}. Use the code shown below."
+            return render_template(
+                'auth/otp_verify.html',
+                cfg=cfg,
+                email=email,
+                purpose='login',
+                otp_hint=otp_hint,
+                notice=notice,
+                warning=warning
+            )
     return render_template('auth/login.html', cfg=cfg, error=error)
 
 
@@ -1305,7 +1394,8 @@ def login_verify():
         get_current_restaurant_id()
         return redirect(url_for('dashboard'))
     otp_code = session.get('otp', {}).get('code')
-    return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', error=error, otp_hint=otp_code)
+    otp_hint = otp_code if should_show_otp_hint() else None
+    return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', error=error, otp_hint=otp_hint)
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -1345,7 +1435,19 @@ def signup():
                     'sub_color': sub_color
                 }
                 otp_code = set_otp(email, 'signup')
-                return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='signup', otp_hint=otp_code)
+                sent, send_error = send_otp_email(email, otp_code, 'signup', cfg)
+                otp_hint = otp_code if (should_show_otp_hint() or not sent) else None
+                notice = 'We sent a verification code to your email.' if sent else None
+                warning = None if sent else f"Email delivery failed: {send_error}. Use the code shown below."
+                return render_template(
+                    'auth/otp_verify.html',
+                    cfg=cfg,
+                    email=email,
+                    purpose='signup',
+                    otp_hint=otp_hint,
+                    notice=notice,
+                    warning=warning
+                )
 
     return render_template('auth/signup.html', cfg=cfg, error=error)
 
@@ -1363,7 +1465,8 @@ def signup_verify():
     ok, error = verify_otp(email, code, 'signup')
     if not ok:
         otp_code = session.get('otp', {}).get('code')
-        return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='signup', error=error, otp_hint=otp_code)
+        otp_hint = otp_code if should_show_otp_hint() else None
+        return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='signup', error=error, otp_hint=otp_hint)
 
     restaurant_id = str(uuid.uuid4())
     meta = {

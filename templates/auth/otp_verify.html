@@ -11,6 +11,14 @@
     <div class="alert alert-danger">{{ error }}</div>
     {% endif %}
 
+    {% if notice %}
+    <div class="alert alert-info">{{ notice }}</div>
+    {% endif %}
+
+    {% if warning %}
+    <div class="alert alert-warning">{{ warning }}</div>
+    {% endif %}
+
     {% if otp_hint %}
     <div class="alert alert-info">Dev OTP: <strong>{{ otp_hint }}</strong></div>
     {% endif %}
