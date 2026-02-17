@@ -159,6 +159,35 @@ def init_db():
                 .format(sql.Identifier(schema))
             )
 
+            # One-time cleanup: normalize email casing where it won't collide.
+            cur.execute(
+                sql.SQL(
+                    """
+                    UPDATE {}.accounts a
+                    SET email = lower(a.email)
+                    WHERE a.email <> lower(a.email)
+                      AND NOT EXISTS (
+                        SELECT 1 FROM {}.accounts b
+                        WHERE lower(b.email) = lower(a.email)
+                          AND b.id <> a.id
+                      )
+                    """
+                ).format(sql.Identifier(schema), sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL(
+                    """
+                    SELECT lower(email), COUNT(*)
+                    FROM {}.accounts
+                    GROUP BY lower(email)
+                    HAVING COUNT(*) > 1
+                    """
+                ).format(sql.Identifier(schema))
+            )
+            duplicates = cur.fetchall()
+            if duplicates:
+                print("Warning: duplicate emails differ only by case:", duplicates)
+
             cur.execute(
                 sql.SQL(
                     """
@@ -328,6 +357,11 @@ def init_db():
                 sql.SQL("ALTER TABLE {}.brand_settings ADD CONSTRAINT brand_settings_pkey PRIMARY KEY (restaurant_id)")
                 .format(sql.Identifier(schema))
             )
+
+            # Log current database and schema for troubleshooting.
+            cur.execute("SELECT current_database(), current_schema();")
+            db_name, current_schema = cur.fetchone() or (None, None)
+            print(f"DB context: database={db_name}, schema={current_schema}")
             
     
 def get_google_api_key():

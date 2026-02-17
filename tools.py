@@ -94,6 +94,12 @@ from datetime import datetime, timezone
 
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
+def normalize_email(email: str) -> str:
+    if not email:
+        return ''
+    return email.strip().lower()
+
 def load_config(restaurant_id: str = None):
     cfg = {}
 
@@ -372,6 +378,7 @@ def _replace_menu_items(restaurant_id: str, menu_items):
 def add_user(email: str, password: str = None, meta: dict = None):
     """Add a new user to the database."""
     schema = get_db_schema()
+    email = normalize_email(email)
     password_hash = ''
     if password:
         password_hash = generate_password_hash(password)
@@ -380,6 +387,8 @@ def add_user(email: str, password: str = None, meta: dict = None):
     meta_json = json.dumps(meta) if meta else None
     
     try:
+        if user_exists(email):
+            return False
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -400,12 +409,13 @@ def add_user(email: str, password: str = None, meta: dict = None):
 def verify_user(email: str, password: str):
     """Verify user credentials against the database."""
     schema = get_db_schema()
+    email = normalize_email(email)
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL(
-                        "SELECT password_hash FROM {}.accounts WHERE email = %s"
+                        "SELECT password_hash FROM {}.accounts WHERE lower(email) = %s"
                     ).format(sql.Identifier(schema)),
                     [email]
                 )
@@ -420,12 +430,13 @@ def verify_user(email: str, password: str):
 def user_exists(email: str) -> bool:
     """Check if a user exists in the database."""
     schema = get_db_schema()
+    email = normalize_email(email)
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL(
-                        "SELECT 1 FROM {}.accounts WHERE email = %s"
+                        "SELECT 1 FROM {}.accounts WHERE lower(email) = %s"
                     ).format(sql.Identifier(schema)),
                     [email]
                 )
@@ -437,12 +448,13 @@ def user_exists(email: str) -> bool:
 def get_user(email: str):
     """Get user data from the database."""
     schema = get_db_schema()
+    email = normalize_email(email)
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     sql.SQL(
-                        "SELECT id, email, password_hash, meta, restaurant_id, created_at FROM {}.accounts WHERE email = %s"
+                        "SELECT id, email, password_hash, meta, restaurant_id, created_at FROM {}.accounts WHERE lower(email) = %s"
                     ).format(sql.Identifier(schema)),
                     [email]
                 )
@@ -464,12 +476,13 @@ def get_user(email: str):
 def update_user_meta(email: str, updates: dict):
     """Update user metadata in the database."""
     schema = get_db_schema()
+    email = normalize_email(email)
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 # Get current meta
                 cur.execute(
-                    sql.SQL("SELECT meta FROM {}.accounts WHERE email = %s").format(sql.Identifier(schema)),
+                    sql.SQL("SELECT meta FROM {}.accounts WHERE lower(email) = %s").format(sql.Identifier(schema)),
                     [email]
                 )
                 row = cur.fetchone()
@@ -486,14 +499,14 @@ def update_user_meta(email: str, updates: dict):
                 if restaurant_id:
                     cur.execute(
                         sql.SQL(
-                            "UPDATE {}.accounts SET meta = %s::jsonb, restaurant_id = %s WHERE email = %s"
+                            "UPDATE {}.accounts SET meta = %s::jsonb, restaurant_id = %s WHERE lower(email) = %s"
                         ).format(sql.Identifier(schema)),
                         [json.dumps(meta), restaurant_id, email]
                     )
                 else:
                     cur.execute(
                         sql.SQL(
-                            "UPDATE {}.accounts SET meta = %s::jsonb WHERE email = %s"
+                            "UPDATE {}.accounts SET meta = %s::jsonb WHERE lower(email) = %s"
                         ).format(sql.Identifier(schema)),
                         [json.dumps(meta), email]
                     )
