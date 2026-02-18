@@ -23,6 +23,11 @@
         min-height: 100vh;
         font-family: 'Inter', system-ui, -apple-system, sans-serif;
       }
+
+      .auth-layout .main-content {
+        margin-left: 0 !important;
+        width: 100%;
+      }
       
       /* --- Header --- */
       .auth-topbar {
@@ -132,7 +137,7 @@
     </style>
     {% block head %}{% endblock %}
   </head>
-  <body>
+  <body class="auth-layout">
     <header class="auth-topbar">
       <a href="/" class="brand">
         <div class="logo">

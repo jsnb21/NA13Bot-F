@@ -26,6 +26,8 @@ overflow-y: auto;
 
 .sidebar-inner { 
 padding: 28px 20px;
+position: relative;
+height: 100%;
 }
 
 .sidebar-brand {
