@@ -615,64 +615,362 @@ if (retrainBtn) {
 
 // Template downloads
 function downloadTemplate(type) {
-    const templates = {
-        menu: {
-            name: 'menu-template.json',
-            content: JSON.stringify({
-                "restaurant": {
-                    "name": "Your Restaurant Name",
-                    "menu": [
-                        {
-                            "item": "Sample Item",
-                            "price": "$10.99",
-                            "description": "Delicious sample description",
-                            "category": "Main Course"
-                        }
-                    ]
-                }
-            }, null, 2)
-        },
-        faq: {
-            name: 'faq-template.txt',
-            content: `Q: What are your hours?
-A: We're open 10am-10pm daily
-
-Q: Do you deliver?
-A: Yes, delivery available within 5 miles
-
-Q: Any vegetarian options?
-A: Yes, check our full menu for marked items`
-        },
-        hours: {
-            name: 'hours-template.json',
-            content: JSON.stringify({
-                "business_hours": {
-                    "monday": "10:00 AM - 10:00 PM",
-                    "tuesday": "10:00 AM - 10:00 PM",
-                    "wednesday": "10:00 AM - 10:00 PM",
-                    "thursday": "10:00 AM - 10:00 PM",
-                    "friday": "10:00 AM - 11:00 PM",
-                    "saturday": "10:00 AM - 11:00 PM",
-                    "sunday": "11:00 AM - 9:00 PM"
-                }
-            }, null, 2)
-        }
-    };
+    if (type !== 'complete') return;
     
-    const template = templates[type];
-    if (!template) return;
-    
-    const blob = new Blob([template.content], { type: 'text/plain' });
+    const content = `===============================================================================
+                  RESTAURANT INFORMATION TEMPLATE
+===============================================================================
+
+Welcome! Use this template to train your AI chatbot with essential information
+about your restaurant. Fill in the details below, save the file, and upload it
+to your AI Training dashboard.
+
+===============================================================================
+
+
+SECTION 1: RESTAURANT MENU
+===============================================================================
+
+Restaurant Name: [Enter your restaurant name]
+Cuisine Type: [e.g., Italian, Mexican, Asian Fusion, American]
+
+
+APPETIZERS & STARTERS
+-------------------------------------------------------------------------------
+
+Garlic Bread
+  Price: $5.99
+  Description: Freshly baked bread with garlic butter and herbs
+  Dietary Notes: Vegetarian
+
+Caesar Salad
+  Price: $8.99
+  Description: Crisp romaine lettuce with parmesan and house-made dressing
+  Dietary Notes: Can be made vegetarian
+
+[Add Your Appetizer]
+  Price: $[0.00]
+  Description: [Describe your dish]
+  Dietary Notes: [Vegetarian, Vegan, Gluten-Free, etc.]
+
+
+MAIN COURSES
+-------------------------------------------------------------------------------
+
+Grilled Salmon
+  Price: $18.99
+  Description: Fresh Atlantic salmon with seasonal vegetables and lemon butter
+              sauce
+  Dietary Notes: Gluten-Free, Contains Fish
+
+Classic Burger
+  Price: $12.99
+  Description: 8oz beef patty with lettuce, tomato, onion, pickles, and fries
+  Dietary Notes: Contains Gluten
+
+Margherita Pizza
+  Price: $14.99
+  Description: Tomato sauce, fresh mozzarella, and basil on wood-fired crust
+  Dietary Notes: Vegetarian
+
+[Add Your Main Course]
+  Price: $[0.00]
+  Description: [Describe your dish]
+  Dietary Notes: [Any dietary information]
+
+
+DESSERTS
+-------------------------------------------------------------------------------
+
+Chocolate Lava Cake
+  Price: $6.99
+  Description: Warm chocolate cake with molten center and vanilla ice cream
+  Dietary Notes: Vegetarian
+
+Tiramisu
+  Price: $7.99
+  Description: Classic Italian dessert with espresso-soaked ladyfingers
+  Dietary Notes: Vegetarian, Contains Alcohol
+
+[Add Your Dessert]
+  Price: $[0.00]
+  Description: [Describe your dessert]
+
+
+BEVERAGES
+-------------------------------------------------------------------------------
+
+Soft Drinks
+  Price: $2.99
+  Options: Coca-Cola, Sprite, Fanta, Diet Coke, Ginger Ale
+
+Fresh Juices
+  Price: $4.99
+  Options: Orange, Apple, Grapefruit, Cranberry
+
+Specialty Coffee
+  Price: $3.99
+  Options: Espresso, Cappuccino, Latte, Americano, Mocha
+
+[Add Your Beverage]
+  Price: $[0.00]
+  Description: [Describe your beverage options]
+
+
+DAILY SPECIALS & COMBO DEALS
+-------------------------------------------------------------------------------
+
+[Example: Monday Lunch Special - Any pasta + drink for $15.99]
+[Example: Happy Hour - 50% off all appetizers, 4-6 PM weekdays]
+[Add your special offers and promotions here]
+
+
+===============================================================================
+
+
+SECTION 2: FREQUENTLY ASKED QUESTIONS
+===============================================================================
+
+
+HOURS & LOCATION
+-------------------------------------------------------------------------------
+
+Q: What are your hours of operation?
+A: We're open Monday through Sunday, 10:00 AM to 10:00 PM. Last seating is
+   30 minutes before closing time.
+
+Q: Where are you located?
+A: [Enter your full street address, city, state, and ZIP code]
+
+Q: Is parking available?
+A: Yes! We offer free parking in our lot. Street parking is also available
+   nearby.
+
+Q: Do you have outdoor seating?
+A: [Yes - describe your patio/outdoor area OR No]
+
+
+ORDERING & DELIVERY
+-------------------------------------------------------------------------------
+
+Q: Do you offer delivery?
+A: Yes! We deliver within a 5-mile radius. Delivery fee is $4.99, free on
+   orders over $30.
+
+Q: Can I order online?
+A: Absolutely! Order through our website or call us at [Your Phone Number].
+
+Q: What are your delivery hours?
+A: Delivery is available during all business hours: 10:00 AM - 10:00 PM daily.
+
+Q: Do you accept takeout orders?
+A: Yes, takeout orders are welcome! Call ahead or order online for faster
+   pickup.
+
+Q: Are you on food delivery apps?
+A: [Yes - we're on UberEats, DoorDash, Grubhub OR No - order directly through us]
+
+
+RESERVATIONS & EVENTS
+-------------------------------------------------------------------------------
+
+Q: Do you accept reservations?
+A: Yes! Book online through our website or call us. Walk-ins are also welcome.
+
+Q: How far in advance can I make a reservation?
+A: You can reserve tables up to 30 days in advance.
+
+Q: Do you have private dining options?
+A: [Yes - describe your private room capacity OR No, but we can accommodate
+   large groups]
+
+Q: What's your cancellation policy?
+A: Please cancel at least 2 hours before your reserved time.
+
+Q: Do you host special events?
+A: Yes! We cater birthdays, corporate events, weddings, and more. Contact us
+   for details.
+
+
+MENU & DIETARY OPTIONS
+-------------------------------------------------------------------------------
+
+Q: Do you have vegetarian or vegan options?
+A: Yes! We have many vegetarian and vegan dishes clearly marked on our menu.
+
+Q: Can you accommodate food allergies?
+A: Absolutely. Please inform your server about any allergies or restrictions
+   and we'll work with you to find safe options.
+
+Q: Do you have gluten-free options?
+A: [Yes - describe options OR We can modify certain dishes]
+
+Q: Is there a kids menu?
+A: [Yes - describe OR No, but we offer half portions of regular menu items]
+
+Q: Where do you source your ingredients?
+A: [We use locally sourced, organic ingredients OR Describe your sourcing]
+
+
+PAYMENT & PRICING
+-------------------------------------------------------------------------------
+
+Q: What payment methods do you accept?
+A: We accept cash, all major credit cards (Visa, Mastercard, Amex, Discover),
+   and digital wallets (Apple Pay, Google Pay, Venmo).
+
+Q: Is there a minimum for card payments?
+A: No minimum purchase required for card payments.
+
+Q: Do you include gratuity?
+A: Gratuity is optional. For parties of 6 or more, an 18% service charge is
+   added.
+
+Q: Do you offer gift cards?
+A: [Yes - available in-store and online OR No]
+
+
+OTHER COMMON QUESTIONS
+-------------------------------------------------------------------------------
+
+Q: Do you have WiFi?
+A: [Yes - free WiFi for all guests OR No]
+
+Q: Are you family-friendly?
+A: [Yes - we welcome families with kids menus and high chairs available]
+
+Q: Do you serve alcohol?
+A: [Yes - we have a full bar with beer, wine, and cocktails OR No / BYOB]
+
+Q: Is your restaurant wheelchair accessible?
+A: [Yes - fully accessible with ramps and accessible restrooms OR Describe
+   accessibility]
+
+Q: Can I bring my pet?
+A: [Yes - pets welcome on our outdoor patio OR No indoor pets, service animals
+   always welcome]
+
+
+===============================================================================
+
+
+SECTION 3: CONTACT & HOURS
+===============================================================================
+
+
+CONTACT INFORMATION
+-------------------------------------------------------------------------------
+
+Phone:      [Your Phone Number]
+Email:      [Your Email Address]
+Website:    [Your Website URL]
+
+Address:    [Street Address]
+            [City, State ZIP Code]
+
+Social Media:
+  Facebook:  [facebook.com/yourrestaurant]
+  Instagram: [@yourrestaurant]
+  Twitter:   [@yourrestaurant]
+
+
+OPERATING HOURS
+-------------------------------------------------------------------------------
+
+Monday      10:00 AM - 10:00 PM
+Tuesday     10:00 AM - 10:00 PM
+Wednesday   10:00 AM - 10:00 PM
+Thursday    10:00 AM - 10:00 PM
+Friday      10:00 AM - 11:00 PM
+Saturday    10:00 AM - 11:00 PM
+Sunday      11:00 AM - 9:00 PM
+
+Important Notes:
+  - Last seating: 30 minutes before closing
+  - Kitchen closes: 15 minutes before closing time
+  - Holiday hours may vary - check our website or call ahead
+
+
+HOLIDAY HOURS
+-------------------------------------------------------------------------------
+
+[Specify any holiday closures or special hours]
+
+Examples:
+  - Closed on Thanksgiving and Christmas Day
+  - New Year's Eve - Extended hours until 12:30 AM
+  - Memorial Day - Regular hours with special BBQ menu
+
+
+DELIVERY AREAS
+-------------------------------------------------------------------------------
+
+We deliver to:
+[List specific neighborhoods, ZIP codes, or areas you serve]
+
+Examples:
+  - Downtown, Midtown, Riverside, University District
+  - ZIP codes: 12345, 12346, 12347
+
+
+ADDITIONAL INFORMATION
+-------------------------------------------------------------------------------
+
+[Add any other important information your customers should know]
+
+Examples:
+  - Live music every Friday night from 7-9 PM
+  - Happy Hour: Monday-Friday 4-6 PM
+  - We validate parking for the Main Street garage
+  - Outdoor patio available (weather permitting, April-October)
+  - Free birthday dessert with valid ID
+  - Senior discount: 10% off on Tuesdays
+  - Student discount: 15% off with valid student ID
+
+
+===============================================================================
+
+
+HOW TO USE THIS TEMPLATE
+===============================================================================
+
+Step 1: Replace all [bracketed text] with your actual restaurant information
+
+Step 2: Remove example items you don't need
+
+Step 3: Add more menu items, FAQs, or information as needed
+
+Step 4: Keep the formatting clean and organized
+
+Step 5: Save this file when you're done editing
+
+Step 6: Upload it to the AI Training section in your dashboard
+
+
+PRO TIP: The more detailed and accurate your information, the better your AI
+chatbot will be at helping customers! You can always update and re-upload this
+file later as your menu or information changes.
+
+Need help? Contact our support team or check the documentation in your
+dashboard.
+
+
+===============================================================================
+                        Template Version 1.0 - 2026
+===============================================================================
+`;
+
+    const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = template.name;
+    a.download = 'restaurant-template.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    showToast('success', `Downloaded ${template.name}`);
+    showToast('success', 'Downloaded restaurant template');
 }
 
 // Drag and drop functionality
@@ -719,6 +1017,7 @@ document.addEventListener('keydown', (e) => {
 
 // Initial load
 window.aiTrainingRefresh = fetchFiles;
+window.downloadTemplate = downloadTemplate; // Expose downloadTemplate globally
 fetchFiles();
 fetchHistory();
 })();

@@ -187,7 +187,7 @@ def api_chat():
         clean_response = response.replace('[READY_TO_ORDER]', '').strip()
         
         # Parse order items from the response
-        order_items = extract_order_items(clean_response, menu_items, currency_symbol)
+        order_items = extract_order_items(clean_response, menu_items)
         total = sum((item['price'] * item['quantity']) for item in order_items)
         
         return jsonify({
