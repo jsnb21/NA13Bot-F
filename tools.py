@@ -40,7 +40,7 @@ Brand Settings Fields:
   - menu_text: Full menu content
   - currency_code, currency_symbol: Currency info (default: ₱)
   - chatbot_avatar: AI avatar image URL
-  - business_name, business_email, business_phone, business_address
+
   - open_time, close_time: Operating hours
   - tax_rate: Tax percentage
   - image_urls: Additional images (JSONB)
@@ -179,10 +179,6 @@ BRAND_FIELDS = {
     'chatbot_avatar',
     'chatbot_avatar_uploaded_by',
     'chatbot_avatar_uploaded_at',
-    'business_name',
-    'business_email',
-    'business_phone',
-    'business_address',
     'open_time',
     'close_time',
     'tax_rate',
@@ -219,10 +215,6 @@ def _fetch_brand_settings(restaurant_id: str = None):
         'chatbot_avatar',
         'chatbot_avatar_uploaded_by',
         'chatbot_avatar_uploaded_at',
-        'business_name',
-        'business_email',
-        'business_phone',
-        'business_address',
         'open_time',
         'close_time',
         'tax_rate',

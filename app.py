@@ -576,7 +576,7 @@ def send_otp_email(to_email: str, code: str, purpose: str, cfg: dict = None):
         return False, 'SMTP is not configured.'
 
     cfg = cfg or {}
-    brand = cfg.get('business_name') or cfg.get('establishment_name') or 'Resto AI'
+    brand = cfg.get('establishment_name') or 'Resto AI'
     ttl_minutes = max(1, int(OTP_TTL_SECONDS / 60))
     subject = f"Your {brand} verification code"
     intro = "Use this code to finish signing in" if purpose == 'login' else "Use this code to finish creating your account"
@@ -1389,10 +1389,6 @@ def settings():
             'font_family': request.form.get('font_family', cfg.get('font_family', '')),
             'menu_text': request.form.get('menu_text', cfg.get('menu_text', '')),
             'image_urls': [u.strip() for u in request.form.get('image_urls', "\n".join(cfg.get('image_urls', []))).splitlines() if u.strip()],
-            'business_name': request.form.get('business_name', cfg.get('business_name', '')),
-            'business_email': request.form.get('business_email', cfg.get('business_email', '')),
-            'business_phone': request.form.get('business_phone', cfg.get('business_phone', '')),
-            'business_address': request.form.get('business_address', cfg.get('business_address', '')),
             'open_time': request.form.get('open_time', cfg.get('open_time', '')),
             'close_time': request.form.get('close_time', cfg.get('close_time', '')),
             'tax_rate': request.form.get('tax_rate', cfg.get('tax_rate', '')),
