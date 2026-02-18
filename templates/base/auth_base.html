@@ -64,6 +64,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        width: 100%;
+        min-height: calc(100vh - var(--header-height) - var(--footer-height));
         padding: calc(var(--header-height) + 24px) 24px calc(var(--footer-height) + 24px) 24px;
       }
 
@@ -104,6 +106,28 @@
         letter-spacing: 0.5px;
         position: fixed;
         bottom: 0; left: 0; right: 0;
+      }
+
+      @media (max-width: 768px) {
+        :root {
+          --header-height: 56px;
+          --footer-height: 48px;
+        }
+
+        main.main-content {
+          padding: calc(var(--header-height) + 16px) 16px calc(var(--footer-height) + 16px) 16px;
+        }
+
+        .auth-card {
+          padding: 28px 22px;
+          border-radius: 16px;
+        }
+      }
+
+      @media (max-height: 700px) {
+        main.main-content {
+          align-items: flex-start;
+        }
       }
     </style>
     {% block head %}{% endblock %}

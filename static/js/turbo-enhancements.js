@@ -45,9 +45,21 @@ function setMainFrameInteractive(isInteractive) {
   mainFrame.style.pointerEvents = isInteractive ? 'auto' : 'none';
 }
 
+let frameInteractionTimer = null;
+function scheduleInteractionRestore() {
+  if (frameInteractionTimer) {
+    clearTimeout(frameInteractionTimer);
+  }
+  frameInteractionTimer = setTimeout(function() {
+    setMainFrameInteractive(true);
+    frameInteractionTimer = null;
+  }, 2000);
+}
+
 // Visual feedback during fetch request (hover preview or actual navigation)
 document.addEventListener('turbo:before-fetch-request', function() {
   setMainFrameInteractive(false);
+  scheduleInteractionRestore();
 });
 
 document.addEventListener('turbo:before-frame-render', function() {
@@ -66,6 +78,10 @@ document.addEventListener('turbo:after-frame-render', function() {
     mainFrame.style.opacity = '1';
     mainFrame.style.pointerEvents = 'auto';
   }
+  if (frameInteractionTimer) {
+    clearTimeout(frameInteractionTimer);
+    frameInteractionTimer = null;
+  }
 });
 
 document.addEventListener('turbo:load', function() {
@@ -74,6 +90,10 @@ document.addEventListener('turbo:load', function() {
   if (mainFrame) {
     mainFrame.style.opacity = '1';
     mainFrame.style.pointerEvents = 'auto';
+  }
+  if (frameInteractionTimer) {
+    clearTimeout(frameInteractionTimer);
+    frameInteractionTimer = null;
   }
   
   // Update active nav link
@@ -98,11 +118,28 @@ document.addEventListener('turbo:before-fetch-response', function(event) {
 
   // Make sure interactions are restored even if the frame won't render.
   setMainFrameInteractive(true);
+  if (frameInteractionTimer) {
+    clearTimeout(frameInteractionTimer);
+    frameInteractionTimer = null;
+  }
 });
 
 // Restore interactions if a Turbo request fails or is canceled.
 document.addEventListener('turbo:fetch-request-error', function() {
   setMainFrameInteractive(true);
+  if (frameInteractionTimer) {
+    clearTimeout(frameInteractionTimer);
+    frameInteractionTimer = null;
+  }
+});
+
+// Restore interactions after non-frame renders as a fallback.
+document.addEventListener('turbo:render', function() {
+  setMainFrameInteractive(true);
+  if (frameInteractionTimer) {
+    clearTimeout(frameInteractionTimer);
+    frameInteractionTimer = null;
+  }
 });
 
 // Enhance links with data-turbo attribute for explicit Turbo navigation

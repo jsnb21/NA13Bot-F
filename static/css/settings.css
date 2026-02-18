@@ -64,6 +64,18 @@
     font-weight: 500;
     white-space: pre-wrap;
 }
+.input-or {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    padding: 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.input-hint {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
 .editable-input {
     display: none;
 }

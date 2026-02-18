@@ -64,7 +64,7 @@ function exportReportAsCSV() {
     document.body.removeChild(link);
 }
 
-document.addEventListener('turbo:load', function() {
+function initReports() {
     // Safety check: only run if we're on the reports page
     if (!document.getElementById('revenueChart')) return;
 
@@ -290,7 +290,25 @@ document.addEventListener('turbo:load', function() {
     }
     
     window.reportsChartsInitialized = true;
+}
+
+document.addEventListener('turbo:load', function() {
+    initReports();
 });
+
+document.addEventListener('turbo:frame-load', function(event) {
+    if (event.target && event.target.id === 'main-frame') {
+        initReports();
+    }
+});
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        initReports();
+    }, { once: true });
+} else {
+    initReports();
+}
 
 function showNoDataState(message) {
     const text = message || 'There is not enough data to show analytics yet.';
