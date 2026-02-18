@@ -88,7 +88,12 @@ document.getElementById('send').addEventListener('click', async () => {
     if (result.orderReady) {
         postOrderForm(result);
     } else {
-        postMessage(result, 'bot');
+        postMessage(result.message || result, 'bot');
+        
+        // Show running cart if items were detected
+        if (result.currentItems && result.currentItems.length > 0) {
+            postCartSummary(result.currentItems, result.currentTotal);
+        }
     }
     
     txt.disabled = false;
@@ -232,9 +237,11 @@ function postOrderForm(orderData) {
     img.src = (chatbotConfig && chatbotConfig.chatbot_avatar) ? chatbotConfig.chatbot_avatar : '/static/img/bot-avatar.svg';
     img.alt = 'Bot';
     
+    const currency = (chatbotConfig && chatbotConfig.currency_symbol) ? chatbotConfig.currency_symbol : '₱';
+    
     const orderSummary = orderData.items.map(item => {
         const total = (item.price * item.quantity).toFixed(2);
-        return `${item.name} x${item.quantity}: $${total}`;
+        return `${item.name} x${item.quantity}: ${currency}${total}`;
     }).join('<br>');
     
     const bubble = document.createElement('div');
@@ -244,7 +251,7 @@ function postOrderForm(orderData) {
         <div style="margin-bottom: 12px;">
             <strong>Order Summary:</strong><br>
             ${orderSummary}<br><br>
-            <strong>Total: $${orderData.total.toFixed(2)}</strong>
+            <strong>Total: ${currency}${orderData.total.toFixed(2)}</strong>
         </div>
         <form id="order-form" style="display: flex; flex-direction: column; gap: 8px;">
             <input type="text" id="order-name" placeholder="Your name" required style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit;">
@@ -283,6 +290,44 @@ function postOrderForm(orderData) {
     });
 }
 
+function postCartSummary(items, total) {
+    const container = document.getElementById('messages');
+    const row = document.createElement('div');
+    row.className = 'message-row bot';
+    
+    const img = document.createElement('img');
+    img.className = 'avatar';
+    img.src = (chatbotConfig && chatbotConfig.chatbot_avatar) ? chatbotConfig.chatbot_avatar : '/static/img/bot-avatar.svg';
+    img.alt = 'Bot';
+    
+    const currency = (chatbotConfig && chatbotConfig.currency_symbol) ? chatbotConfig.currency_symbol : '₱';
+    
+    const cartItems = items.map(item => {
+        const itemTotal = (item.price * item.quantity).toFixed(2);
+        return `${item.name} x${item.quantity}: ${currency}${itemTotal}`;
+    }).join('<br>');
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble bot';
+    bubble.style.minWidth = '250px';
+    bubble.style.padding = '10px 12px';
+    bubble.style.backgroundColor = '#f0f0f0';
+    bubble.innerHTML = `
+        <div style="font-size: 0.95rem;">
+            <strong style="display: block; margin-bottom: 6px;">Current Cart:</strong>
+            <div style="margin-bottom: 8px; font-size: 0.9rem;">
+                ${cartItems}
+            </div>
+            <strong style="border-top: 1px solid #ddd; padding-top: 6px; display: block;">Total: ${currency}${total.toFixed(2)}</strong>
+        </div>
+    `;
+    
+    row.appendChild(img);
+    row.appendChild(bubble);
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+}
+
 async function sendToAI(message) {
     try {
         // Add user message to history
@@ -312,10 +357,22 @@ async function sendToAI(message) {
             };
         }
         
-        return botResponse;
+        // Return cart items if detected during conversation
+        const result = {
+            message: botResponse
+        };
+        
+        if (data.current_items && data.current_items.length > 0) {
+            result.currentItems = data.current_items;
+            result.currentTotal = data.current_total;
+        }
+        
+        return result;
     } catch (e) {
         console.error('Chat error:', e);
-        return 'Sorry, I encountered an error. Please try again.';
+        return {
+            message: 'Sorry, I encountered an error. Please try again.'
+        };
     }
 }
 

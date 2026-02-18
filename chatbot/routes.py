@@ -181,13 +181,15 @@ def api_chat():
     system_prompt = build_system_prompt(establishment_name, menu_text, training_context)
     response = ai.get_response(user_message, system_prompt, conversation_history)
     
+    # Always try to extract items from the response to show running cart
+    order_items = extract_order_items(response, menu_items)
+    has_items = len(order_items) > 0
+    
     # Check if response indicates order is ready
     if '[READY_TO_ORDER]' in response:
         # Remove the marker from the response
         clean_response = response.replace('[READY_TO_ORDER]', '').strip()
         
-        # Parse order items from the response
-        order_items = extract_order_items(clean_response, menu_items)
         total = sum((item['price'] * item['quantity']) for item in order_items)
         
         return jsonify({
@@ -197,7 +199,14 @@ def api_chat():
             'order_total': total
         })
     
-    return jsonify({'response': response})
+    # If items were detected during conversation, show them
+    response_data = {'response': response}
+    if has_items:
+        total = sum((item['price'] * item['quantity']) for item in order_items)
+        response_data['current_items'] = order_items
+        response_data['current_total'] = total
+    
+    return jsonify(response_data)
 
 
 @chatbot_bp.route('/orders/place', methods=['POST'])
