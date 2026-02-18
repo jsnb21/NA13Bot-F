@@ -259,3 +259,44 @@ def api_place_order():
         }), 201
     except Exception as e:
         return jsonify({'error': 'Failed to place order', 'detail': str(e)}), 500
+
+@chatbot_bp.route('/orders/list', methods=['GET'])
+def api_get_orders():
+    """Get all orders for a restaurant."""
+    try:
+        restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+        if not restaurant_id:
+            return jsonify({'error': 'No restaurant ID provided'}), 400
+        
+        from tools import get_orders, update_order_status
+        orders = get_orders(restaurant_id, limit=100)
+        
+        return jsonify({
+            'success': True,
+            'orders': orders
+        })
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch orders', 'detail': str(e)}), 500
+
+
+@chatbot_bp.route('/orders/update-status', methods=['POST'])
+def api_update_order_status():
+    """Update order status."""
+    try:
+        data = request.get_json()
+        restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+        order_id = data.get('order_id')
+        new_status = data.get('status')
+        
+        if not restaurant_id or not order_id or not new_status:
+            return jsonify({'error': 'Missing required fields'}), 400
+        
+        from tools import update_order_status
+        success = update_order_status(order_id, new_status)
+        
+        if not success:
+            return jsonify({'error': 'Failed to update order status'}), 500
+        
+        return jsonify({'success': True, 'message': f'Order status updated to {new_status}'})
+    except Exception as e:
+        return jsonify({'error': 'Failed to update order', 'detail': str(e)}), 500

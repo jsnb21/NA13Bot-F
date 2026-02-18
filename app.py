@@ -1002,6 +1002,14 @@ def orders():
     cfg = load_config(restaurant_id)
     return render_template('clients/orders.html', cfg=cfg)
 
+@app.route('/kitchen')
+@login_required
+def kitchen():
+    """Kitchen/Cashier orders tracking page."""
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
+    return render_template('clients/kitchen.html', cfg=cfg)
+
 @app.route('/menu')
 @login_required
 def menu():

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Kitchen Orders — Resto{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --main-color: {{ cfg.get('main_color', '#1e40af') }};
+            --accent: {{ cfg.get('sub_color', '#ffd41d') }};
+            --primary: {{ cfg.get('primary', '#667eea') }};
+            --primary-light: {{ cfg.get('primary_light', '#764ba2') }};
+            --success: {{ cfg.get('success', '#28a745') }};
+            --warning: {{ cfg.get('warning', '#ffc107') }};
+            --info: {{ cfg.get('info', '#17a2b8') }};
+            --light: {{ cfg.get('light', '#f5f5f5') }};
+            --text-primary: {{ cfg.get('text_primary', '#333') }};
+            --border: {{ cfg.get('border', '#ddd') }};
+            --font-family: {% if cfg.get('font_family') %}'{{ cfg.get('font_family') }}', {% endif %}-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--light);
+            color: var(--text-primary);
+        }
+
+        .kitchen-navbar {
+            background: var(--main-color);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .navbar-brand img,
+        .navbar-brand .logo-icon {
+            height: 40px;
+            width: 40px;
+            background: white;
+            padding: 5px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .navbar-link {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .navbar-link:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .navbar-link.active {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .navbar-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .navbar-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            padding: 0;
+        }
+
+        .kitchen-content {
+            padding: 20px;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="kitchen-navbar">
+        <div class="navbar-brand">
+            {% if cfg.get('logo_url') %}
+                <img src="{{ cfg.get('logo_url') }}" alt="Logo" class="logo-icon">
+            {% else %}
+                <i class="fas fa-utensils"></i>
+            {% endif %}
+            {% if cfg and cfg.get('establishment_name') %}
+                {{ cfg.get('establishment_name') }} - Kitchen Orders
+            {% else %}
+                Kitchen Orders
+            {% endif %}
+        </div>
+        <div class="navbar-menu">
+            <a href="/kitchen" class="navbar-link active">
+                <i class="fas fa-clipboard-list"></i>
+                Orders
+            </a>
+            <a href="/dashboard" class="navbar-link">
+                <i class="fas fa-arrow-left"></i>
+                Back to Admin
+            </a>
+            <a href="/logout" class="navbar-logout">
+                <i class="fas fa-sign-out-alt"></i>
+                Sign Out
+            </a>
+        </div>
+    </nav>
+
+    <div class="kitchen-content">
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -59,6 +59,10 @@
               <i class="fas fa-shopping-cart"></i>
               <span>Orders</span>
             </a>
+            <a class="nav-link {% if request.path == '/kitchen' %}active{% endif %}" href="/kitchen" data-turbo="true">
+              <i class="fas fa-clipboard-list"></i>
+              <span>Kitchen</span>
+            </a>
             <a class="nav-link {% if request.path == '/menu' %}active{% endif %}" href="/menu" data-turbo="true">
               <i class="fas fa-utensils"></i>
               <span>Menu</span>
