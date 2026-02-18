@@ -88,10 +88,13 @@ document.getElementById('send').addEventListener('click', async () => {
     if (result.orderReady) {
         postOrderForm(result);
     } else {
-        postMessage(result.message || result, 'bot');
+        const hasCart = result.currentItems && result.currentItems.length > 0;
+        if (!hasCart) {
+            postMessage(result.message || result, 'bot');
+        }
         
-        // Show running cart if items were detected
-        if (result.currentItems && result.currentItems.length > 0) {
+        // Prefer the cart summary when items were detected
+        if (hasCart) {
             postCartSummary(result.currentItems, result.currentTotal);
         }
     }
