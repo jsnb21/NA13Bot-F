@@ -39,13 +39,15 @@ document.addEventListener('turbo:before-cache', function() {
   window.dashboardInitialized = false;
 });
 
+function setMainFrameInteractive(isInteractive) {
+  const mainFrame = document.getElementById('main-frame');
+  if (!mainFrame) return;
+  mainFrame.style.pointerEvents = isInteractive ? 'auto' : 'none';
+}
+
 // Visual feedback during fetch request (hover preview or actual navigation)
 document.addEventListener('turbo:before-fetch-request', function() {
-  // Add loading class to main frame for visual feedback
-  const mainFrame = document.getElementById('main-frame');
-  if (mainFrame) {
-    mainFrame.style.pointerEvents = 'none';
-  }
+  setMainFrameInteractive(false);
 });
 
 document.addEventListener('turbo:before-frame-render', function() {
@@ -93,6 +95,14 @@ document.addEventListener('turbo:before-fetch-response', function(event) {
     // Let Turbo handle the redirect
     return;
   }
+
+  // Make sure interactions are restored even if the frame won't render.
+  setMainFrameInteractive(true);
+});
+
+// Restore interactions if a Turbo request fails or is canceled.
+document.addEventListener('turbo:fetch-request-error', function() {
+  setMainFrameInteractive(true);
 });
 
 // Enhance links with data-turbo attribute for explicit Turbo navigation

@@ -342,6 +342,24 @@
 </div>
 
 <script>
+(function(){
+const ordersContainer = document.getElementById('ordersContainer');
+const emptyState = document.getElementById('emptyState');
+const statPending = document.getElementById('statPending');
+const statPreparing = document.getElementById('statPreparing');
+const statReady = document.getElementById('statReady');
+const statCompleted = document.getElementById('statCompleted');
+
+if (!ordersContainer || !emptyState) {
+    // Not on the kitchen page; avoid attaching intervals or handlers.
+    return;
+}
+
+if (window.ordersScriptInitialized) {
+    return;
+}
+window.ordersScriptInitialized = true;
+
 let currentFilter = 'all';
 let allOrders = [];
 
@@ -393,8 +411,7 @@ function formatDate(isoString) {
 }
 
 function renderOrders() {
-    const container = document.getElementById('ordersContainer');
-    const emptyState = document.getElementById('emptyState');
+    const container = ordersContainer;
     
     let filteredOrders = allOrders;
     if (currentFilter !== 'all') {
@@ -456,6 +473,9 @@ function renderOrders() {
 }
 
 function updateStats() {
+    if (!statPending || !statPreparing || !statReady || !statCompleted) {
+        return;
+    }
     const stats = {
         pending: allOrders.filter(o => o.status === 'pending').length,
         preparing: allOrders.filter(o => o.status === 'preparing').length,
@@ -463,10 +483,10 @@ function updateStats() {
         completed: allOrders.filter(o => o.status === 'completed').length
     };
 
-    document.getElementById('statPending').textContent = stats.pending;
-    document.getElementById('statPreparing').textContent = stats.preparing;
-    document.getElementById('statReady').textContent = stats.ready;
-    document.getElementById('statCompleted').textContent = stats.completed;
+    statPending.textContent = stats.pending;
+    statPreparing.textContent = stats.preparing;
+    statReady.textContent = stats.ready;
+    statCompleted.textContent = stats.completed;
 }
 
 async function updateOrderStatus(orderId, newStatus) {
@@ -504,6 +524,10 @@ async function updateOrderStatus(orderId, newStatus) {
 fetchOrders();
 
 // Auto-refresh every 3 seconds
-setInterval(fetchOrders, 3000);
+if (window.ordersRefreshInterval) {
+    clearInterval(window.ordersRefreshInterval);
+}
+window.ordersRefreshInterval = setInterval(fetchOrders, 3000);
+})();
 </script>
 {% endblock %}
