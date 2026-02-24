@@ -82,7 +82,7 @@ Visit the official PostgreSQL download page:
 
 Select your operating system (Windows, macOS, or Linux) and download the latest stable version.
 
-![PostgreSQL download page](images\readme\postgre_downloadpage.png)
+![PostgreSQL download page](../images/readme/postgre_downloadpage.png)
 
 **1.2 Installing PostgreSQL on Windows**
 
@@ -93,7 +93,7 @@ Select your operating system (Windows, macOS, or Linux) and download the latest 
    - Select components (include pgAdmin for GUI management)
    - Set up port (default is 5432)
 
-![PostgreSQL Installation Wizard](images\readme\postgre_downloadpage.png)
+![PostgreSQL Installation Wizard](../images/readme/postgre_installation_wizard.png)
 
 3. Create a superuser:
    - **Username**: `postgres`
@@ -117,23 +117,23 @@ You should see the PostgreSQL version number.
 
 open pgAdmin 4
 
-![pgAdmin 4 GUI](images\readme\pgadmin4.png)
+![pgAdmin 4 GUI](../images/readme/pgadmin4.png)
 
 **2.2 Input Correct Password**
 
-![Input "admin" Password](images\readme\postgre_input_password.png)
+![Input "admin" Password](../images/readme/postgre_input_password.png)
 
 **2.3 Create the Restaurant Chatbot Database**
 
-![Create a new Database](images\readme\create_new_database.png)
+![Create a new Database](../images/readme/create_new_database.png)
 
 **2.4 Insert Correct Database Name**
 
-![Insert Correct Database Name](images\readme\create_new_database2.png)
+![Insert Correct Database Name](../images/readme/create_new_database2.png)
 
 You should see `Restaurant_Chatbot` in the list.
 
-![Database in the list](images\readme\Created_new_database.png)
+![Database in the list](../images/readme/Created_new_database.png)
 
 **2.5 Exit PostgreSQL**
 
