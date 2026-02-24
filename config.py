@@ -76,13 +76,27 @@ Extensions:
 """
 
 import os
+import json
 import psycopg
 from psycopg import sql
+from pathlib import Path
 
 try:
     from dotenv import load_dotenv
 except Exception:
     load_dotenv = None
+
+def _load_config_json():
+    """Load database config from config.json if it exists."""
+    config_path = Path(__file__).parent / 'config.json'
+    if config_path.exists():
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+                return config.get('db', {})
+        except Exception:
+            pass
+    return {}
 
 def get_connection():
     # Load .env if python-dotenv is available
@@ -101,11 +115,20 @@ def get_connection():
     env_user = os.environ.get("DB_USER")
     env_password = os.environ.get("DB_PASSWORD")
 
-    host = env_host or "localhost"
-    port = int(env_port) if env_port else 5432
-    name = env_name
-    user = env_user
-    password = env_password
+    # Fallback to config.json if env vars not set
+    if not all([env_host, env_port, env_name, env_user, env_password]):
+        config_db = _load_config_json()
+        host = env_host or config_db.get('host', 'localhost')
+        port = int(env_port) if env_port else (config_db.get('port', 5432))
+        name = env_name or config_db.get('name')
+        user = env_user or config_db.get('user')
+        password = env_password or config_db.get('password')
+    else:
+        host = env_host
+        port = int(env_port) if env_port else 5432
+        name = env_name
+        user = env_user
+        password = env_password
 
     return psycopg.connect(
         host=host,

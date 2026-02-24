@@ -73,46 +73,195 @@ The application logic relies on **four distinct files/components** functioning i
 
 ### Setup (Hospitality Track)
 
+#### Step 1: Download & Install PostgreSQL
+
+**1.1 Download PostgreSQL 18.2**
+
+Visit the official PostgreSQL download page:
+🔗 https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+
+Select your operating system (Windows, macOS, or Linux) and download the latest stable version.
+
+![PostgreSQL download page](images\readme\postgre_downloadpage.png)
+
+**1.2 Installing PostgreSQL on Windows**
+
+1. Run the downloaded installer
+2. Follow the installation wizard:
+   - Accept license agreement
+   - Choose installation directory (default is fine)
+   - Select components (include pgAdmin for GUI management)
+   - Set up port (default is 5432)
+
+![PostgreSQL Installation Wizard](images\readme\postgre_downloadpage.png)
+
+3. Create a superuser:
+   - **Username**: `postgres`
+   - **Password**: `admin` (use this for Restaurant_Chatbot setup)
+
+4. Complete the installation
+
+**1.3 Verify Installation**
+
+Open Command Prompt or PowerShell and run:
+
 ```powershell
-# 1. Create project directory (or use existing resto-ai-agent)
-mkdir NAI3Bot-H
-cd NAI3Bot-H
-
-# 2. Clone or navigate to repo (if not already done)
-# git clone <repo> .
-cd resto-ai-agent  # or project root
-
-# 3. Backend setup
-cd backend
-python -m venv nai3botvenv
-.\nai3botvenv\Scripts\Activate.ps1
-pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
-
-# 4. Frontend setup
-cd ../frontend/react-app
-npm install
-
-# 5. Set environment variables
-# Create .env in backend/ (example below)
-# GEMINI_API_KEY=your_api_key_here
-# DATABASE_URL=sqlite:///resto.db
-# SECRET_KEY=change-me-in-production
-
-# 6. Initialize database
-# From backend/ with venv activated:
-flask db init
-flask db migrate
-flask db upgrade
-
-# 7. Run backend
-python -m backend.app
-# or: flask run
-
-# 8. Run frontend (new terminal)
-cd frontend/react-app
-npm run dev
+psql --version
 ```
+
+You should see the PostgreSQL version number.
+
+#### Step 2: Create Database & User
+
+**2.1 Connect to PostgreSQL Using PGAdmin 4 GUI**
+
+open pgAdmin 4
+
+![pgAdmin 4 GUI](images\readme\pgadmin4.png)
+
+**2.2 Input Correct Password**
+
+![Input "admin" Password](images\readme\postgre_input_password.png)
+
+**2.3 Create the Restaurant Chatbot Database**
+
+![Create a new Database](images\readme\create_new_database.png)
+
+**2.4 Insert Correct Database Name**
+
+![Insert Correct Database Name](images\readme\create_new_database2.png)
+
+You should see `Restaurant_Chatbot` in the list.
+
+![Database in the list](images\readme\Created_new_database.png)
+
+**2.5 Exit PostgreSQL**
+
+Close pgAdmin 4 GUI
+
+#### Step 3: Application Setup
+
+**3.1 Clone the Repository**
+
+```powershell
+# Navigate to your desired location
+cd C:\Users\YourUsername\Documents
+
+# Clone the repository
+git clone <repository-url>
+cd NA13Bot-F
+```
+
+**3.2 Set Up Python Virtual Environment**
+
+```powershell
+# Verify Python is installed
+python --version
+
+# Create virtual environment
+python -m venv env
+
+# Activate virtual environment (Windows)
+.\env\Scripts\Activate.ps1
+
+# You should see (env) at the start of your PowerShell prompt
+```
+
+**3.3 Install Python Dependencies**
+
+```powershell
+# Ensure pip is up to date
+pip install --upgrade pip setuptools wheel
+
+# Install all required packages from requirements.txt
+pip install -r requirements.txt
+```
+
+**3.4 Configure Environment Variables**
+
+Create a `.env` file in the project root directory:
+
+```powershell
+# Create .env file
+New-Item -Path .env -ItemType File
+
+# Edit with your editor (or use Notepad)
+notepad .env
+```
+
+Add the following content to `.env`:
+
+```
+# Google Gemini API
+GOOGLE_API_KEY=your_gemini_api_key_here
+
+# Database Configuration (fallback to config.json if not set)
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=Restaurant_Chatbot
+DB_USER=postgres
+DB_PASSWORD=admin
+DB_SCHEMA=public
+```
+
+**3.5 Verify config.json Database Settings**
+
+Ensure your `config.json` file has the correct database credentials:
+
+```json
+{
+  "db": {
+    "host": "localhost",
+    "port": 5432,
+    "name": "Restaurant_Chatbot",
+    "user": "postgres",
+    "password": "admin"
+  }
+}
+```
+
+**3.6 Start the Application**
+
+```powershell
+# Make sure you're in the project root directory
+cd C:\Users\User\Documents\GitHub\NA13Bot-F
+
+# Make sure virtual environment is activated (look for (env) prefix)
+# If not, run: .\env\Scripts\Activate.ps1
+
+# Start the Flask application
+python app.py
+```
+
+You should see output similar to:
+```
+DB context: database=Restaurant_Chatbot, schema=public
+ * Serving Flask app 'app'
+ * Debug mode: on
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+```
+
+**3.7 Access the Application**
+
+Open your web browser and visit:
+
+- **Admin Panel**: http://localhost:5000 (Restaurant management)
+- **Chatbot Interface**: http://localhost:5000/chat (Customer chat)
+- **API Endpoints**: http://localhost:5000/api (Backend API)
+
+**Troubleshooting Connection Issues:**
+
+If you get a PostgreSQL connection error (`fe_sendauth: no password supplied`):
+
+1. Verify PostgreSQL is running (check Services on Windows)
+2. Confirm credentials in `config.json` match your PostgreSQL setup
+3. Test connection manually:
+   ```powershell
+   psql -U postgres -h localhost -d Restaurant_Chatbot
+   # Enter password: admin
+   ```
+4. Check that the `Restaurant_Chatbot` database exists in pgAdmin
 
 Visit:
 - **Admin Panel**: http://localhost:5173 → tab "Resto Admin"
