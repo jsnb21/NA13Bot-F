@@ -30,7 +30,9 @@
       <button class="category-btn">Appetizers</button>
       <button class="category-btn">Main Course</button>
       <button class="category-btn">Desserts</button>
+      <button class="category-btn">Drinks/Beverages</button>
     </div>
+
 
     <div id="menuEditor" class="menu-editor mb-4 d-none">
       <div class="menu-editor-header mb-3">
@@ -44,81 +46,128 @@
         </div>
       </div>
 
-      <button type="button" class="btn btn-dark mb-3" style="background: var(--brand-dark);" id="menuAddToggle">Add Item</button>
-      <form method="POST" action="/menu/add" class="row g-3 mb-4 d-none" id="menuAddForm">
-        <div class="col-md-4">
-          <label class="form-label">Item Name</label>
-          <input type="text" name="name" class="form-control" placeholder="Margherita Pizza" required>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Category</label>
-          <input type="text" name="category" class="form-control" placeholder="Main Course">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Price ({{ cfg.get('currency_code','PHP') }})</label>
-          <input type="text" name="price" class="form-control" placeholder="12.99">
-        </div>
-        <div class="col-md-8">
-          <label class="form-label">Description</label>
-          <input type="text" name="description" class="form-control" placeholder="Fresh tomato, mozzarella, and basil on crispy crust">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Status</label>
-          <select name="status" class="form-select">
-            <option value="Live" selected>Live</option>
-            <option value="Draft">Draft</option>
-          </select>
-        </div>
-        <div class="col-12 d-flex gap-2">
-          <button type="submit" class="btn btn-dark" style="background: var(--brand-dark);">Save Item</button>
-          <button type="button" class="btn btn-outline-secondary" id="menuAddCancel">Cancel</button>
-        </div>
-      </form>
+      <button type="button" class="btn btn-dark mb-3" style="background: var(--brand-dark);" data-bs-toggle="modal" data-bs-target="#addMenuItemModal">
+        <i class="fas fa-plus me-2"></i>Add Item
+      </button>
 
-      <form method="POST" action="/menu/update" class="row g-3 mb-4 d-none" id="menuEditForm">
-        <input type="hidden" name="item_index" id="menuEditIndex">
-        <div class="col-md-4">
-          <label class="form-label">Item Name</label>
-          <input type="text" name="name" class="form-control" id="menuEditName" required>
+      <!-- Add Item Modal -->
+      <div class="modal fade" id="addMenuItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+              <h5 class="modal-title fw-bold">Add New Item</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form method="POST" action="/menu/add" class="row g-3" id="menuAddForm">
+                <div class="col-12">
+                  <label class="form-label fw-semibold small text-secondary">Item Name</label>
+                  <input type="text" name="name" class="form-control" placeholder="e.g. Margherita Pizza" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small text-secondary">Category</label>
+                  <select name="category" class="form-select">
+                    <option value="" selected disabled>Select Category</option>
+                    <option value="Appetizers">Appetizers</option>
+                    <option value="Main Course">Main Course</option>
+                    <option value="Desserts">Desserts</option>
+                    <option value="Drinks/Beverages">Drinks/Beverages</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small text-secondary">Price ({{ cfg.get('currency_code','PHP') }})</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light text-secondary">{{ cfg.get('currency_symbol', '₱') }}</span>
+                    <input type="text" name="price" class="form-control" placeholder="0.00">
+                  </div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small text-secondary">Description</label>
+                  <textarea name="description" class="form-control" rows="3" placeholder="Describe ingredients, taste..."></textarea>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small text-secondary">Status</label>
+                  <select name="status" class="form-select">
+                    <option value="Live" selected>Live</option>
+                    <option value="Draft">Draft</option>
+                  </select>
+                </div>
+                <div class="col-12 mt-4 text-end">
+                  <button type="button" class="btn btn-light text-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-dark px-4" style="background: var(--brand-dark);">Create Item</button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Category</label>
-          <input type="text" name="category" class="form-control" id="menuEditCategory">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Price ({{ cfg.get('currency_code','PHP') }})</label>
-          <input type="text" name="price" class="form-control" id="menuEditPrice">
-        </div>
-        <div class="col-md-8">
-          <label class="form-label">Description</label>
-          <input type="text" name="description" class="form-control" id="menuEditDescription">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Status</label>
-          <select name="status" class="form-select" id="menuEditStatus">
-            <option value="Live">Live</option>
-            <option value="Draft">Draft</option>
-          </select>
-        </div>
-        <div class="col-12 d-flex gap-2">
-          <button type="submit" class="btn btn-dark" style="background: var(--brand-dark);">Save Changes</button>
-          <button type="button" class="btn btn-outline-secondary" id="menuEditCancel">Cancel</button>
-        </div>
-      </form>
+      </div>
 
-      <div class="table-responsive" id="menuItemsList">
-        <table class="menu-editor-table">
-          <thead>
+      <!-- Edit Item Modal -->
+      <div class="modal fade" id="editMenuItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+              <h5 class="modal-title fw-bold">Edit Item</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form method="POST" action="/menu/update" class="row g-3" id="menuEditForm">
+                <input type="hidden" name="item_index" id="menuEditIndex">
+                <div class="col-12">
+                  <label class="form-label fw-semibold small text-secondary">Item Name</label>
+                  <input type="text" name="name" class="form-control" id="menuEditName" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small text-secondary">Category</label>
+                  <select name="category" class="form-select" id="menuEditCategory">
+                    <option value="" selected disabled>Select Category</option>
+                    <option value="Appetizers">Appetizers</option>
+                    <option value="Main Course">Main Course</option>
+                    <option value="Desserts">Desserts</option>
+                    <option value="Drinks/Beverages">Drinks/Beverages</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small text-secondary">Price ({{ cfg.get('currency_code','PHP') }})</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light text-secondary">{{ cfg.get('currency_symbol', '₱') }}</span>
+                    <input type="text" name="price" class="form-control" id="menuEditPrice">
+                  </div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small text-secondary">Description</label>
+                  <textarea name="description" class="form-control" id="menuEditDescription" rows="3"></textarea>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold small text-secondary">Status</label>
+                  <select name="status" class="form-select" id="menuEditStatus">
+                    <option value="Live">Live</option>
+                    <option value="Draft">Draft</option>
+                  </select>
+                </div>
+                <div class="col-12 mt-4 text-end">
+                  <button type="button" class="btn btn-light text-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-dark px-4" style="background: var(--brand-dark);">Save Changes</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-responsive border rounded-3 shadow-sm bg-white" id="menuItemsList">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="bg-light">
             <tr>
-              <th style="width: 18%">Name</th>
-              <th style="width: 26%">Description</th>
-              <th style="width: 12%">Price</th>
-              <th style="width: 16%">Category</th>
-              <th style="width: 12%">Status</th>
-              <th style="width: 16%">Action</th>
+              <th class="ps-4 py-3 text-secondary text-uppercase small fw-bold border-0">Name</th>
+              <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Description</th>
+              <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Price</th>
+              <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Category</th>
+              <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Status</th>
+              <th class="text-end pe-4 py-3 text-secondary text-uppercase small fw-bold border-0">Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="border-top-0">
             {% for item in cfg.get('menu_items', []) %}
             {% set desc = item.get('description','') %}
             {% set has_sizes = 'Sizes:' in desc or 'SIZES:' in desc %}
@@ -130,24 +179,32 @@
               {% set clean_desc = desc %}
               {% set sizes_part = '' %}
             {% endif %}
-            <tr data-menu-row>
-              <td>{{ item.get('name','') }}</td>
-              <td>{{ clean_desc }}</td>
-              <td>
+            <tr data-menu-row data-category="{{ item.get('category', '') }}" class="border-bottom">
+              <td class="ps-4 fw-medium text-dark">{{ item.get('name','') }}</td>
+              <td class="text-secondary small text-truncate" style="max-width: 250px;">{{ clean_desc }}</td>
+              <td class="fw-semibold text-dark">
                 {% set symbol = cfg.get('currency_symbol', '₱') %}
                 {% if symbol == 'None' or symbol == '' %}{% set symbol = '₱' %}{% endif %}
                 {% if has_sizes %}
-                  <small>{{ sizes_part }}</small>
+                  <small class="text-muted">{{ sizes_part }}</small>
                 {% else %}
                   {{ symbol }}{{ item.get('price','') }}
                 {% endif %}
               </td>
-              <td>{{ item.get('category','') }}</td>
-              <td>{{ item.get('status','') }}</td>
               <td>
+                <span class="badge bg-light text-dark border fw-normal">{{ item.get('category','Uncategorized') }}</span>
+              </td>
+              <td>
+                {% if item.get('status') == 'Draft' %}
+                  <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3">Draft</span>
+                {% else %}
+                  <span class="badge bg-success-subtle text-success rounded-pill px-3">Live</span>
+                {% endif %}
+              </td>
+              <td class="text-end pe-4">
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-dark"
+                  class="btn btn-sm btn-light text-secondary border-0 hover-lift"
                   data-menu-edit-row
                   data-index="{{ loop.index0 }}"
                   data-name="{{ item.get('name','') }}"
@@ -157,7 +214,7 @@
                   data-status="{{ item.get('status','') }}"
                   data-image-url="{{ item.get('image_url','') }}"
                 >
-                  Edit
+                  <i class="fas fa-pen"></i>
                 </button>
               </td>
             </tr>
@@ -201,7 +258,7 @@
       </div>
 
         {% for item in cfg.get('menu_items', []) %}
-        <div class="menu-card">
+        <div class="menu-card" data-category="{{ item.get('category', '') }}">
           <div class="menu-card-image-box">
             {% if item.get('image_url') %}
               <img src="{{ item.get('image_url') }}" alt="{{ item.get('name','') }}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" loading="lazy">
@@ -295,9 +352,14 @@
 </div>
 
 <script>
-  // Wrap in Turbo event to prevent variable redeclaration
-  document.addEventListener('turbo:load', function initMenuScript() {
-    const menuUploadInput = document.getElementById('menuUpload');
+  // Define the init function outside to allow reference for removal (if needed, though anonymous here)
+  // or use a check to preventing stacking turbo:load listeners if the script is re-executed.
+  if (!window.menuScriptListenerAttached) {
+    document.addEventListener('turbo:load', function initMenuScript() {
+      // guard: run only if we are on the menu page
+      if (!document.getElementById('menuEditor')) return;
+
+      const menuUploadInput = document.getElementById('menuUpload');
     const menuPhotoUpload = document.getElementById('menuPhotoUpload');
     const uploadCard = document.getElementById('uploadCard');
     const photoUploadCard = document.getElementById('photoUploadCard');
@@ -495,132 +557,176 @@
 
   const menuEditor = document.getElementById('menuEditor');
   const menuGrid = document.getElementById('menuGrid');
+  // Toggle button on the main page (Grid View) to switch to "Edit Menu"
   const menuEditorToggle = document.getElementById('menuEditorToggle');
+  // "Close" button inside the editor to go back to Grid View
   const menuEditorClose = document.getElementById('menuEditorClose');
   const menuSearch = document.getElementById('menuSearch');
-  const menuAddToggle = document.getElementById('menuAddToggle');
+
+  // Forms
   const menuAddForm = document.getElementById('menuAddForm');
-  const menuAddCancel = document.getElementById('menuAddCancel');
   const menuEditForm = document.getElementById('menuEditForm');
-  const menuEditCancel = document.getElementById('menuEditCancel');
+
+
+  // Edit Modal Fields
+  const editModalEl = document.getElementById('editMenuItemModal');
+  let editModal = null;
+  if (editModalEl) {
+    editModal = bootstrap.Modal.getInstance(editModalEl) || new bootstrap.Modal(editModalEl);
+  }
+  
   const menuEditIndex = document.getElementById('menuEditIndex');
   const menuEditName = document.getElementById('menuEditName');
   const menuEditDescription = document.getElementById('menuEditDescription');
-  const menuEditImageUrl = document.getElementById('menuEditImageUrl');
   const menuEditPrice = document.getElementById('menuEditPrice');
   const menuEditCategory = document.getElementById('menuEditCategory');
   const menuEditStatus = document.getElementById('menuEditStatus');
-  const menuItemsList = document.getElementById('menuItemsList');
 
   function toggleMenuEditor(show) {
-    if (!menuEditor) return;
-    const shouldShow = typeof show === 'boolean' ? show : menuEditor.classList.contains('d-none');
-    menuEditor.classList.toggle('d-none', !shouldShow);
-    if (menuGrid) {
-      menuGrid.classList.toggle('d-none', shouldShow);
-    }
+    // If show is undefined, toggle based on current state
+    const isHidden = menuEditor.classList.contains('d-none');
+    const shouldShow = (typeof show === 'boolean') ? show : isHidden;
+
     if (shouldShow) {
+      menuEditor.classList.remove('d-none');
+      if (menuGrid) menuGrid.classList.add('d-none');
       menuEditor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      menuEditor.classList.add('d-none');
+      if (menuGrid) menuGrid.classList.remove('d-none');
     }
   }
 
   if (menuEditorToggle) {
-    menuEditorToggle.addEventListener('click', () => toggleMenuEditor());
+    menuEditorToggle.addEventListener('click', () => toggleMenuEditor(true));
   }
   if (menuEditorClose) {
     menuEditorClose.addEventListener('click', () => toggleMenuEditor(false));
   }
 
-  if (menuAddToggle && menuAddForm) {
-    menuAddToggle.addEventListener('click', () => {
-      menuAddForm.classList.toggle('d-none');
-      if (menuEditForm) menuEditForm.classList.add('d-none');
-      if (menuItemsList) {
-        menuItemsList.classList.toggle('d-none', !menuAddForm.classList.contains('d-none'));
-      }
-      if (!menuAddForm.classList.contains('d-none')) {
-        const firstInput = menuAddForm.querySelector('input, select, textarea');
-        if (firstInput) firstInput.focus();
-      }
-    });
-  }
-  if (menuAddCancel && menuAddForm) {
-    menuAddCancel.addEventListener('click', () => {
-      menuAddForm.classList.add('d-none');
-      if (menuItemsList) {
-        menuItemsList.classList.remove('d-none');
-      }
-    });
-  }
+  // Handle "Edit" button clicks in the table - Use a named function to avoid duplicates if possible, 
+  // though anonymous functions in turbo:load will still pile up on 'document' unless cleaned.
+  // Better approach: check if we already have a specialized handler or just let it be efficiently ignored.
+  // Ideally, use a controller or cleanup. For now, let's just make sure we don't have infinite loops.
+  
+  // To avoid stacking document listeners on Turbo navigations:
+  if (!window.menuEditListenerAttached) {
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-menu-edit-row]');
+      if (btn) {
+        const data = btn.dataset;
+        
+        // Populate fields
+        if (menuEditIndex) menuEditIndex.value = data.index || '';
+        if (menuEditName) menuEditName.value = data.name || '';
+        if (menuEditDescription) menuEditDescription.value = data.description || '';
+        if (menuEditPrice) menuEditPrice.value = data.price || '';
+        if (menuEditCategory) menuEditCategory.value = data.category || '';
+        if (menuEditStatus) menuEditStatus.value = data.status || 'Live';
 
-  if (menuEditCancel && menuEditForm) {
-    menuEditCancel.addEventListener('click', () => {
-      menuEditForm.classList.add('d-none');
-      if (menuItemsList) {
-        menuItemsList.classList.remove('d-none');
+        // Show modal
+        if (editModal) {
+          editModal.show();
+        }
       }
     });
+    window.menuEditListenerAttached = true;
   }
 
-  document.querySelectorAll('[data-menu-edit-row]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (!menuEditForm) return;
-      if (menuAddForm) menuAddForm.classList.add('d-none');
-      if (menuItemsList) menuItemsList.classList.add('d-none');
-      menuEditForm.classList.remove('d-none');
-      if (menuEditIndex) menuEditIndex.value = btn.dataset.index || '';
-      if (menuEditName) menuEditName.value = btn.dataset.name || '';
-      if (menuEditDescription) menuEditDescription.value = btn.dataset.description || '';
-      if (menuEditImageUrl) menuEditImageUrl.value = btn.dataset.imageUrl || '';
-      if (menuEditPrice) menuEditPrice.value = btn.dataset.price || '';
-      if (menuEditCategory) menuEditCategory.value = btn.dataset.category || '';
-      if (menuEditStatus) menuEditStatus.value = btn.dataset.status || 'Live';
-      if (menuEditName) menuEditName.focus();
-    });
-  });
-
+  // Keep editor open after reload if we were editing, and hide modal to prevent backdrop issues
   if (menuAddForm) {
     menuAddForm.addEventListener('submit', () => {
-      try {
-        sessionStorage.setItem('menuEditorOpen', 'true');
-      } catch (err) {
-        /* ignore storage errors */
-      }
+      sessionStorage.setItem('menuEditorOpen', 'true');
+      const modalEl = document.getElementById('addMenuItemModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
     });
   }
-
   if (menuEditForm) {
     menuEditForm.addEventListener('submit', () => {
-      try {
-        sessionStorage.setItem('menuEditorOpen', 'true');
-      } catch (err) {
-        /* ignore storage errors */
-      }
+      sessionStorage.setItem('menuEditorOpen', 'true');
+      if (editModal) editModal.hide();
     });
   }
 
-  try {
-    const shouldOpenEditor = sessionStorage.getItem('menuEditorOpen') === 'true';
-    if (shouldOpenEditor) {
-      toggleMenuEditor(true);
-      if (menuAddForm) menuAddForm.classList.add('d-none');
-      if (menuEditForm) menuEditForm.classList.add('d-none');
-      if (menuItemsList) menuItemsList.classList.remove('d-none');
-    }
+  // Cleanup potential stuck backdrops on load
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+
+  // Restore state on load
+  const shouldOpenEditor = sessionStorage.getItem('menuEditorOpen') === 'true';
+  if (shouldOpenEditor) {
+    toggleMenuEditor(true);
     sessionStorage.removeItem('menuEditorOpen');
-  } catch (err) {
-    /* ignore storage errors */
   }
 
+  // Search filter in the table
   if (menuSearch) {
     menuSearch.addEventListener('input', () => {
       const query = menuSearch.value.trim().toLowerCase();
-      document.querySelectorAll('[data-menu-row]').forEach((row) => {
+      document.querySelectorAll('#menuItemsList tr[data-menu-row]').forEach((row) => {
         const text = row.textContent.toLowerCase();
-        row.classList.toggle('d-none', query && !text.includes(query));
+        if (!query || text.includes(query)) {
+          row.classList.remove('d-none');
+        } else {
+          row.classList.add('d-none');
+        }
       });
     });
   }
+
+  // Category filtering
+  const categoryBtns = document.querySelectorAll('.category-btn');
+  categoryBtns.forEach(btn => {
+    // Check if listener is already attached to avoid multiple bindings
+    if (btn.dataset.listenerAttached) return;
+    
+    btn.addEventListener('click', () => {
+      // 1. Update active state
+      categoryBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // 2. Filter items
+      const selectedCategory = btn.textContent.trim();
+      const isAll = (selectedCategory === 'All Items');
+
+      // Filter grid cards
+      document.querySelectorAll('.menu-card').forEach(card => {
+        // Skip valid cards that don't have data-category if we're filtering
+        const cat = (card.dataset.category || '').trim().toLowerCase();
+        // Simple flexible matching: checks if the item's category includes the button text
+        // e.g. "Main Course" button matches "Main Course", "Mains", etc.
+        const match = isAll || cat.includes(selectedCategory.toLowerCase());
+        
+        // Use classList for performance instead of style manipulation
+        if (match) {
+          card.classList.remove('d-none');
+        } else {
+          card.classList.add('d-none');
+        }
+      });
+      
+      // Filter editor table rows as well
+      const rows = document.getElementById('menuItemsList')?.querySelectorAll('tr[data-menu-row]');
+      if (rows) {
+        rows.forEach(row => {
+          const cat = (row.dataset.category || '').trim().toLowerCase();
+          const match = isAll || cat.includes(selectedCategory.toLowerCase());
+          if (match) {
+            row.classList.remove('d-none');
+          } else {
+            row.classList.add('d-none');
+          }
+        });
+      }
+    });
+    btn.dataset.listenerAttached = "true";
   });
+  });
+  window.menuScriptListenerAttached = true;
+  }
 </script>
+
 {% endblock %}
