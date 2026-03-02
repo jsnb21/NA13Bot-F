@@ -1166,6 +1166,41 @@ def menu_update_item():
     return redirect(url_for('menu'))
 
 
+@app.route('/menu/bulk-category-update', methods=['POST'])
+@login_required
+def menu_bulk_category_update():
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
+    
+    # Get list of indices from form. Expecting multiple values for 'item_indices'
+    indices_raw = request.form.getlist('item_indices')
+    new_category = request.form.get('category', '').strip()
+    
+    if not indices_raw or not new_category:
+        return redirect(url_for('menu'))
+
+    menu_items = cfg.get('menu_items', [])
+    updated_count = 0
+    
+    # Sort indices in reverse order if we were deleting, but for update order doesn't matter much unless we validate exists.
+    # We should validate indices are integers.
+    try:
+        indices = [int(idx) for idx in indices_raw]
+    except ValueError:
+        return redirect(url_for('menu'))
+        
+    for index in indices:
+        if 0 <= index < len(menu_items):
+            menu_items[index]['category'] = new_category
+            updated_count += 1
+            
+    if updated_count > 0:
+        cfg['menu_items'] = menu_items
+        save_config(cfg, restaurant_id)
+        
+    return redirect(url_for('menu'))
+
+
 def _normalize_menu_key(value: str) -> str:
     text = (value or '').strip().lower()
     return re.sub(r'[^a-z0-9]+', '', text)

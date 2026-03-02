@@ -155,11 +155,32 @@
         </div>
       </div>
 
+      <div id="bulkActionsParams" class="d-none align-items-center justify-content-between p-3 mb-3 bg-indigo-50 border border-indigo-100 rounded-3" style="background-color: #f0fdf4; border-color: #dcfce7;">
+        <div class="d-flex align-items-center gap-3">
+          <span class="fw-bold text-success"><i class="fas fa-check-circle me-2"></i><span id="selectedCount">0</span> selected</span>
+          <div class="vr bg-secondary opacity-25"></div>
+          <form id="bulkCategoryForm" method="POST" action="/menu/bulk-category-update" class="d-flex align-items-center gap-2">
+            <span class="small text-secondary fw-semibold">Move to:</span>
+            <select name="category" class="form-select form-select-sm border-0 shadow-sm" style="width: 180px;" required>
+              <option value="" selected disabled>Select Category...</option>
+              <option value="Appetizers">Appetizers</option>
+              <option value="Main Course">Main Course</option>
+              <option value="Desserts">Desserts</option>
+              <option value="Drinks/Beverages">Drinks/Beverages</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-dark shadow-sm" style="background: var(--brand-dark);">Apply</button>
+          </form>
+        </div>
+      </div>
+
       <div class="table-responsive border rounded-3 shadow-sm bg-white" id="menuItemsList">
         <table class="table table-hover align-middle mb-0">
           <thead class="bg-light">
             <tr>
-              <th class="ps-4 py-3 text-secondary text-uppercase small fw-bold border-0">Name</th>
+              <th class="ps-4 py-3 border-0" style="width: 40px;">
+                <input type="checkbox" class="form-check-input cursor-pointer" id="selectAllItems">
+              </th>
+              <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Name</th>
               <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Description</th>
               <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Price</th>
               <th class="py-3 text-secondary text-uppercase small fw-bold border-0">Category</th>
@@ -180,7 +201,10 @@
               {% set sizes_part = '' %}
             {% endif %}
             <tr data-menu-row data-category="{{ item.get('category', '') }}" class="border-bottom">
-              <td class="ps-4 fw-medium text-dark">{{ item.get('name','') }}</td>
+              <td class="ps-4">
+                <input type="checkbox" class="form-check-input item-checkbox cursor-pointer" value="{{ loop.index0 }}">
+              </td>
+              <td class="fw-medium text-dark">{{ item.get('name','') }}</td>
               <td class="text-secondary small text-truncate" style="max-width: 250px;">{{ clean_desc }}</td>
               <td class="fw-semibold text-dark">
                 {% set symbol = cfg.get('currency_symbol', '₱') %}
@@ -724,7 +748,81 @@
     });
     btn.dataset.listenerAttached = "true";
   });
-  });
+
+  // Bulk Actions Logic
+  const selectAll = document.getElementById('selectAllItems');
+  const bulkParams = document.getElementById('bulkActionsParams');
+  const selectedCount = document.getElementById('selectedCount');
+  const bulkForm = document.getElementById('bulkCategoryForm');
+
+  function updateBulkUI() {
+    const checked = document.querySelectorAll('.item-checkbox:checked');
+    const cnt = checked.length;
+    if (cnt > 0) {
+      if (bulkParams) {
+        bulkParams.classList.remove('d-none');
+        bulkParams.classList.add('d-flex');
+      }
+      if (selectedCount) selectedCount.textContent = cnt;
+    } else {
+      if (bulkParams) {
+        bulkParams.classList.add('d-none');
+        bulkParams.classList.remove('d-flex');
+      }
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      document.querySelectorAll('.item-checkbox').forEach(cb => {
+        // Only select visible items (if filtered)
+        const row = cb.closest('tr');
+        if (row && !row.classList.contains('d-none')) {
+          cb.checked = selectAll.checked;
+        }
+      });
+      updateBulkUI();
+    });
+  }
+
+  // Delegate listener for checkboxes
+  const menuList = document.getElementById('menuItemsList');
+  if (menuList) {
+    menuList.addEventListener('change', (e) => {
+      if (e.target.classList.contains('item-checkbox')) {
+        updateBulkUI();
+        // If one is unchecked, uncheck "select all"
+        if (!e.target.checked && selectAll) selectAll.checked = false;
+      }
+    });
+  }
+
+  // Handle Bulk Form Submit
+  if (bulkForm) {
+    bulkForm.addEventListener('submit', function(e) {
+      // Create hidden inputs for selected indices
+      // Clear previous hidden inputs first
+      const oldInputs = bulkForm.querySelectorAll('input[name="item_indices"]');
+      oldInputs.forEach(i => i.remove());
+
+      const checked = document.querySelectorAll('.item-checkbox:checked');
+      if (checked.length === 0) {
+        e.preventDefault();
+        return;
+      }
+
+      checked.forEach(cb => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'item_indices';
+        input.value = cb.value;
+        bulkForm.appendChild(input);
+      });
+      // Submit proceeds normally
+    });
+  }
+
+  }); // Close initMenuScript and addEventListener
   window.menuScriptListenerAttached = true;
   }
 </script>
