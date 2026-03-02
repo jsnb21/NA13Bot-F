@@ -33,9 +33,19 @@ class GeminiChatbot:
     def __init__(self):
         self.api_key = get_google_api_key()
         self.client = genai.Client(api_key=self.api_key) if self.api_key else None
+
+    def _ensure_client(self):
+        """Refresh client when API key changes (e.g., updated .env)."""
+        latest_key = get_google_api_key()
+        if latest_key != self.api_key:
+            self.api_key = latest_key
+            self.client = genai.Client(api_key=self.api_key) if self.api_key else None
+        elif self.api_key and self.client is None:
+            self.client = genai.Client(api_key=self.api_key)
         
     def get_response(self, user_message, system_prompt, conversation_history=None):
         """Generate AI response using Gemini"""
+        self._ensure_client()
         if not self.client:
             return 'Google API key not configured.'
         try:
@@ -79,6 +89,7 @@ class GeminiChatbot:
         
     def list_models(self):
         """List available Gemini models."""
+        self._ensure_client()
         if not self.client:
             raise Exception('No Google API key configured.')
         

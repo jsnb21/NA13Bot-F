@@ -3,6 +3,10 @@
  * Provides loading indicators and smooth transitions
  */
 
+// Prevent multiple initialization
+if (!window.turboEnhancementsInitialized) {
+  window.turboEnhancementsInitialized = true;
+
 // Clean up page-specific flags and destroy charts when actually navigating away (not on hover preview)
 document.addEventListener('turbo:before-cache', function() {
   // Only triggered when actually navigating away from current page, not on hover preview
@@ -150,3 +154,5 @@ document.addEventListener('click', function(event) {
     return true;
   }
 });
+
+} // End of turboEnhancementsInitialized check

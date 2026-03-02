@@ -168,6 +168,8 @@ def save_config(data: dict, restaurant_id: str = None):
 BRAND_FIELDS = {
     'establishment_name',
     'logo_url',
+    'logo_data',
+    'logo_mime',
     'color_hex',
     'main_color',
     'sub_color',
@@ -177,6 +179,8 @@ BRAND_FIELDS = {
     'currency_code',
     'currency_symbol',
     'chatbot_avatar',
+    'chatbot_avatar_data',
+    'chatbot_avatar_mime',
     'chatbot_avatar_uploaded_by',
     'chatbot_avatar_uploaded_at',
     'open_time',
@@ -204,6 +208,8 @@ def _fetch_brand_settings(restaurant_id: str = None):
         'restaurant_id',
         'establishment_name',
         'logo_url',
+        'logo_data',
+        'logo_mime',
         'color_hex',
         'main_color',
         'sub_color',
@@ -213,6 +219,8 @@ def _fetch_brand_settings(restaurant_id: str = None):
         'currency_code',
         'currency_symbol',
         'chatbot_avatar',
+        'chatbot_avatar_data',
+        'chatbot_avatar_mime',
         'chatbot_avatar_uploaded_by',
         'chatbot_avatar_uploaded_at',
         'open_time',
@@ -634,6 +642,56 @@ def update_order_status(order_id: str, status: str):
                 return True
     except Exception:
         return False
+
+
+def get_order_by_customer(restaurant_id: str, customer_name: str = None, order_number: int = None):
+    """Get order(s) by customer name or order number."""
+    schema = get_db_schema()
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                if order_number:
+                    # Look up by order number
+                    cur.execute(
+                        sql.SQL(
+                            """SELECT id, order_number, customer_name, table_number, items, total_amount, 
+                                   status, created_at FROM {}.orders 
+                               WHERE restaurant_id = %s AND order_number = %s 
+                               ORDER BY created_at DESC LIMIT 1"""
+                        ).format(sql.Identifier(schema)),
+                        [restaurant_id, order_number]
+                    )
+                elif customer_name:
+                    # Look up by customer name (most recent)
+                    cur.execute(
+                        sql.SQL(
+                            """SELECT id, order_number, customer_name, table_number, items, total_amount, 
+                                   status, created_at FROM {}.orders 
+                               WHERE restaurant_id = %s AND LOWER(customer_name) = LOWER(%s) 
+                               ORDER BY created_at DESC LIMIT 1"""
+                        ).format(sql.Identifier(schema)),
+                        [restaurant_id, customer_name]
+                    )
+                else:
+                    return None
+                
+                row = cur.fetchone()
+                if not row:
+                    return None
+                    
+                return {
+                    'id': str(row[0]),
+                    'order_number': row[1],
+                    'customer_name': row[2],
+                    'table_number': row[3],
+                    'items': row[4] if isinstance(row[4], list) else json.loads(row[4] or '[]'),
+                    'total_amount': float(row[5]),
+                    'status': row[6],
+                    'created_at': row[7].isoformat() if row[7] else None
+                }
+    except Exception as e:
+        print(f"Error fetching order: {e}")
+        return None
 
 
 def get_all_restaurants():

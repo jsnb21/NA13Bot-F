@@ -35,5 +35,8 @@ users.json
 # Node
 node_modules/
 
+# Static file uploads (now stored in database)
+static/uploads/
+
 #training data
 training_data/

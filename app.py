@@ -29,11 +29,11 @@ Main Page Routes:
   - GET /reports - Analytics and reports
 
 API Routes:
-  - POST /upload-logo - Logo upload (admin)
   - POST /upload-training-file - Training file upload
   - POST /delete-training-file - Remove training file
   - GET /get-trained-brands - List trained restaurants
-  - POST /save-settings - Save restaurant configuration
+  - GET /brand/image/<kind>/<restaurant_id> - Serve logo/avatar from database
+  - POST /save-settings - Save restaurant configuration (includes logo/avatar DB upload)
   - POST /save-menu-description - Update menu text
   - POST /api/* - Chatbot API endpoints (see chatbot/routes.py)
 
@@ -63,6 +63,8 @@ Key Functions:
   - load_training_manifest(): Load training file metadata
   - save_training_manifest(): Save training file metadata
   - save_training_upload_bytes(): Save training file to disk
+  - _store_brand_image_upload(): Store logo/avatar binary data to database
+  - _migrate_static_brand_image(): Migrate legacy /static/uploads images to database
   - extract_pdf_text(): Parse PDF files
   - extract_docx_text(): Parse DOCX files
   - extract_csv_text(): Parse CSV files
@@ -87,6 +89,7 @@ import json
 import csv
 import io
 import re
+import mimetypes
 try:
     from pypdf import PdfReader
 except Exception:
@@ -109,6 +112,10 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
 # after app is created, before routes
 init_db()
 
@@ -129,9 +136,6 @@ def regex_findall_filter(text, pattern):
     return re.findall(pattern, str(text))
 
 app.register_blueprint(chatbot_bp)
-# upload dir for logo files
-UPLOAD_DIR = Path(__file__).parent / 'static' / 'uploads'
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 TRAINING_DIR = Path(__file__).parent / 'training_data'
 TRAINING_DIR.mkdir(parents=True, exist_ok=True)
 from functools import wraps
@@ -149,6 +153,89 @@ def allowed_file(filename):
 
 def training_allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in TRAINING_ALLOWED_EXT
+
+
+BRAND_IMAGE_COLUMNS = {
+    'logo': ('logo_data', 'logo_mime'),
+    'chatbot_avatar': ('chatbot_avatar_data', 'chatbot_avatar_mime')
+}
+
+
+def _get_brand_image_url(image_kind: str, restaurant_id: str) -> str:
+    return f"/brand/image/{image_kind}/{restaurant_id}"
+
+
+def _store_brand_image_bytes(restaurant_id: str, image_kind: str, image_bytes: bytes, mime_type: str) -> str:
+    if not restaurant_id or image_kind not in BRAND_IMAGE_COLUMNS:
+        raise ValueError('Invalid brand image target')
+    if not image_bytes:
+        raise ValueError('Image data is empty')
+
+    data_col, mime_col = BRAND_IMAGE_COLUMNS[image_kind]
+    schema = get_db_schema()
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                psycopg.sql.SQL(
+                    """
+                    INSERT INTO {}.brand_settings (restaurant_id, {}, {})
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (restaurant_id) DO UPDATE
+                    SET {} = EXCLUDED.{}, {} = EXCLUDED.{}, updated_at = now()
+                    """
+                ).format(
+                    psycopg.sql.Identifier(schema),
+                    psycopg.sql.Identifier(data_col),
+                    psycopg.sql.Identifier(mime_col),
+                    psycopg.sql.Identifier(data_col),
+                    psycopg.sql.Identifier(data_col),
+                    psycopg.sql.Identifier(mime_col),
+                    psycopg.sql.Identifier(mime_col)
+                ),
+                [restaurant_id, image_bytes, mime_type or 'application/octet-stream']
+            )
+
+    return _get_brand_image_url(image_kind, restaurant_id)
+
+
+def _store_brand_image_upload(restaurant_id: str, image_kind: str, upload_file) -> str:
+    safe_name = secure_filename(upload_file.filename or '')
+    ext = Path(safe_name).suffix.lower()
+    if not ext or ext.lstrip('.') not in ALLOWED_EXT:
+        raise ValueError('Unsupported file type')
+
+    image_bytes = upload_file.read()
+    mime_type = upload_file.content_type
+    if not mime_type or mime_type == 'application/octet-stream':
+        guessed_mime, _ = mimetypes.guess_type(safe_name)
+        mime_type = guessed_mime or 'application/octet-stream'
+
+    return _store_brand_image_bytes(restaurant_id, image_kind, image_bytes, mime_type)
+
+
+def _migrate_static_brand_image(restaurant_id: str, image_kind: str, image_url: str) -> str:
+    if not image_url or not image_url.startswith('/static/uploads/'):
+        return image_url
+
+    project_root = Path(__file__).parent.resolve()
+    candidate = (project_root / image_url.lstrip('/')).resolve()
+
+    try:
+        candidate.relative_to(project_root)
+    except Exception:
+        return image_url
+
+    if not candidate.is_file():
+        return image_url
+
+    ext = candidate.suffix.lower().lstrip('.')
+    if ext not in ALLOWED_EXT:
+        return image_url
+
+    image_bytes = candidate.read_bytes()
+    guessed_mime, _ = mimetypes.guess_type(candidate.name)
+    return _store_brand_image_bytes(restaurant_id, image_kind, image_bytes, guessed_mime or 'application/octet-stream')
 
 
 def get_training_dir(restaurant_id: str):
@@ -1267,6 +1354,41 @@ def menu_get_photo(photo_id):
         app.logger.exception('Failed to fetch menu photo')
         return jsonify({'error': 'Failed to fetch photo'}), 500
 
+
+@app.route('/brand/image/<image_kind>/<restaurant_id>', methods=['GET'])
+def brand_get_image(image_kind, restaurant_id):
+    """Serve a brand logo/avatar image from the database."""
+    try:
+        if image_kind not in BRAND_IMAGE_COLUMNS or not restaurant_id:
+            return jsonify({'error': 'Image not found'}), 404
+
+        data_col, mime_col = BRAND_IMAGE_COLUMNS[image_kind]
+        schema = get_db_schema()
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    psycopg.sql.SQL(
+                        "SELECT {}, {} FROM {}.brand_settings WHERE restaurant_id = %s"
+                    ).format(
+                        psycopg.sql.Identifier(data_col),
+                        psycopg.sql.Identifier(mime_col),
+                        psycopg.sql.Identifier(schema)
+                    ),
+                    [restaurant_id]
+                )
+                row = cur.fetchone()
+
+        if not row or not row[0]:
+            return jsonify({'error': 'Image not found'}), 404
+
+        response = Response(row[0], mimetype=row[1] or 'application/octet-stream')
+        response.headers['Cache-Control'] = 'public, max-age=31536000'
+        return response
+    except Exception:
+        app.logger.exception('Failed to fetch brand image')
+        return jsonify({'error': 'Failed to fetch image'}), 500
+
 # Order Management Routes
 from tools import save_order, get_orders, update_order_status
 
@@ -1397,42 +1519,46 @@ def settings():
         }
         # merge with existing config to avoid wiping other keys
         # handle logo upload (optional)
-        logo_url = request.form.get('logo_url', cfg.get('logo_url',''))
+        logo_url = request.form.get('logo_url', cfg.get('logo_url', ''))
         logo_file = request.files.get('logo_file')
         if logo_file and logo_file.filename:
             if allowed_file(logo_file.filename):
-                safe_name = secure_filename(logo_file.filename)
-                ext = Path(safe_name).suffix.lower()
-                logo_filename = f"{uuid.uuid4().hex}{ext}"
-                logo_dir = UPLOAD_DIR / restaurant_id
-                logo_dir.mkdir(parents=True, exist_ok=True)
-                dest = logo_dir / logo_filename
-                logo_file.save(str(dest))
-                logo_url = f'/static/uploads/{restaurant_id}/{logo_filename}'
-                data['logo_uploaded_by'] = session.get('user')
-                data['logo_uploaded_at'] = datetime.now(timezone.utc)
+                try:
+                    logo_url = _store_brand_image_upload(restaurant_id, 'logo', logo_file)
+                    data['logo_uploaded_by'] = session.get('user')
+                    data['logo_uploaded_at'] = datetime.now(timezone.utc)
+                except Exception:
+                    app.logger.exception('Logo upload failed')
+                    flash('Failed to upload logo.')
             else:
                 flash('Unsupported logo file type.')
+        else:
+            try:
+                logo_url = _migrate_static_brand_image(restaurant_id, 'logo', logo_url)
+            except Exception:
+                app.logger.exception('Failed migrating legacy logo image')
 
         data['logo_url'] = logo_url
 
         # handle chatbot avatar upload (optional)
-        avatar_url = request.form.get('chatbot_avatar_url', cfg.get('chatbot_avatar',''))
+        avatar_url = request.form.get('chatbot_avatar_url', cfg.get('chatbot_avatar', ''))
         avatar_file = request.files.get('chatbot_avatar_file')
         if avatar_file and avatar_file.filename:
             if allowed_file(avatar_file.filename):
-                safe_name = secure_filename(avatar_file.filename)
-                ext = Path(safe_name).suffix.lower()
-                avatar_filename = f"{uuid.uuid4().hex}{ext}"
-                avatar_dir = UPLOAD_DIR / restaurant_id
-                avatar_dir.mkdir(parents=True, exist_ok=True)
-                dest = avatar_dir / avatar_filename
-                avatar_file.save(str(dest))
-                avatar_url = f'/static/uploads/{restaurant_id}/{avatar_filename}'
-                data['chatbot_avatar_uploaded_by'] = session.get('user')
-                data['chatbot_avatar_uploaded_at'] = datetime.now(timezone.utc)
+                try:
+                    avatar_url = _store_brand_image_upload(restaurant_id, 'chatbot_avatar', avatar_file)
+                    data['chatbot_avatar_uploaded_by'] = session.get('user')
+                    data['chatbot_avatar_uploaded_at'] = datetime.now(timezone.utc)
+                except Exception:
+                    app.logger.exception('Chatbot avatar upload failed')
+                    flash('Failed to upload chatbot avatar.')
             else:
                 flash('Unsupported avatar file type.')
+        else:
+            try:
+                avatar_url = _migrate_static_brand_image(restaurant_id, 'chatbot_avatar', avatar_url)
+            except Exception:
+                app.logger.exception('Failed migrating legacy chatbot avatar')
 
         data['chatbot_avatar'] = avatar_url
 
@@ -1714,19 +1840,41 @@ def login():
             
             otp_code = set_otp(email, 'login')
             sent, send_error = send_otp_email(email, otp_code, 'login', cfg)
-            otp_hint = otp_code if (should_show_otp_hint() or not sent) else None
-            notice = 'We sent a verification code to your email.' if sent else None
-            warning = None if sent else f"Email delivery failed: {send_error}. Use the code shown below."
-            return render_template(
-                'auth/otp_verify.html',
-                cfg=cfg,
-                email=email,
-                purpose='login',
-                otp_hint=otp_hint,
-                notice=notice,
-                warning=warning
-            )
+            session['otp_notice'] = 'We sent a verification code to your email.' if sent else None
+            session['otp_warning'] = None if sent else f"Email delivery failed: {send_error}. Use the code shown below."
+            return redirect(url_for('otp_verify_page', email=email, purpose='login'))
+    # Return 422 for validation errors (Turbo requirement)
+    if error:
+        return render_template('auth/login.html', cfg=cfg, error=error), 422
     return render_template('auth/login.html', cfg=cfg, error=error)
+
+
+@app.route('/otp-verify', methods=['GET'])
+def otp_verify_page():
+    """Display OTP verification page."""
+    cfg = load_config()
+    email = request.args.get('email', '').strip().lower()
+    purpose = request.args.get('purpose', 'login')
+    error = request.args.get('error', '')
+    
+    if not email or not session.get('otp'):
+        return redirect(url_for('login'))
+    
+    otp_code = session.get('otp', {}).get('code')
+    otp_hint = otp_code if should_show_otp_hint() else None
+    notice = session.pop('otp_notice', None)
+    warning = session.pop('otp_warning', None)
+    
+    return render_template(
+        'auth/otp_verify.html',
+        cfg=cfg,
+        email=email,
+        purpose=purpose,
+        error=error,
+        otp_hint=otp_hint,
+        notice=notice,
+        warning=warning
+    )
 
 
 @app.route('/login/verify', methods=['POST'])
@@ -1764,9 +1912,8 @@ def login_verify():
         
         return response
     
-    otp_code = session.get('otp', {}).get('code')
-    otp_hint = otp_code if should_show_otp_hint() else None
-    return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='login', error=error, otp_hint=otp_hint)
+    # Redirect back to OTP verify page with error
+    return redirect(url_for('otp_verify_page', email=email, purpose='login', error=error))
 
 
 @app.route('/signup', methods=['GET', 'POST'])
@@ -1779,16 +1926,19 @@ def signup():
         main_color = request.form.get('main_color', '')
         sub_color = request.form.get('sub_color', '')
 
+        existing_pending = session.get('pending_signup') or {}
+        pending_restaurant_id = existing_pending.get('restaurant_id') or str(uuid.uuid4())
+
         # handle logo file upload
         logo_url = request.form.get('logo_url', '')
         logo_file = request.files.get('logo_file')
         if logo_file and logo_file.filename:
             if allowed_file(logo_file.filename):
-                filename = secure_filename(logo_file.filename)
-                dest = UPLOAD_DIR / filename
-                logo_file.save(str(dest))
-                # set path relative to static
-                logo_url = f'/static/uploads/{filename}'
+                try:
+                    logo_url = _store_brand_image_upload(pending_restaurant_id, 'logo', logo_file)
+                except Exception:
+                    app.logger.exception('Signup logo upload failed')
+                    error = 'Failed to upload logo file.'
             else:
                 error = 'Unsupported logo file type.'
 
@@ -1800,6 +1950,7 @@ def signup():
             else:
                 session['pending_signup'] = {
                     'email': email,
+                    'restaurant_id': pending_restaurant_id,
                     'establishment_name': establishment_name,
                     'logo_url': logo_url,
                     'main_color': main_color,
@@ -1807,19 +1958,13 @@ def signup():
                 }
                 otp_code = set_otp(email, 'signup')
                 sent, send_error = send_otp_email(email, otp_code, 'signup', cfg)
-                otp_hint = otp_code if (should_show_otp_hint() or not sent) else None
-                notice = 'We sent a verification code to your email.' if sent else None
-                warning = None if sent else f"Email delivery failed: {send_error}. Use the code shown below."
-                return render_template(
-                    'auth/otp_verify.html',
-                    cfg=cfg,
-                    email=email,
-                    purpose='signup',
-                    otp_hint=otp_hint,
-                    notice=notice,
-                    warning=warning
-                )
+                session['otp_notice'] = 'We sent a verification code to your email.' if sent else None
+                session['otp_warning'] = None if sent else f"Email delivery failed: {send_error}. Use the code shown below."
+                return redirect(url_for('otp_verify_page', email=email, purpose='signup'))
 
+    # Return 422 for validation errors (Turbo requirement)
+    if error:
+        return render_template('auth/signup.html', cfg=cfg, error=error), 422
     return render_template('auth/signup.html', cfg=cfg, error=error)
 
 
@@ -1830,16 +1975,16 @@ def signup_verify():
     email = request.form.get('email', '').strip().lower()
     if not pending or pending.get('email') != email:
         error = 'Signup session not found. Please start again.'
-        return render_template('auth/signup.html', cfg=cfg, error=error)
+        # Return 422 for validation errors (Turbo requirement)
+        return render_template('auth/signup.html', cfg=cfg, error=error), 422
 
     code = request.form.get('otp', '').strip()
     ok, error = verify_otp(email, code, 'signup')
     if not ok:
-        otp_code = session.get('otp', {}).get('code')
-        otp_hint = otp_code if should_show_otp_hint() else None
-        return render_template('auth/otp_verify.html', cfg=cfg, email=email, purpose='signup', error=error, otp_hint=otp_hint)
+        # Redirect back to OTP verify page with error
+        return redirect(url_for('otp_verify_page', email=email, purpose='signup', error=error))
 
-    restaurant_id = str(uuid.uuid4())
+    restaurant_id = pending.get('restaurant_id') or str(uuid.uuid4())
     meta = {
         'establishment_name': pending.get('establishment_name', ''),
         'logo_url': pending.get('logo_url', ''),
@@ -1850,7 +1995,8 @@ def signup_verify():
     success = add_user(email, password=None, meta=meta)
     if not success:
         error = 'A user with that email already exists.'
-        return render_template('auth/signup.html', cfg=cfg, error=error)
+        # Return 422 for validation errors (Turbo requirement)
+        return render_template('auth/signup.html', cfg=cfg, error=error), 422
 
     cfg.update({
         'establishment_name': pending.get('establishment_name', ''),

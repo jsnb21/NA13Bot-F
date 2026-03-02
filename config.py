@@ -218,6 +218,8 @@ def init_db():
                                             restaurant_id     UUID PRIMARY KEY,
                       establishment_name TEXT,
                       logo_url          TEXT,
+                      logo_data         BYTEA,
+                      logo_mime         TEXT,
                       color_hex         TEXT,
                       main_color        TEXT,
                       sub_color         TEXT,
@@ -227,6 +229,8 @@ def init_db():
                       currency_code     TEXT,
                       currency_symbol   TEXT,
                       chatbot_avatar    TEXT,
+                      chatbot_avatar_data BYTEA,
+                      chatbot_avatar_mime TEXT,
                                             chatbot_avatar_uploaded_by TEXT,
                                             chatbot_avatar_uploaded_at TIMESTAMPTZ,
                       business_name     TEXT,
@@ -311,6 +315,22 @@ def init_db():
             )
             cur.execute(
                 sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS currency_symbol TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS logo_data BYTEA")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS logo_mime TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS chatbot_avatar_data BYTEA")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS chatbot_avatar_mime TEXT")
                 .format(sql.Identifier(schema))
             )
             cur.execute(
@@ -405,10 +425,13 @@ def get_google_api_key():
     1. Environment variables `GOOGLE_API_KEY` or `google_api_key`
     Returns empty string if not found.
     """
+    if load_dotenv is not None:
+        load_dotenv(override=True)
+
     # 1) env vars (check common variants)
     for env_key in ('GOOGLE_API_KEY', 'google_api_key'):
         val = os.environ.get(env_key)
         if val:
-            return val
+            return val.strip()
 
     return ''

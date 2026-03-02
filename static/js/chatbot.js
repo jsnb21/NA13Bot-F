@@ -450,7 +450,7 @@ function buildMenuText(cfg) {
 }
 
 const canned = {
-    'menu': (cfg) => buildMenuText(cfg) || 'Our menu includes pizzas, salads, burgers and daily specials.',
+    'menu': (cfg) => buildMenuText(cfg) || 'Menu is currently unavailable or not yet configured.',
     'order': () => 'Sure — what would you like to order?',
     'hours': () => 'We are open Mon–Sun, 9:00 AM to 10:00 PM.',
     'support': (cfg) => `You can reach support at ${cfg && cfg.business_email ? cfg.business_email : 'support@example.com'}.`

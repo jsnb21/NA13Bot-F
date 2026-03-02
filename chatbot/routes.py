@@ -181,6 +181,58 @@ def api_chat():
     system_prompt = build_system_prompt(establishment_name, menu_text, training_context)
     response = ai.get_response(user_message, system_prompt, conversation_history)
     
+    # Check if response contains order status check trigger
+    if '[CHECK_ORDER_STATUS:' in response:
+        # Extract customer name from the trigger
+        match = re.search(r'\[CHECK_ORDER_STATUS:(.+?)\]', response)
+        if match:
+            customer_name = match.group(1).strip()
+            
+            # Look up the order
+            from tools import get_order_by_customer
+            order = get_order_by_customer(restaurant_id, customer_name=customer_name)
+            
+            if order:
+                # Format status message
+                status_map = {
+                    'pending': 'received and is waiting to be prepared',
+                    'preparing': 'currently being prepared in the kitchen',
+                    'ready': 'ready for pickup',
+                    'completed': 'completed and delivered'
+                }
+                status_text = status_map.get(order['status'], order['status'])
+                
+                # Build items list
+                items = order.get('items', [])
+                items_text = ', '.join([f"{item.get('quantity')}x {item.get('name')}" for item in items])
+                
+                status_response = f"Hi {order['customer_name']}! I found your order #{order['order_number']} for table {order['table_number']}. Your order ({items_text}) is {status_text}. "
+                
+                if order['status'] == 'pending':
+                    status_response += "It should be started soon!"
+                elif order['status'] == 'preparing':
+                    status_response += "The kitchen is working on it now!"
+                elif order['status'] == 'ready':
+                    status_response += "You can pick it up now!"
+                elif order['status'] == 'completed':
+                    status_response += "Thank you for your order!"
+                
+                # Remove the trigger from response and replace with status
+                clean_response = re.sub(r'\[CHECK_ORDER_STATUS:.+?\]', status_response, response)
+                
+                return jsonify({
+                    'response': clean_response,
+                    'order_status': order
+                })
+            else:
+                # Order not found
+                not_found_msg = f"I couldn't find any recent orders for {customer_name}. Could you please verify the name or provide your order number?"
+                clean_response = re.sub(r'\[CHECK_ORDER_STATUS:.+?\]', not_found_msg, response)
+                
+                return jsonify({
+                    'response': clean_response
+                })
+    
     # Always try to extract items from the response to show running cart
     order_items = extract_order_items(response, menu_items)
     has_items = len(order_items) > 0
@@ -300,3 +352,32 @@ def api_update_order_status():
         return jsonify({'success': True, 'message': f'Order status updated to {new_status}'})
     except Exception as e:
         return jsonify({'error': 'Failed to update order', 'detail': str(e)}), 500
+
+
+@chatbot_bp.route('/orders/check-status', methods=['POST'])
+def api_check_order_status():
+    """Check order status by customer name or order number."""
+    try:
+        data = request.get_json()
+        restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
+        customer_name = data.get('customer_name', '').strip()
+        order_number = data.get('order_number')
+        
+        if not restaurant_id:
+            return jsonify({'error': 'No restaurant ID provided'}), 400
+        
+        if not customer_name and not order_number:
+            return jsonify({'error': 'Please provide customer name or order number'}), 400
+        
+        from tools import get_order_by_customer
+        order = get_order_by_customer(restaurant_id, customer_name, order_number)
+        
+        if not order:
+            return jsonify({'found': False, 'message': 'No order found'})
+        
+        return jsonify({
+            'found': True,
+            'order': order
+        })
+    except Exception as e:
+        return jsonify({'error': 'Failed to check order status', 'detail': str(e)}), 500

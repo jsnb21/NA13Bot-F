@@ -520,6 +520,9 @@ async function updateOrderStatus(orderId, newStatus) {
     }
 }
 
+// Expose function to global scope for onclick handlers
+window.updateOrderStatus = updateOrderStatus;
+
 // Initial load
 fetchOrders();
 
