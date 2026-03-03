@@ -399,6 +399,10 @@
 
     // Guard: Only initialize if elements exist
     if (!menuUploadInput || !uploadCard) return;
+    
+    // Guard: Prevent re-attaching event listeners on Turbo navigation
+    if (menuUploadInput.dataset.listenerAttached === '1') return;
+    menuUploadInput.dataset.listenerAttached = '1';
 
     // Toast notification function
     function showToast(type, message) {
@@ -483,10 +487,14 @@
   });
 
   if (menuPhotoUpload) {
-    menuPhotoUpload.addEventListener('change', async () => {
-      if (!menuPhotoUpload.files || menuPhotoUpload.files.length === 0) {
-        return;
-      }
+    // Guard: Prevent re-attaching event listeners
+    if (menuPhotoUpload.dataset.listenerAttached !== '1') {
+      menuPhotoUpload.dataset.listenerAttached = '1';
+      
+      menuPhotoUpload.addEventListener('change', async () => {
+        if (!menuPhotoUpload.files || menuPhotoUpload.files.length === 0) {
+          return;
+        }
 
       if (photoUploadCard && photoUploadProgress) {
         photoUploadCard.classList.add('uploading');
@@ -538,6 +546,7 @@
         menuPhotoUpload.value = '';
       }
     });
+    } // Close guard for listenerAttached check
   }
 
   // Clear all menu items
@@ -567,7 +576,8 @@
     }
   }
 
-  if (confirmClearMenuBtn) {
+  if (confirmClearMenuBtn && confirmClearMenuBtn.dataset.listenerAttached !== '1') {
+    confirmClearMenuBtn.dataset.listenerAttached = '1';
     confirmClearMenuBtn.addEventListener('click', async () => {
       if (clearMenuModal) {
         clearMenuModal.hide();
@@ -621,10 +631,12 @@
     }
   }
 
-  if (menuEditorToggle) {
+  if (menuEditorToggle && menuEditorToggle.dataset.listenerAttached !== '1') {
+    menuEditorToggle.dataset.listenerAttached = '1';
     menuEditorToggle.addEventListener('click', () => toggleMenuEditor(true));
   }
-  if (menuEditorClose) {
+  if (menuEditorClose && menuEditorClose.dataset.listenerAttached !== '1') {
+    menuEditorClose.dataset.listenerAttached = '1';
     menuEditorClose.addEventListener('click', () => toggleMenuEditor(false));
   }
 
@@ -658,7 +670,8 @@
   }
 
   // Keep editor open after reload if we were editing, and hide modal to prevent backdrop issues
-  if (menuAddForm) {
+  if (menuAddForm && menuAddForm.dataset.listenerAttached !== '1') {
+    menuAddForm.dataset.listenerAttached = '1';
     menuAddForm.addEventListener('submit', () => {
       sessionStorage.setItem('menuEditorOpen', 'true');
       const modalEl = document.getElementById('addMenuItemModal');
@@ -666,7 +679,8 @@
       if (modal) modal.hide();
     });
   }
-  if (menuEditForm) {
+  if (menuEditForm && menuEditForm.dataset.listenerAttached !== '1') {
+    menuEditForm.dataset.listenerAttached = '1';
     menuEditForm.addEventListener('submit', () => {
       sessionStorage.setItem('menuEditorOpen', 'true');
       if (editModal) editModal.hide();
@@ -687,7 +701,8 @@
   }
 
   // Search filter in the table
-  if (menuSearch) {
+  if (menuSearch && menuSearch.dataset.listenerAttached !== '1') {
+    menuSearch.dataset.listenerAttached = '1';
     menuSearch.addEventListener('input', () => {
       const query = menuSearch.value.trim().toLowerCase();
       document.querySelectorAll('#menuItemsList tr[data-menu-row]').forEach((row) => {
@@ -772,7 +787,8 @@
     }
   }
 
-  if (selectAll) {
+  if (selectAll && selectAll.dataset.listenerAttached !== '1') {
+    selectAll.dataset.listenerAttached = '1';
     selectAll.addEventListener('change', () => {
       document.querySelectorAll('.item-checkbox').forEach(cb => {
         // Only select visible items (if filtered)
@@ -787,7 +803,8 @@
 
   // Delegate listener for checkboxes
   const menuList = document.getElementById('menuItemsList');
-  if (menuList) {
+  if (menuList && menuList.dataset.listenerAttached !== '1') {
+    menuList.dataset.listenerAttached = '1';
     menuList.addEventListener('change', (e) => {
       if (e.target.classList.contains('item-checkbox')) {
         updateBulkUI();
@@ -798,7 +815,8 @@
   }
 
   // Handle Bulk Form Submit
-  if (bulkForm) {
+  if (bulkForm && bulkForm.dataset.listenerAttached !== '1') {
+    bulkForm.dataset.listenerAttached = '1';
     bulkForm.addEventListener('submit', function(e) {
       // Create hidden inputs for selected indices
       // Clear previous hidden inputs first
