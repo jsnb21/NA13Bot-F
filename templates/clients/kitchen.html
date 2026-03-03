@@ -68,10 +68,10 @@ if (!ordersContainer || !emptyState) {
     return;
 }
 
-if (window.ordersScriptInitialized) {
+if (ordersContainer.dataset.initialized === '1') {
     return;
 }
-window.ordersScriptInitialized = true;
+ordersContainer.dataset.initialized = '1';
 
 let currentFilter = 'all';
 let allOrders = [];
@@ -89,12 +89,17 @@ filterButtons.forEach(btn => {
 async function fetchOrders() {
     try {
         const response = await fetch('/api/orders/list');
+        if (!response.ok) {
+            throw new Error(`Failed to load orders (${response.status})`);
+        }
         const data = await response.json();
         if (data.success) {
             allOrders = data.orders;
             renderOrders();
             updateStats();
+            return;
         }
+        console.warn('Orders API did not return success state', data);
     } catch (error) {
         console.error('Failed to fetch orders:', error);
     }
@@ -238,6 +243,7 @@ window.updateOrderStatus = updateOrderStatus;
 
 // Initial load
 fetchOrders();
+setTimeout(fetchOrders, 600);
 
 // Auto-refresh every 3 seconds
 if (window.ordersRefreshInterval) {

@@ -1,13 +1,13 @@
 // Prevent re-initialization with Turbo - chatbot is persistent across pages
 if (window.chatbotScriptInitialized) {
-    throw new Error('Chatbot script already loaded');
-}
-
+    console.debug('Chatbot script already initialized; skipping re-bind.');
+} else {
 // 1. Move config to global scope so all functions can access it
 let chatbotConfig = {};
 
 // Conversation history
 let conversationHistory = [];
+const MAX_HISTORY_MESSAGES = 20;
 
 // Order state management
 let orderState = {
@@ -16,6 +16,13 @@ let orderState = {
     tableNumber: '',
     isCollectingOrder: false
 };
+
+function pushHistory(entry) {
+    conversationHistory.push(entry);
+    if (conversationHistory.length > MAX_HISTORY_MESSAGES) {
+        conversationHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
+    }
+}
 
 function setOrderNumber(value) {
     const badge = document.getElementById('order-number');
@@ -249,17 +256,17 @@ function postOrderForm(orderData) {
     
     const bubble = document.createElement('div');
     bubble.className = 'bubble bot';
-    bubble.style.minWidth = '300px';
+    bubble.classList.add('order-form-bubble');
     bubble.innerHTML = `
-        <div style="margin-bottom: 12px;">
+        <div class="order-summary-block">
             <strong>Order Summary:</strong><br>
             ${orderSummary}<br><br>
             <strong>Total: ${currency}${orderData.total.toFixed(2)}</strong>
         </div>
-        <form id="order-form" style="display: flex; flex-direction: column; gap: 8px;">
-            <input type="text" id="order-name" placeholder="Your name" required style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit;">
-            <input type="text" id="order-table" placeholder="Table number" required style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; font-family: inherit;">
-            <button type="button" id="confirm-order-btn" style="padding: 10px; background: #0b343d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">Confirm & Place Order</button>
+        <form id="order-form" class="order-form-fields">
+            <input type="text" id="order-name" placeholder="Your name" required class="order-form-input">
+            <input type="text" id="order-table" placeholder="Table number" required class="order-form-input">
+            <button type="button" id="confirm-order-btn" class="order-form-confirm">Confirm & Place Order</button>
         </form>
     `;
     
@@ -312,16 +319,14 @@ function postCartSummary(items, total) {
     
     const bubble = document.createElement('div');
     bubble.className = 'bubble bot';
-    bubble.style.minWidth = '250px';
-    bubble.style.padding = '10px 12px';
-    bubble.style.backgroundColor = '#f0f0f0';
+    bubble.classList.add('cart-summary-bubble');
     bubble.innerHTML = `
-        <div style="font-size: 0.95rem;">
-            <strong style="display: block; margin-bottom: 6px;">Current Cart:</strong>
-            <div style="margin-bottom: 8px; font-size: 0.9rem;">
+        <div class="cart-summary-body">
+            <strong class="cart-summary-title">Current Cart:</strong>
+            <div class="cart-summary-items">
                 ${cartItems}
             </div>
-            <strong style="border-top: 1px solid #ddd; padding-top: 6px; display: block;">Total: ${currency}${total.toFixed(2)}</strong>
+            <strong class="cart-summary-total">Total: ${currency}${total.toFixed(2)}</strong>
         </div>
     `;
     
@@ -334,7 +339,7 @@ function postCartSummary(items, total) {
 async function sendToAI(message) {
     try {
         // Add user message to history
-        conversationHistory.push({ role: 'user', content: message });
+        pushHistory({ role: 'user', content: message });
         
         const res = await fetch('/api/chat', {
             method: 'POST',
@@ -348,7 +353,7 @@ async function sendToAI(message) {
         
         // Add bot response to history
         const botResponse = data.response || 'Sorry, I could not process that.';
-        conversationHistory.push({ role: 'assistant', content: botResponse });
+        pushHistory({ role: 'assistant', content: botResponse });
         
         // Check if the response contains an order ready
         if (data.order_ready && data.order_items && data.order_items.length > 0) {
@@ -502,14 +507,6 @@ async function submitOrder() {
     }
 }
 
-function calculateOrderTotal() {
-    return orderState.items.reduce((sum, item) => {
-        const price = parseFloat(item.price) || 0;
-        const qty = item.quantity || 1;
-        return sum + (price * qty);
-    }, 0);
-}
-
 // Fixed the incomplete click listener and removed redundant fetch
 document.querySelectorAll('.quick-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -545,3 +542,4 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
 
 // Mark chatbot as initialized to prevent re-loading
 window.chatbotScriptInitialized = true;
+}

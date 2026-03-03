@@ -169,8 +169,8 @@
               <small style="color: #666;">Pending</small>
             </div>
             <div style="padding: 12px; background: #dbeafe; border-radius: 8px; text-align: center;">
-              <div style="font-size: 2rem; font-weight: 700; color: #0ea5e9;" id="statusConfirmed">-</div>
-              <small style="color: #666;">Confirmed</small>
+              <div style="font-size: 2rem; font-weight: 700; color: #0ea5e9;" id="statusPreparing">-</div>
+              <small style="color: #666;">Preparing</small>
             </div>
             <div style="padding: 12px; background: #dcfce7; border-radius: 8px; text-align: center;">
               <div style="font-size: 2rem; font-weight: 700; color: #16a34a;" id="statusCompleted">-</div>
@@ -215,8 +215,8 @@ function formatTime(dateString) {
 function getStatusBadge(status) {
     const badges = {
         'pending': '<span class="badge bg-warning text-dark">Pending</span>',
-        'confirmed': '<span class="badge bg-info">Confirmed</span>',
-        'in_progress': '<span class="badge" style="background: var(--secondary);">In Progress</span>',
+        'preparing': '<span class="badge bg-info">Preparing</span>',
+        'ready': '<span class="badge" style="background: var(--secondary);">Ready</span>',
         'completed': '<span class="badge bg-success">Completed</span>',
         'cancelled': '<span class="badge bg-danger">Cancelled</span>'
     };
@@ -338,7 +338,7 @@ function showInsights(orders) {
     // Status breakdown
     const statusCount = {
         pending: orders.filter(o => o.status === 'pending').length,
-        confirmed: orders.filter(o => o.status === 'confirmed').length,
+        preparing: orders.filter(o => o.status === 'preparing').length,
         completed: orders.filter(o => o.status === 'completed').length,
         cancelled: orders.filter(o => o.status === 'cancelled').length
     };
@@ -349,7 +349,7 @@ function showInsights(orders) {
     document.getElementById('insightsAOV').textContent = formatCurrency(aov);
     document.getElementById('insightsBestItem').textContent = bestItem[0];
     document.getElementById('statusPending').textContent = statusCount.pending;
-    document.getElementById('statusConfirmed').textContent = statusCount.confirmed;
+    document.getElementById('statusPreparing').textContent = statusCount.preparing;
     document.getElementById('statusCompleted').textContent = statusCount.completed;
     document.getElementById('statusCancelled').textContent = statusCount.cancelled;
     

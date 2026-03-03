@@ -88,12 +88,16 @@ Dependencies:
 
 import json
 import re
+import logging
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
 from datetime import datetime, timezone
 
 from werkzeug.security import generate_password_hash, check_password_hash
+
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_email(email: str) -> str:
@@ -125,7 +129,7 @@ def save_global_system_prompt(prompt: str):
         config_path.write_text(json.dumps(data, indent=2))
         return True
     except Exception as e:
-        print(f"Error saving global system prompt: {e}")
+        logger.exception("Error saving global system prompt")
         return False
 
 def load_config(restaurant_id: str = None):
@@ -567,7 +571,21 @@ def save_order(restaurant_id: str, order_data: dict, order_number: int = None):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
-                next_number = order_number if order_number else get_next_order_number(restaurant_id)
+                if order_number:
+                    next_number = int(order_number)
+                else:
+                    cur.execute(
+                        sql.SQL("LOCK TABLE {}.orders IN EXCLUSIVE MODE").format(sql.Identifier(schema))
+                    )
+                    cur.execute(
+                        sql.SQL(
+                            "SELECT COALESCE(MAX(order_number), 0) + 1 FROM {}.orders WHERE restaurant_id = %s"
+                        ).format(sql.Identifier(schema)),
+                        [restaurant_id]
+                    )
+                    row = cur.fetchone()
+                    next_number = int(row[0]) if row and row[0] else 1
+
                 cur.execute(
                     sql.SQL(
                         """INSERT INTO {}.orders (restaurant_id, order_number, customer_name, table_number, 
@@ -591,7 +609,7 @@ def save_order(restaurant_id: str, order_data: dict, order_number: int = None):
                     'order_number': next_number
                 }
     except Exception as e:
-        print(f"Error saving order: {e}")
+        logger.exception("Error saving order")
         return None
 
 
@@ -690,7 +708,7 @@ def get_order_by_customer(restaurant_id: str, customer_name: str = None, order_n
                     'created_at': row[7].isoformat() if row[7] else None
                 }
     except Exception as e:
-        print(f"Error fetching order: {e}")
+        logger.exception("Error fetching order")
         return None
 
 
@@ -736,7 +754,7 @@ def get_all_restaurants():
                     for row in rows
                 ]
     except Exception as e:
-        print(f"Error fetching restaurants: {e}")
+        logger.exception("Error fetching restaurants")
         return []
 
 
@@ -781,7 +799,7 @@ def get_platform_stats():
                     'active_restaurants': int(active_restaurants)
                 }
     except Exception as e:
-        print(f"Error fetching platform stats: {e}")
+        logger.exception("Error fetching platform stats")
         return {
             'total_restaurants': 0,
             'total_orders': 0,
