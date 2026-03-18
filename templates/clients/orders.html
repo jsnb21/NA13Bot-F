@@ -23,8 +23,8 @@
             <select class="form-select" id="statusFilter" style="max-width:150px; display:inline-block;" onchange="filterOrders()">
                 <option value="">All Status</option>
                 <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="in_progress">In Progress</option>
+                <option value="preparing">Preparing</option>
+                <option value="ready">Ready</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
             </select>
@@ -89,8 +89,8 @@ function viewOrder(orderId) {
     
     const statusBadge = {
         'pending': '<span class="badge bg-warning text-dark">Pending</span>',
-        'confirmed': '<span class="badge bg-info">Confirmed</span>',
-        'in_progress': '<span class="badge" style="background-color: #f59e0b; color: white;">In Progress</span>',
+        'preparing': '<span class="badge bg-info">Preparing</span>',
+        'ready': '<span class="badge" style="background-color: #f59e0b; color: white;">Ready</span>',
         'completed': '<span class="badge bg-success">Completed</span>',
         'cancelled': '<span class="badge bg-danger">Cancelled</span>'
     }[order.status] || '<span class="badge bg-secondary">' + order.status + '</span>';
@@ -146,8 +146,8 @@ async function updateOrderStatus(orderId) {
     
     const statusOptions = [
         { value: 'pending', label: 'Pending', color: 'bg-warning text-dark' },
-        { value: 'confirmed', label: 'Confirmed', color: 'bg-info' },
-        { value: 'in_progress', label: 'In Progress', color: 'bg-primary' },
+        { value: 'preparing', label: 'Preparing', color: 'bg-info' },
+        { value: 'ready', label: 'Ready', color: 'bg-primary' },
         { value: 'completed', label: 'Completed', color: 'bg-success' },
         { value: 'cancelled', label: 'Cancelled', color: 'bg-danger' }
     ];
@@ -337,8 +337,8 @@ function displayOrders(orders) {
         
         const statusBadge = {
             'pending': '<span class="badge bg-warning text-dark">Pending</span>',
-            'confirmed': '<span class="badge bg-info">Confirmed</span>',
-            'in_progress': '<span class="badge" style="background-color: #f59e0b; color: white;">In Progress</span>',
+            'preparing': '<span class="badge bg-info">Preparing</span>',
+            'ready': '<span class="badge" style="background-color: #f59e0b; color: white;">Ready</span>',
             'completed': '<span class="badge bg-success">Completed</span>',
             'cancelled': '<span class="badge bg-danger">Cancelled</span>'
         }[order.status] || '<span class="badge bg-secondary">' + order.status + '</span>';

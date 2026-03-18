@@ -104,7 +104,16 @@ import uuid
 import hashlib
 from datetime import datetime, timezone, timedelta
 from chatbot.routes import chatbot_bp
-from chatbot.training import build_training_context
+from chatbot.training import (
+    build_training_context,
+    get_training_dir as training_get_dir,
+    get_training_manifest_path as training_get_manifest_path,
+    get_training_history_path as training_get_history_path,
+    load_training_manifest as training_load_manifest,
+    save_training_manifest as training_save_manifest,
+    load_training_history as training_load_history,
+    save_training_history as training_save_history,
+)
 import google.genai as genai
 import base64
 import psycopg
@@ -136,8 +145,6 @@ def regex_findall_filter(text, pattern):
     return re.findall(pattern, str(text))
 
 app.register_blueprint(chatbot_bp)
-TRAINING_DIR = Path(__file__).parent / 'training_data'
-TRAINING_DIR.mkdir(parents=True, exist_ok=True)
 from functools import wraps
 from flask import flash
 
@@ -239,48 +246,31 @@ def _migrate_static_brand_image(restaurant_id: str, image_kind: str, image_url: 
 
 
 def get_training_dir(restaurant_id: str):
-    safe_id = str(restaurant_id) if restaurant_id else 'default'
-    path = TRAINING_DIR / safe_id
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    return training_get_dir(restaurant_id)
 
 
 def get_training_manifest_path(restaurant_id: str):
-    return get_training_dir(restaurant_id) / 'manifest.json'
+    return training_get_manifest_path(restaurant_id)
 
 
 def get_training_history_path(restaurant_id: str):
-    return get_training_dir(restaurant_id) / 'history.json'
+    return training_get_history_path(restaurant_id)
 
 
 def load_training_manifest(restaurant_id: str):
-    manifest_path = get_training_manifest_path(restaurant_id)
-    if manifest_path.exists():
-        try:
-            return json.loads(manifest_path.read_text())
-        except Exception:
-            return []
-    return []
+    return training_load_manifest(restaurant_id)
 
 
 def save_training_manifest(restaurant_id: str, entries):
-    manifest_path = get_training_manifest_path(restaurant_id)
-    manifest_path.write_text(json.dumps(entries, indent=2, default=str))
+    training_save_manifest(restaurant_id, entries)
 
 
 def load_training_history(restaurant_id: str):
-    history_path = get_training_history_path(restaurant_id)
-    if history_path.exists():
-        try:
-            return json.loads(history_path.read_text())
-        except Exception:
-            return []
-    return []
+    return training_load_history(restaurant_id)
 
 
 def save_training_history(restaurant_id: str, entries):
-    history_path = get_training_history_path(restaurant_id)
-    history_path.write_text(json.dumps(entries, indent=2, default=str))
+    training_save_history(restaurant_id, entries)
 
 
 def add_training_history_entry(restaurant_id: str, entry: dict, max_entries: int = 200):
@@ -886,24 +876,6 @@ def chatbot_route():
     cfg = load_config(restaurant_id)
     return render_template('clients/chatbot.html', cfg=cfg)
 
-@app.route('/api/models', methods=['GET'])
-def api_models():
-    """List available Gemini models."""
-    api_key = get_google_api_key()
-    if not api_key:
-        return jsonify({'error': 'No API key configured'}), 400
-    try:
-        client = genai.Client(api_key=api_key)
-        models = client.models.list()
-        model_list = []
-        for m in models:
-            methods = getattr(m, 'supported_generation_methods', None)
-            if not methods or 'generateContent' in methods:
-                model_list.append(m.name)
-        return jsonify({'models': model_list})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/chat', methods=['POST'])
 @login_required
 def admin_chat():
@@ -966,84 +938,6 @@ Respond in a friendly, helpful manner. Keep responses concise and focused on hel
     except Exception as e:
         return jsonify({'reply': f'Sorry, I encountered an error: {str(e)}'}), 500
 
-
-@app.route('/api/chat', methods=['POST'])
-def api_chat():
-    """Handle chat messages and return AI responses."""
-    data = request.get_json()
-    user_message = data.get('message', '')
-    
-    if not user_message:
-        return jsonify({'error': 'No message provided'}), 400
-    
-    # Get fresh API key in case it was just configured
-    api_key = get_google_api_key()
-    if not api_key:
-        return jsonify({'response': 'AI is not configured. Please add your Google API key in the settings.'}), 200
-    
-    client = genai.Client(api_key=api_key)
-    
-    try:
-        # Load config to get restaurant context
-        restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
-        cfg = load_config(restaurant_id)
-        establishment_name = cfg.get('establishment_name', 'our restaurant')
-        menu_text = cfg.get('menu_text', '')
-        menu_items = cfg.get('menu_items', [])
-        currency_symbol = cfg.get('currency_symbol', '₱')
-        if menu_items:
-            lines = []
-            for item in menu_items:
-                name = item.get('name', '').strip()
-                desc = item.get('description', '').strip()
-                price = item.get('price', '').strip()
-                if not name:
-                    continue
-                line = name
-                if desc:
-                    line += f" — {desc}"
-                if price:
-                    line += f" ({currency_symbol}{price})"
-                lines.append(line)
-            menu_text = "\n".join(lines) if lines else menu_text
-        if not menu_text:
-            menu_text = 'No menu available'
-        
-        training_context = build_training_context(restaurant_id, user_message)
-
-        # Create context-aware prompt
-        system_prompt = f"""You are a helpful AI assistant for {establishment_name}, a restaurant chatbot.
-You help customers with:
-- Taking orders
-- Answering questions about the menu
-- Providing information about the restaurant
-
-Menu:
-{menu_text}
-
-    Training data (reference only):
-    {training_context}
-
-Respond in a friendly, helpful manner. Keep responses concise and focused on helping the customer."""
-        
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[
-                {"role": "user", "parts": [{"text": user_message}]}
-            ],
-            config=genai.types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.7,
-                max_output_tokens=500,
-                top_p=0.9,
-                top_k=40
-            )
-        )
-        
-        return jsonify({'response': response.text})
-    
-    except Exception as e:
-        return jsonify({'response': f'Sorry, I encountered an error: {str(e)}'}), 500
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -1111,7 +1005,7 @@ def api_save_global_system_prompt():
     return jsonify({'success': success})
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/admin-client', methods=['GET', 'POST'])
 @login_required
 def admin_client():
     if request.method == 'POST':
@@ -1647,77 +1541,6 @@ def brand_get_image(image_kind, restaurant_id):
     except Exception:
         app.logger.exception('Failed to fetch brand image')
         return jsonify({'error': 'Failed to fetch image'}), 500
-
-# Order Management Routes
-from tools import save_order, get_orders, update_order_status
-
-@app.route('/api/orders/create', methods=['POST'])
-def api_create_order():
-    """Create a new order from chatbot or client."""
-    try:
-        data = request.get_json()
-        restaurant_id = request.args.get('restaurant_id') or session.get('restaurant_id')
-        
-        if not restaurant_id:
-            return jsonify({'error': 'No restaurant ID provided'}), 400
-        
-        order_data = {
-            'customer_name': data.get('customer_name', ''),
-            'customer_email': data.get('customer_email', ''),
-            'items': data.get('items', []),
-            'total_amount': data.get('total_amount', 0),
-            'status': 'pending'
-        }
-        
-        saved = save_order(restaurant_id, order_data)
-        if not saved:
-            return jsonify({'error': 'Failed to save order'}), 500
-
-        order_id = saved.get('id')
-        order_number = saved.get('order_number')
-        
-        return jsonify({
-            'success': True,
-            'order_id': order_id,
-            'order_number': order_number,
-            'message': f'Order #{order_id} placed successfully!'
-        }), 201
-    except Exception as e:
-        app.logger.exception('Order creation failed')
-        return jsonify({'error': 'Failed to create order', 'detail': str(e)}), 500
-
-
-@app.route('/api/orders/list', methods=['GET'])
-@login_required
-def api_list_orders():
-    """List all orders for a restaurant."""
-    try:
-        restaurant_id = get_current_restaurant_id()
-        orders = get_orders(restaurant_id)
-        return jsonify({'orders': orders})
-    except Exception as e:
-        app.logger.exception('Listing orders failed')
-        return jsonify({'error': 'Failed to list orders', 'detail': str(e)}), 500
-
-
-@app.route('/api/orders/<order_id>/status', methods=['POST'])
-@login_required
-def api_update_order_status(order_id):
-    """Update order status."""
-    try:
-        data = request.get_json()
-        new_status = data.get('status', '').strip().lower()
-        
-        if new_status not in ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']:
-            return jsonify({'error': 'Invalid status'}), 400
-        
-        if update_order_status(order_id, new_status):
-            return jsonify({'success': True, 'message': f'Order status updated to {new_status}'})
-        else:
-            return jsonify({'error': 'Failed to update order status'}), 500
-    except Exception as e:
-        app.logger.exception('Order status update failed')
-        return jsonify({'error': 'Failed to update order status', 'detail': str(e)}), 500
 
 @app.route('/customers')
 @login_required

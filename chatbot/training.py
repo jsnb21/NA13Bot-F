@@ -84,6 +84,10 @@ def get_training_manifest_path(restaurant_id: str):
     return get_training_dir(restaurant_id) / 'manifest.json'
 
 
+def get_training_history_path(restaurant_id: str):
+    return get_training_dir(restaurant_id) / 'history.json'
+
+
 def load_training_manifest(restaurant_id: str):
     manifest_path = get_training_manifest_path(restaurant_id)
     if manifest_path.exists():
@@ -92,6 +96,26 @@ def load_training_manifest(restaurant_id: str):
         except Exception:
             return []
     return []
+
+
+def save_training_manifest(restaurant_id: str, entries):
+    manifest_path = get_training_manifest_path(restaurant_id)
+    manifest_path.write_text(json.dumps(entries, indent=2, default=str))
+
+
+def load_training_history(restaurant_id: str):
+    history_path = get_training_history_path(restaurant_id)
+    if history_path.exists():
+        try:
+            return json.loads(history_path.read_text())
+        except Exception:
+            return []
+    return []
+
+
+def save_training_history(restaurant_id: str, entries):
+    history_path = get_training_history_path(restaurant_id)
+    history_path.write_text(json.dumps(entries, indent=2, default=str))
 
 
 def _read_text_file(path: Path):

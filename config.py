@@ -77,6 +77,7 @@ Extensions:
 
 import os
 import json
+import logging
 import psycopg
 from psycopg import sql
 from pathlib import Path
@@ -85,6 +86,9 @@ try:
     from dotenv import load_dotenv
 except Exception:
     load_dotenv = None
+
+
+logger = logging.getLogger(__name__)
 
 def _load_config_json():
     """Load database config from config.json if it exists."""
@@ -209,7 +213,7 @@ def init_db():
             )
             duplicates = cur.fetchall()
             if duplicates:
-                print("Warning: duplicate emails differ only by case:", duplicates)
+                logger.warning("Duplicate emails differ only by case: %s", duplicates)
 
             cur.execute(
                 sql.SQL(
@@ -415,7 +419,7 @@ def init_db():
             # Log current database and schema for troubleshooting.
             cur.execute("SELECT current_database(), current_schema();")
             db_name, current_schema = cur.fetchone() or (None, None)
-            print(f"DB context: database={db_name}, schema={current_schema}")
+            logger.info("DB context: database=%s, schema=%s", db_name, current_schema)
             
     
 def get_google_api_key():
