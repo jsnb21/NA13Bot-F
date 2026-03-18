@@ -55,7 +55,7 @@
             </div>
         </div>
 
-        <div class="row g-3 mb-3">
+        <div class="row g-3 mb-0">
             <div class="col-md-3 col-6">
                 <div class="stat-card">
                     <div class="stat-value">{{ menu_items|length }}</div>
@@ -69,47 +69,13 @@
                 </div>
             </div>
         </div>
-
-        <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Category</th>
-                        <th>Price</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in menu_items[:12] %}
-                    <tr>
-                        <td>{{ item.get('name', '') }}</td>
-                        <td>{{ item.get('category', 'Uncategorized') }}</td>
-                        <td>
-                            {% set symbol = cfg.get('currency_symbol', '₱') %}
-                            {% if symbol == 'None' or symbol == '' %}{% set symbol = '₱' %}{% endif %}
-                            {{ symbol }}{{ item.get('price', '') }}
-                        </td>
-                        <td>{{ item.get('status', 'Live') }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" class="text-muted text-center py-3">No menu items yet. Upload a menu file to get started.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% if menu_items|length > 12 %}
-        <p class="text-muted small mt-2 mb-0">Showing first 12 of {{ menu_items|length }} items.</p>
-        {% endif %}
     </div>
 
     <div class="row mb-4">
         <div class="col-md-8">
             <div class="card-surface mb-4">
                 <h5 class="mb-4">Upload Training Files</h5>
-                
+
                 <div class="templates-section mb-4">
                     <h6 class="mb-3">Start with a Template</h6>
                     <div class="d-flex gap-2 flex-wrap">
@@ -121,7 +87,7 @@
                         Includes menu, FAQ, and business hours sections - fill in your details and upload
                     </p>
                 </div>
-                
+
                 <div class="upload-section" id="uploadZone">
                     <div class="upload-icon">📁</div>
                     <h5>Drag & Drop Files Here</h5>
@@ -136,7 +102,7 @@
                 <div id="uploadProgress" style="display:none; margin-top:20px;">
                     <div id="uploadQueue"></div>
                 </div>
-                
+
                 <div id="validationMessages" style="margin-top:15px;"></div>
             </div>
 
@@ -144,14 +110,14 @@
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h5 class="mb-0">Uploaded Training Files</h5>
                     <div id="bulkActions" class="bulk-actions" style="display:none;">
-                        <input type="checkbox" id="selectAll" class="me-2"> 
+                        <input type="checkbox" id="selectAll" class="me-2">
                         <span class="text-muted me-3"><span id="selectedCount">0</span> selected</span>
                         <button class="btn btn-sm btn-danger" id="deleteSelectedBtn">
                             <i class="fa fa-trash"></i> Delete Selected
                         </button>
                     </div>
                 </div>
-                
+
                 <div id="filesList"></div>
 
                 <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
@@ -197,40 +163,53 @@
     </div>
 
     <div class="card-surface mb-4">
-        <h5 class="mb-3">Example Training File Formats</h5>
-        
+        <h5 class="mb-3">Simple Training File Example (TXT)</h5>
+        <p class="text-muted mb-3">Use plain text like this in a .txt, .docx, or .pdf file. No coding format needed.</p>
+
         <div class="row">
-            <div class="col-md-6">
-                <h6>JSON Format (Recommended)</h6>
-                <div class="code-example">{
-  "restaurant": {
-    "name": "Resto",
-    "menu": [
-      {
-        "item": "Margherita Pizza",
-        "price": "$12.99",
-        "description": "Fresh tomato and basil"
-      }
-    ]
-  }
-}</div>
+            <div class="col-md-4">
+                <h6>1. Restaurant Details</h6>
+                <div class="training-example-card">
+                    <p><strong>Restaurant Name:</strong> Scott's Restaurant</p>
+                    <p><strong>Address:</strong> 123 Main St, Quezon City</p>
+                    <p><strong>Contact Number:</strong> +63 912 345 6789</p>
+                    <p><strong>Opening Hours:</strong> 10:00 AM to 10:00 PM (Daily)</p>
+                    <p><strong>Delivery Areas:</strong> Quezon City, San Juan</p>
+                    <p class="mb-0"><strong>Special Notes:</strong> We accept dine-in, takeout, and delivery.</p>
+                </div>
             </div>
-            <div class="col-md-6">
-                <h6>Q&A Format (TXT)</h6>
-                <div class="code-example">Q: What are your hours?
-A: We're open 10am-10pm daily
-
-Q: Do you deliver?
-A: Yes, delivery available within 5 miles
-
-Q: Any vegetarian options?
-A: Yes, check our full menu for marked items</div>
+            <div class="col-md-4">
+                <h6>2. Menu Items</h6>
+                <div class="training-example-card">
+                    <p class="mb-2"><strong>Category:</strong> Main Course</p>
+                    <p><strong>Item:</strong> Beef Tapa</p>
+                    <p><strong>Price:</strong> 180</p>
+                    <p><strong>Description:</strong> Marinated beef strips served with garlic rice and egg.</p>
+                    <hr>
+                    <p class="mb-2"><strong>Category:</strong> Drinks/Beverages</p>
+                    <p><strong>Item:</strong> Iced Latte</p>
+                    <p><strong>Price:</strong> 150</p>
+                    <p class="mb-0"><strong>Description:</strong> Fresh espresso with milk and ice.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6>3. Customer Q&amp;A</h6>
+                <div class="training-example-card">
+                    <p><strong>Q:</strong> What time do you open?</p>
+                    <p><strong>A:</strong> We open daily at 10:00 AM.</p>
+                    <hr>
+                    <p><strong>Q:</strong> Do you offer delivery?</p>
+                    <p><strong>A:</strong> Yes, we deliver within selected nearby areas.</p>
+                    <hr>
+                    <p><strong>Q:</strong> What are your bestsellers?</p>
+                    <p class="mb-0"><strong>A:</strong> Our bestsellers are Beef Tapa and Iced Latte.</p>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="card-surface">
-        <h5 class="mb-3">Training Status & History</h5>
+        <h5 class="mb-3">Training Status &amp; History</h5>
         <table class="table mb-0">
             <thead style="background:#f8f9fa;">
                 <tr>
@@ -253,6 +232,14 @@ A: Yes, check our full menu for marked items</div>
         </div>
         <div id="previewMeta" class="preview-meta"></div>
         <pre id="previewBody" class="preview-body"></pre>
+    </div>
+</div>
+
+<div id="aiReadModal" class="ai-read-modal" aria-hidden="true">
+    <div class="ai-read-modal__content" role="dialog" aria-modal="true" aria-labelledby="aiReadTitle">
+        <div class="ai-read-spinner" aria-hidden="true"></div>
+        <h5 id="aiReadTitle" class="mb-2">AI Is Processing Your Upload</h5>
+        <p id="aiReadStatus" class="mb-0 text-muted">Reading your file and extracting menu content. Please wait...</p>
     </div>
 </div>
 

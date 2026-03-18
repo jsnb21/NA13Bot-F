@@ -979,6 +979,23 @@ const menuUploadInput = document.getElementById('menuUploadAiTraining');
 const menuPhotoTrigger = document.getElementById('menuPhotoTriggerAiTraining');
 const menuPhotoInput = document.getElementById('menuPhotoUploadAiTraining');
 const clearMenuBtn = document.getElementById('clearMenuBtnAiTraining');
+const aiReadModal = document.getElementById('aiReadModal');
+const aiReadStatus = document.getElementById('aiReadStatus');
+
+function showAiReadModal(message) {
+    if (!aiReadModal) return;
+    if (aiReadStatus && message) {
+        aiReadStatus.textContent = message;
+    }
+    aiReadModal.classList.add('open');
+    aiReadModal.setAttribute('aria-hidden', 'false');
+}
+
+function hideAiReadModal() {
+    if (!aiReadModal) return;
+    aiReadModal.classList.remove('open');
+    aiReadModal.setAttribute('aria-hidden', 'true');
+}
 
 if (menuUploadTrigger && menuUploadInput) {
     menuUploadTrigger.addEventListener('click', () => menuUploadInput.click());
@@ -990,6 +1007,7 @@ if (menuUploadTrigger && menuUploadInput) {
         const file = menuUploadInput.files[0];
         const formData = new FormData();
         formData.append('menu_file', file, file.name);
+        showAiReadModal(`Reading ${file.name} with AI. This may take a moment...`);
 
         try {
             const res = await fetch('/menu/upload', {
@@ -1006,6 +1024,7 @@ if (menuUploadTrigger && menuUploadInput) {
         } catch (err) {
             showToast('error', err.message || 'Menu upload failed');
         } finally {
+            hideAiReadModal();
             menuUploadInput.value = '';
         }
     });
@@ -1022,6 +1041,8 @@ if (menuPhotoTrigger && menuPhotoInput) {
         Array.from(menuPhotoInput.files).forEach((file) => {
             formData.append('menu_photos', file, file.name);
         });
+        const count = menuPhotoInput.files.length;
+        showAiReadModal(`Processing ${count} image file${count > 1 ? 's' : ''}. Please wait...`);
 
         try {
             const res = await fetch('/menu/photos/upload', {
@@ -1038,6 +1059,7 @@ if (menuPhotoTrigger && menuPhotoInput) {
         } catch (err) {
             showToast('error', err.message || 'Photo upload failed');
         } finally {
+            hideAiReadModal();
             menuPhotoInput.value = '';
         }
     });

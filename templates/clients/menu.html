@@ -58,7 +58,7 @@
           <p class="text-secondary small mb-0">Update items or add new ones.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <button type="button" class="btn btn-sm btn-outline-dark" id="autoCategorizeBtn" {% if unc.count == 0 %}disabled{% endif %}>
+          <button type="button" class="btn btn-sm btn-dark text-nowrap" style="background: var(--brand-dark);" id="autoCategorizeBtn" {% if unc.count == 0 %}disabled{% endif %}>
             <i class="fas fa-wand-magic-sparkles me-1"></i>Auto-Categorize ({{ unc.count }})
           </button>
           <input type="text" class="form-control form-control-sm" id="menuSearch" placeholder="Search items..." aria-label="Search menu items">
@@ -69,42 +69,6 @@
       <button type="button" class="btn btn-dark mb-3" style="background: var(--brand-dark);" data-bs-toggle="modal" data-bs-target="#addMenuItemModal">
         <i class="fas fa-plus me-2"></i>Add Item
       </button>
-
-      <form method="POST" action="/menu/add" class="row g-2 align-items-end mb-3 p-3 border rounded-3 bg-light-subtle" id="menuQuickInlineForm">
-        <div class="col-lg-4 col-md-6">
-          <label class="form-label fw-semibold small text-secondary mb-1">Name</label>
-          <input type="text" name="name" class="form-control" placeholder="e.g. Beef Tapa" required>
-        </div>
-        <div class="col-lg-3 col-md-6">
-          <label class="form-label fw-semibold small text-secondary mb-1">Price ({{ cfg.get('currency_code','PHP') }})</label>
-          <input type="text" name="price" class="form-control" placeholder="0.00">
-        </div>
-        <div class="col-lg-3 col-md-6">
-          <label class="form-label fw-semibold small text-secondary mb-1">Category</label>
-          <select name="category" class="form-select">
-            <option value="">Auto Detect</option>
-            {% for cat in ns.menu_categories %}
-            <option value="{{ cat }}">{{ cat }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-lg-2 col-md-6">
-          <label class="form-label fw-semibold small text-secondary mb-1">Status</label>
-          <select name="status" class="form-select">
-            <option value="Live" selected>Live</option>
-            <option value="Draft">Draft</option>
-          </select>
-        </div>
-        <div class="col-12">
-          <label class="form-label fw-semibold small text-secondary mb-1">Description (optional)</label>
-          <input type="text" name="description" class="form-control" placeholder="Short description for quicker entry">
-        </div>
-        <div class="col-12 d-flex justify-content-end">
-          <button type="submit" class="btn btn-dark" style="background: var(--brand-dark);">
-            <i class="fas fa-plus me-2"></i>Quick Add Item
-          </button>
-        </div>
-      </form>
 
       <!-- Add Item Modal -->
       <div class="modal fade" id="addMenuItemModal" tabindex="-1" aria-hidden="true">
@@ -550,7 +514,6 @@
   // Forms
   const menuAddForm = document.getElementById('menuAddForm');
   const menuEditForm = document.getElementById('menuEditForm');
-  const menuQuickInlineForm = document.getElementById('menuQuickInlineForm');
 
 
   // Edit Modal Fields
@@ -629,11 +592,6 @@
     });
   }
 
-  if (menuQuickInlineForm) {
-    menuQuickInlineForm.addEventListener('submit', () => {
-      sessionStorage.setItem('menuEditorOpen', 'true');
-    });
-  }
   if (menuAddForm) {
     menuAddForm.addEventListener('submit', () => {
       sessionStorage.setItem('menuEditorOpen', 'true');
