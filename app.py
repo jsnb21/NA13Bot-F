@@ -872,7 +872,10 @@ def index():
 @app.route('/chatbot')
 def chatbot_route():
     # explicit route for /chatbot for convenience
-    restaurant_id = session.get('restaurant_id')
+    requested_restaurant_id = request.args.get('restaurant_id')
+    if requested_restaurant_id:
+        session['restaurant_id'] = requested_restaurant_id
+    restaurant_id = requested_restaurant_id or get_current_restaurant_id()
     cfg = load_config(restaurant_id)
     return render_template('clients/chatbot.html', cfg=cfg)
 

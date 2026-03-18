@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Chatbot — Resto</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css')}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbot.css')}}?v=9">
     {% if cfg.get('main_color') or cfg.get('sub_color') %}
     <style>
       :root {
@@ -16,53 +16,82 @@
     {% endif %}
   </head>
   <body>
-    <div class="chat-shell">
-      <div class="phone" id="phone">
-        <div class="header" id="resto-name">
+    <div class="phone" id="phone">
+      <div class="header" id="resto-name">
+        <div class="header-brand">
           {% if cfg.get('logo_url') %}
-            <img src="{{ cfg.get('logo_url') }}" alt="Resto logo" style="height:24px;width:auto;margin-right:8px;vertical-align:middle;">
+            <img src="{{ cfg.get('logo_url') }}" alt="Resto logo" class="header-logo">
           {% else %}
-            <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Resto logo" style="height:24px;width:auto;margin-right:8px;vertical-align:middle;">
+            <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Resto logo" class="header-logo">
           {% endif %}
-          <span id="resto-name-text">Resto Name - A.I Chatbot</span>
-          <span class="order-badge" id="order-number">Order #--</span>
+          <span id="resto-name-text">Resto Name</span>
         </div>
-        <div class="messages" id="messages">
-          <div class="message-row bot">
-            {% if cfg.get('chatbot_avatar') %}
-              <img src="{{ cfg.get('chatbot_avatar') }}" alt="Bot" class="avatar">
-            {% else %}
-              <img src="{{ url_for('static', filename='img/bot-avatar.svg') }}" alt="Bot" class="avatar">
-            {% endif %}
-            <div class="bubble bot">Welcome! How can I help?</div>
+        <div class="header-actions">
+          <span class="order-badge" id="order-number">Order #--</span>
+          <button type="button" id="menu-filter-toggle" class="menu-filter-toggle-btn" aria-controls="kiosk-filter-drawer" aria-expanded="false" aria-label="Open menu filters">☰</button>
+        </div>
+      </div>
+      <div class="customer-layout">
+        <section class="kiosk-priority" aria-label="Mini kiosk ordering section">
+          <div id="kiosk-panel" class="kiosk-panel"></div>
+        </section>
+
+        <div id="kiosk-filter-backdrop" class="kiosk-filter-backdrop is-closed" aria-hidden="true"></div>
+        <aside id="kiosk-filter-drawer" class="kiosk-filter-drawer is-closed" aria-label="Menu filters" aria-hidden="true">
+          <div class="kiosk-filter-head">
+            <strong>Filter Menu</strong>
+            <button type="button" id="kiosk-filter-close" class="kiosk-filter-close-btn" aria-label="Close menu filters">✕</button>
           </div>
-          
-          <div class="typing-indicator" id="typing-indicator" style="display:none;">
-            <div class="bubble bot">
-              <div class="typing-dots">
-                <span></span>
-                <span></span>
-                <span></span>
+          <div id="kiosk-filter-list" class="kiosk-filter-list"></div>
+        </aside>
+
+        <section id="assistant-panel" class="assistant-panel assistant-popup is-closed" aria-label="Chat assistant section" aria-hidden="true">
+          <div class="assistant-header">
+            <span>Assistant Chat</span>
+            <button type="button" id="assistant-close" class="assistant-close-btn" aria-label="Close assistant">✕</button>
+          </div>
+
+          <div class="messages" id="messages">
+            <div class="message-row bot">
+              {% if cfg.get('chatbot_avatar') %}
+                <img src="{{ cfg.get('chatbot_avatar') }}" alt="Bot" class="avatar">
+              {% else %}
+                <img src="{{ url_for('static', filename='img/bot-avatar.svg') }}" alt="Bot" class="avatar">
+              {% endif %}
+              <div class="bubble bot">Hi! I can assist while you order from the kiosk above.</div>
+            </div>
+
+            <div class="typing-indicator" id="typing-indicator" style="display:none;">
+              <div class="bubble bot">
+                <div class="typing-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="quick-actions d-flex gap-2 p-2" style="padding:12px;">
-          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="menu">View Menu</button>
-          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="order">Place Order</button>
-          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="hours">Opening Hours</button>
-          <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="support">Contact Support</button>
-        </div>
 
-        <div class="composer">
-          <input id="txt" placeholder="Type message...">
-          <button id="send">➤</button>
-        </div>
+          <div class="quick-actions d-flex gap-2 p-2" style="padding:12px;">
+            <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="menu">Go To Kiosk</button>
+            <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="order">Place Order</button>
+            <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="hours">Opening Hours</button>
+            <button class="btn btn-sm btn-outline-secondary quick-btn" data-action="support">Contact Support</button>
+          </div>
+
+          <div class="composer">
+            <input id="txt" placeholder="Ask the assistant...">
+            <button id="send">➤</button>
+          </div>
+        </section>
+
+        <button type="button" id="assistant-toggle" class="assistant-toggle-btn" aria-controls="assistant-panel" aria-expanded="false">
+          <span class="assistant-toggle-label">Chat</span>
+          <span id="assistant-unread" class="assistant-unread-dot" style="display:none;">0</span>
+        </button>
       </div>
-
-      <!-- desktop preview removed per request -->
     </div>
 
-    <script src="{{ url_for('static', filename='js/chatbot.js') }}?v=4"></script>
+    <script src="{{ url_for('static', filename='js/chatbot.js') }}?v=11"></script>
   </body>
 </html>

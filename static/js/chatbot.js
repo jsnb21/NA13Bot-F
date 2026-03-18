@@ -1,13 +1,10 @@
-// Prevent re-initialization with Turbo - chatbot is persistent across pages
-if (window.chatbotScriptInitialized) {
-    console.debug('Chatbot script already initialized; skipping re-bind.');
-} else {
 // 1. Move config to global scope so all functions can access it
 let chatbotConfig = {};
 
 // Conversation history
 let conversationHistory = [];
 const MAX_HISTORY_MESSAGES = 20;
+const MENU_INTENT_REGEX = /\b(menu|show\s+menu|view\s+menu|full\s+menu|what.*menu)\b/i;
 
 // Order state management
 let orderState = {
@@ -16,6 +13,19 @@ let orderState = {
     tableNumber: '',
     isCollectingOrder: false
 };
+
+const assistantPanel = document.getElementById('assistant-panel');
+const assistantToggleButton = document.getElementById('assistant-toggle');
+const assistantCloseButton = document.getElementById('assistant-close');
+const assistantUnreadBadge = document.getElementById('assistant-unread');
+const menuFilterToggleButton = document.getElementById('menu-filter-toggle');
+const kioskFilterDrawer = document.getElementById('kiosk-filter-drawer');
+const kioskFilterBackdrop = document.getElementById('kiosk-filter-backdrop');
+const kioskFilterCloseButton = document.getElementById('kiosk-filter-close');
+const kioskFilterList = document.getElementById('kiosk-filter-list');
+let assistantUnreadCount = 0;
+let activeKioskCategory = 'all';
+let availableKioskCategories = [];
 
 function pushHistory(entry) {
     conversationHistory.push(entry);
@@ -31,6 +41,93 @@ function setOrderNumber(value) {
     }
     const normalized = value ? `Order #${value}` : 'Order #--';
     badge.textContent = normalized;
+}
+
+function isAssistantOpen() {
+    return Boolean(assistantPanel && !assistantPanel.classList.contains('is-closed'));
+}
+
+function syncAssistantUnreadBadge() {
+    if (!assistantUnreadBadge) return;
+    if (assistantUnreadCount > 0) {
+        assistantUnreadBadge.style.display = 'inline-flex';
+        assistantUnreadBadge.textContent = assistantUnreadCount > 99 ? '99+' : String(assistantUnreadCount);
+    } else {
+        assistantUnreadBadge.style.display = 'none';
+        assistantUnreadBadge.textContent = '0';
+    }
+}
+
+function clearAssistantUnread() {
+    assistantUnreadCount = 0;
+    syncAssistantUnreadBadge();
+}
+
+function bumpAssistantUnread() {
+    if (isAssistantOpen()) return;
+    assistantUnreadCount += 1;
+    syncAssistantUnreadBadge();
+}
+
+function setAssistantOpen(open) {
+    if (!assistantPanel || !assistantToggleButton) return;
+    assistantPanel.classList.toggle('is-closed', !open);
+    assistantPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    assistantToggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+        clearAssistantUnread();
+        const txt = document.getElementById('txt');
+        if (txt) txt.focus();
+    }
+}
+
+function isKioskFilterOpen() {
+    return Boolean(kioskFilterDrawer && !kioskFilterDrawer.classList.contains('is-closed'));
+}
+
+function setKioskFilterOpen(open) {
+    if (!kioskFilterDrawer || !kioskFilterBackdrop || !menuFilterToggleButton) return;
+    kioskFilterDrawer.classList.toggle('is-closed', !open);
+    kioskFilterBackdrop.classList.toggle('is-closed', !open);
+    kioskFilterDrawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+    kioskFilterBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+    menuFilterToggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function syncKioskCategoryUI() {
+    const selected = activeKioskCategory || 'all';
+
+    document.querySelectorAll('.kiosk-category-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', (btn.dataset.category || 'all') === selected);
+    });
+
+    document.querySelectorAll('.kiosk-drawer-filter-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', (btn.dataset.category || 'all') === selected);
+    });
+
+    document.querySelectorAll('.kiosk-item-card').forEach((card) => {
+        const cardCategory = card.dataset.category || '';
+        card.style.display = (selected === 'all' || selected === cardCategory) ? '' : 'none';
+    });
+}
+
+function setKioskCategory(category) {
+    const normalized = (category || 'all').trim() || 'all';
+    const allowed = new Set(['all', ...availableKioskCategories]);
+    activeKioskCategory = allowed.has(normalized) ? normalized : 'all';
+    syncKioskCategoryUI();
+}
+
+function renderKioskFilterList(categories) {
+    if (!kioskFilterList) return;
+    const buttons = ['all', ...categories]
+        .map((category) => {
+            const slug = category === 'all' ? 'all' : slugifyCategory(category);
+            const label = category === 'all' ? 'All Items' : category;
+            return `<button type="button" class="kiosk-drawer-filter-btn" data-category="${escapeHtml(slug)}">${escapeHtml(label)}</button>`;
+        })
+        .join('');
+    kioskFilterList.innerHTML = buttons;
 }
 
 async function loadConfig() {
@@ -77,9 +174,175 @@ function hideTyping() {
     }
 }
 
-// Single 'send' handler
-document.getElementById('send').addEventListener('click', async () => {
+function hasMenuItems(cfg) {
+    return Boolean(cfg && Array.isArray(cfg.menu_items) && cfg.menu_items.some((item) => (item && item.name)));
+}
+
+function isMenuRequest(text) {
+    return MENU_INTENT_REGEX.test((text || '').trim());
+}
+
+function formatPriceForMenu(price) {
+    const currency = chatbotConfig.currency_symbol || '₱';
+    const raw = (price || '').toString().trim();
+    if (!raw) return '';
+    const cleaned = raw.replace(/[^0-9.]/g, '');
+    const numeric = parseFloat(cleaned);
+    if (!Number.isNaN(numeric)) {
+        return `${currency}${numeric.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `${currency}${raw.replace(currency, '').trim()}`;
+}
+
+function slugifyCategory(value) {
+    return (value || 'Other').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+function getKioskData() {
+    const items = (chatbotConfig.menu_items || [])
+        .filter((item) => item && item.name)
+        .map((item) => {
+            const category = (item.category || 'Other').toString().trim() || 'Other';
+            const imageUrl = (item.image_url || '').toString().trim();
+            const fallbackImage = (chatbotConfig.logo_url || '').toString().trim() || '/static/uploads/logo.png';
+            return {
+                name: (item.name || '').toString().trim(),
+                description: (item.description || '').toString().trim(),
+                category,
+                categorySlug: slugifyCategory(category),
+                imageUrl,
+                displayImageUrl: imageUrl || fallbackImage,
+                priceLabel: formatPriceForMenu(item.price)
+            };
+        });
+
+    const categories = Array.from(new Set(items.map((item) => item.category)))
+        .sort((a, b) => a.localeCompare(b));
+
+    return { items, categories };
+}
+
+function buildMiniKioskHtml(items, categories) {
+    const categoryChips = categories
+        .map((category) => `<button type="button" class="kiosk-category-btn" data-category="${escapeHtml(slugifyCategory(category))}">${escapeHtml(category)}</button>`)
+        .join('');
+
+    const cards = items
+        .map((item) => {
+            const desc = item.description ? `<div class="kiosk-item-desc">${escapeHtml(item.description)}</div>` : '';
+            const priceBadge = item.priceLabel ? `<div class="kiosk-price-badge">${escapeHtml(item.priceLabel)}</div>` : '';
+            return `
+                <article class="kiosk-item-card" data-category="${escapeHtml(item.categorySlug)}">
+                    <div class="kiosk-item-media">
+                        <img class="kiosk-item-image" src="${escapeHtml(item.displayImageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">
+                        ${priceBadge}
+                    </div>
+                    <div class="kiosk-item-body">
+                        <div class="kiosk-item-name">${escapeHtml(item.name)}</div>
+                        ${desc}
+                        <div class="kiosk-item-footer">
+                            <button type="button" class="kiosk-add-btn" data-item-name="${escapeHtml(item.name)}">Add To Order</button>
+                        </div>
+                    </div>
+                </article>
+            `;
+        })
+        .join('');
+
+    return `
+        <div class="mini-kiosk">
+            <div class="kiosk-header">
+                <div class="kiosk-title">Deals & Menu</div>
+                <div class="kiosk-subtitle">Tap a food card to add it to your order</div>
+            </div>
+            <div class="kiosk-categories">
+                <button type="button" class="kiosk-category-btn is-active" data-category="all">All</button>
+                ${categoryChips}
+            </div>
+            <div class="kiosk-grid">
+                ${cards}
+            </div>
+        </div>
+    `;
+}
+
+function focusKioskPanel() {
+    const panel = document.getElementById('kiosk-panel');
+    if (!panel) return;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel.classList.add('is-highlighted');
+    window.setTimeout(() => panel.classList.remove('is-highlighted'), 750);
+}
+
+function renderKioskPanel() {
+    const panel = document.getElementById('kiosk-panel');
+    if (!panel) return;
+
+    if (!hasMenuItems(chatbotConfig)) {
+        panel.innerHTML = '<div class="kiosk-empty">Menu is currently unavailable or not yet configured.</div>';
+        availableKioskCategories = [];
+        renderKioskFilterList([]);
+        return;
+    }
+
+    const { items, categories } = getKioskData();
+    panel.innerHTML = buildMiniKioskHtml(items, categories);
+    availableKioskCategories = categories.map((category) => slugifyCategory(category));
+    renderKioskFilterList(categories);
+    setKioskCategory(activeKioskCategory);
+}
+
+function postMiniKiosk() {
+    if (!hasMenuItems(chatbotConfig)) {
+        postMessage('Menu is currently unavailable or not yet configured.', 'bot');
+        return;
+    }
+
+    const container = document.getElementById('messages');
+    if (!container) return;
+
+    const { items, categories } = getKioskData();
+
+    const row = document.createElement('div');
+    row.className = 'message-row bot';
+
+    const img = document.createElement('img');
+    img.className = 'avatar';
+    img.src = (chatbotConfig && chatbotConfig.chatbot_avatar) ? chatbotConfig.chatbot_avatar : '/static/img/bot-avatar.svg';
+    img.alt = 'Bot';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble bot mini-kiosk-bubble';
+
+    bubble.innerHTML = buildMiniKioskHtml(items, categories);
+
+    row.appendChild(img);
+    row.appendChild(bubble);
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+}
+
+function renderAIResult(result) {
+    if (result.orderReady) {
+        postOrderForm(result);
+        return;
+    }
+
+    const hasCart = result.currentItems && result.currentItems.length > 0;
+    if (!hasCart) {
+        postMessage(result.message || result, 'bot');
+    }
+
+    if (hasCart) {
+        postCartSummary(result.currentItems, result.currentTotal);
+    }
+}
+
+// Shared send handler used by click and Enter key.
+async function handleSendMessage() {
     const txt = document.getElementById('txt');
+    if (!txt || txt.disabled) return;
+
     const v = txt.value.trim();
     if (!v) return;
 
@@ -88,33 +351,84 @@ document.getElementById('send').addEventListener('click', async () => {
         txt.value = '';
         txt.disabled = true;
 
-    showTyping();
-    const result = await sendToAI(v);
-    hideTyping();
+        showTyping();
+        const result = await sendToAI(v);
+        hideTyping();
 
-    // If order is ready, result contains the order form
-    if (result.orderReady) {
-        postOrderForm(result);
-    } else {
-        const hasCart = result.currentItems && result.currentItems.length > 0;
-        if (!hasCart) {
-            postMessage(result.message || result, 'bot');
+        renderAIResult(result);
+
+        // Prioritize kiosk panel when menu is requested.
+        if (isMenuRequest(v) && hasMenuItems(chatbotConfig) && !result.orderReady) {
+            postMessage('The order kiosk is ready above. Tap items there, and ask me here for help anytime.', 'bot');
+            focusKioskPanel();
         }
-        
-        // Prefer the cart summary when items were detected
-        if (hasCart) {
-            postCartSummary(result.currentItems, result.currentTotal);
+    } catch (e) {
+        hideTyping();
+        console.error('Send handler error:', e);
+        postMessage('Sorry, I encountered an error. Please try again.', 'bot');
+    } finally {
+        txt.disabled = false;
+        txt.focus();
+    }
+}
+
+const sendButton = document.getElementById('send');
+if (sendButton) {
+    // Use property assignment so reloading the script does not stack handlers.
+    sendButton.onclick = () => {
+        handleSendMessage();
+    };
+}
+
+if (assistantToggleButton) {
+    assistantToggleButton.onclick = () => {
+        setAssistantOpen(!isAssistantOpen());
+    };
+}
+
+if (assistantCloseButton) {
+    assistantCloseButton.onclick = () => {
+        setAssistantOpen(false);
+    };
+}
+
+if (menuFilterToggleButton) {
+    menuFilterToggleButton.onclick = () => {
+        setKioskFilterOpen(!isKioskFilterOpen());
+    };
+}
+
+if (kioskFilterCloseButton) {
+    kioskFilterCloseButton.onclick = () => {
+        setKioskFilterOpen(false);
+    };
+}
+
+if (kioskFilterBackdrop) {
+    kioskFilterBackdrop.onclick = () => {
+        setKioskFilterOpen(false);
+    };
+}
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        if (isKioskFilterOpen()) {
+            setKioskFilterOpen(false);
+            return;
+        }
+        if (isAssistantOpen()) {
+            setAssistantOpen(false);
         }
     }
-    
-    txt.disabled = false;
-    txt.focus();
 });
 
 function applyConfig(cfg) {
     if (!cfg) return;
     const root = document.documentElement;
-    if (cfg.color_hex) root.style.setProperty('--accent', cfg.color_hex);
+    if (cfg.main_color) root.style.setProperty('--accent', cfg.main_color);
+    else if (cfg.color_hex) root.style.setProperty('--accent', cfg.color_hex);
+    if (cfg.sub_color) root.style.setProperty('--bubble-user', cfg.sub_color);
+    if (cfg.font_color) root.style.setProperty('--text', cfg.font_color);
     if (cfg.menu_text) {
         const pm = document.getElementById('preview-menu');
         if (pm) pm.textContent = cfg.menu_text;
@@ -122,7 +436,7 @@ function applyConfig(cfg) {
     if (cfg.establishment_name) {
         const nameE1 = document.getElementById('resto-name-text');
         if (nameE1) {
-            nameE1.textContent = cfg.establishment_name + ' - A.I Chatbot';
+            nameE1.textContent = cfg.establishment_name;
         }
     }
     if (cfg.font_family) document.body.style.fontFamily = cfg.font_family + ', Arial, sans-serif';
@@ -232,6 +546,10 @@ function postMessage(text, from = 'user') {
 
     container.appendChild(row);
     container.scrollTop = container.scrollHeight;
+
+    if (from === 'bot') {
+        bumpAssistantUnread();
+    }
 }
 
 function postOrderForm(orderData) {
@@ -271,6 +589,7 @@ function postOrderForm(orderData) {
     row.appendChild(bubble);
     container.appendChild(row);
     container.scrollTop = container.scrollHeight;
+    bumpAssistantUnread();
     
     // Store order data and attach event listener
     orderState.items = orderData.items;
@@ -331,6 +650,7 @@ function postCartSummary(items, total) {
     row.appendChild(bubble);
     container.appendChild(row);
     container.scrollTop = container.scrollHeight;
+    bumpAssistantUnread();
 }
 
 async function sendToAI(message) {
@@ -381,18 +701,26 @@ async function sendToAI(message) {
     }
 }
 
-document.getElementById('txt').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('send').click();
-    }
-});
+const txtInput = document.getElementById('txt');
+if (txtInput) {
+    // Use property assignment so reloading the script does not stack handlers.
+    txtInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
+}
 
 // Initialization
 (async function () {
     const cfg = await loadConfig();
     applyConfig(cfg);
+    renderKioskPanel();
     loadOrderNumber();
+    syncAssistantUnreadBadge();
+    setAssistantOpen(false);
+    setKioskFilterOpen(false);
 })();
 
 // Quick-reply definitions
@@ -506,13 +834,25 @@ async function submitOrder() {
 
 // Fixed the incomplete click listener and removed redundant fetch
 document.querySelectorAll('.quick-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    // Use property assignment so reloading the script does not stack handlers.
+    btn.onclick = async () => {
         const action = btn.dataset.action;
         const label = btn.textContent.trim();
         
         postMessage(label, 'user');
 
-        if (action === 'order') {
+        if (action === 'menu') {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                if (hasMenuItems(chatbotConfig)) {
+                    postMessage('Kiosk is displayed above. Tap any item there to add it to your order.', 'bot');
+                    focusKioskPanel();
+                } else {
+                    postMessage(canned.menu(chatbotConfig), 'bot');
+                }
+            }, 350);
+        } else if (action === 'order') {
             orderState.isCollectingOrder = true;
             showTyping();
             const reply = canned[action]();
@@ -532,11 +872,53 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
             showTyping();
             const reply = await sendToAI(label);
             hideTyping();
-            postMessage(reply, 'bot');
+            renderAIResult(reply);
         }
-    });
+    };
 });
 
-// Mark chatbot as initialized to prevent re-loading
-window.chatbotScriptInitialized = true;
+const handleKioskInteraction = async (event) => {
+        const categoryBtn = event.target.closest('.kiosk-category-btn');
+        if (categoryBtn) {
+            const selected = categoryBtn.dataset.category || 'all';
+            setKioskCategory(selected);
+            setKioskFilterOpen(false);
+            return;
+        }
+
+        const drawerBtn = event.target.closest('.kiosk-drawer-filter-btn');
+        if (drawerBtn) {
+            const selected = drawerBtn.dataset.category || 'all';
+            setKioskCategory(selected);
+            setKioskFilterOpen(false);
+            return;
+        }
+
+        const addBtn = event.target.closest('.kiosk-add-btn');
+        if (!addBtn) return;
+
+        const itemName = (addBtn.dataset.itemName || '').trim();
+        if (!itemName) return;
+
+        const orderMessage = `I'd like to order 1 ${itemName}`;
+        postMessage(orderMessage, 'user');
+
+        showTyping();
+        const result = await sendToAI(orderMessage);
+        hideTyping();
+        renderAIResult(result);
+};
+
+const messagesContainer = document.getElementById('messages');
+if (messagesContainer) {
+    messagesContainer.onclick = handleKioskInteraction;
+}
+
+const kioskPanel = document.getElementById('kiosk-panel');
+if (kioskPanel) {
+    kioskPanel.onclick = handleKioskInteraction;
+}
+
+if (kioskFilterList) {
+    kioskFilterList.onclick = handleKioskInteraction;
 }
