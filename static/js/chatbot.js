@@ -83,9 +83,10 @@ document.getElementById('send').addEventListener('click', async () => {
     const v = txt.value.trim();
     if (!v) return;
 
-    postMessage(v, 'user');
-    txt.value = '';
-    txt.disabled = true;
+    try {
+        postMessage(v, 'user');
+        txt.value = '';
+        txt.disabled = true;
 
     showTyping();
     const result = await sendToAI(v);
@@ -225,13 +226,9 @@ function postMessage(text, from = 'user') {
         bubble.innerHTML = formatMessage(text);
     }
 
-    if (from === 'user') {
-        row.appendChild(bubble);
-        row.appendChild(img);
-    } else {
-        row.appendChild(img);
-        row.appendChild(bubble);
-    }
+    // For both user and bot: img first, bubble second (flex-direction: row-reverse handles the rest)
+    row.appendChild(img);
+    row.appendChild(bubble);
 
     container.appendChild(row);
     container.scrollTop = container.scrollHeight;
