@@ -610,7 +610,14 @@
 
         const updated = Number(data.updated || 0);
         const total = Number(data.total_uncategorized || 0);
-        showToast('success', `Categorized ${updated} of ${total} uncategorized item(s).`);
+        if (data.warning) {
+          showToast('error', data.warning);
+          setTimeout(() => {
+            showToast('success', `Categorized ${updated} of ${total} uncategorized item(s).`);
+          }, 250);
+        } else {
+          showToast('success', `Categorized ${updated} of ${total} uncategorized item(s).`);
+        }
         setTimeout(() => {
           window.location.reload();
         }, 900);

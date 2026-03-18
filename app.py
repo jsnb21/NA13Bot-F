@@ -114,7 +114,7 @@ from email.message import EmailMessage
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
-load_dotenv(override=True)
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / '.env', override=True)
 
 # after app is created, before routes
 init_db()
@@ -870,11 +870,9 @@ def cleanup_expired_device_tokens():
 
 # Configure Google AI - environment variable only
 def get_google_api_key():
-    # First check environment variable
-    key = os.environ.get('GOOGLE_API_KEY', '')
-    if key:
-        return key
-    return ''
+    # Accept either GOOGLE_API_KEY or GEMINI_API_KEY and normalize accidental quotes/spaces.
+    key = os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY') or ''
+    return key.strip().strip('"').strip("'")
 
 @app.route('/')
 def index():
@@ -1281,10 +1279,6 @@ def menu_auto_categorize_uncategorized():
     if not uncategorized_rows:
         return jsonify({'updated': 0, 'total_uncategorized': 0, 'message': 'No uncategorized items found.'})
 
-    api_key = get_google_api_key()
-    if not api_key:
-        return jsonify({'error': 'Google API key is not configured.'}), 400
-
     known_categories = _extract_known_categories(menu_items)
     allowed_categories = [c for c in known_categories if c.strip().lower() != 'uncategorized']
     for default_cat in ['Appetizers', 'Main Course', 'Desserts', 'Drinks/Beverages']:
@@ -1299,6 +1293,34 @@ def menu_auto_categorize_uncategorized():
             'description': (item.get('description') or '').strip(),
             'price': (item.get('price') or '').strip()
         })
+
+    def fallback_categorize(reason: str):
+        updated_local = 0
+        for idx, item in uncategorized_rows:
+            current = (menu_items[idx].get('category') or '').strip().lower()
+            if current and current != 'uncategorized':
+                continue
+            normalized = infer_menu_category(item.get('name', ''), item.get('description', ''), allowed_categories)
+            if not normalized or normalized.strip().lower() == 'uncategorized':
+                normalized = 'Main Course'
+            menu_items[idx]['category'] = normalized
+            updated_local += 1
+
+        if updated_local > 0:
+            cfg['menu_items'] = menu_items
+            save_config(cfg, restaurant_id)
+
+        return jsonify({
+            'updated': updated_local,
+            'total_uncategorized': len(uncategorized_rows),
+            'categories': allowed_categories,
+            'fallback': True,
+            'warning': reason
+        })
+
+    api_key = get_google_api_key()
+    if not api_key:
+        return fallback_categorize('Google API key not configured. Used local categorization instead.')
 
     try:
         client = genai.Client(api_key=api_key)
@@ -1339,6 +1361,7 @@ def menu_auto_categorize_uncategorized():
             raise ValueError('AI response is not a list')
 
         allowed_lookup = {c.lower(): c for c in allowed_categories}
+        classified_indices = set()
         updated = 0
         for row in suggestions:
             if not isinstance(row, dict):
@@ -1349,6 +1372,7 @@ def menu_auto_categorize_uncategorized():
                 continue
             if idx < 0 or idx >= len(menu_items):
                 continue
+            classified_indices.add(idx)
 
             normalized = allowed_lookup.get(category_raw.lower())
             if not normalized:
@@ -1362,6 +1386,19 @@ def menu_auto_categorize_uncategorized():
                 menu_items[idx]['category'] = normalized
                 updated += 1
 
+        # Fill any missing AI classifications with local categorization.
+        for idx, item in uncategorized_rows:
+            if idx in classified_indices:
+                continue
+            current = (menu_items[idx].get('category') or '').strip().lower()
+            if current and current != 'uncategorized':
+                continue
+            normalized = infer_menu_category(item.get('name', ''), item.get('description', ''), allowed_categories)
+            if not normalized or normalized.strip().lower() == 'uncategorized':
+                normalized = 'Main Course'
+            menu_items[idx]['category'] = normalized
+            updated += 1
+
         if updated > 0:
             cfg['menu_items'] = menu_items
             save_config(cfg, restaurant_id)
@@ -1372,8 +1409,13 @@ def menu_auto_categorize_uncategorized():
             'categories': allowed_categories
         })
     except Exception as exc:
-        app.logger.exception('Auto-categorization failed')
-        return jsonify({'error': f'Auto-categorization failed: {str(exc)}'}), 500
+        app.logger.exception('Auto-categorization failed; using fallback')
+        err = str(exc)
+        if 'API_KEY_INVALID' in err or 'API key not valid' in err or 'INVALID_ARGUMENT' in err:
+            reason = 'Gemini API key is invalid. Used local categorization instead.'
+        else:
+            reason = 'Gemini is unavailable right now. Used local categorization instead.'
+        return fallback_categorize(reason)
 
 
 def _normalize_menu_key(value: str) -> str:
