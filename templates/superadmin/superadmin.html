@@ -187,7 +187,7 @@ async function manageRestaurant(restaurantId) {
     });
     
     if (!res.ok) {
-      alert('Failed to switch to restaurant management');
+      window.appShowAlert('Failed to switch to restaurant management', 'Switch Failed');
       return;
     }
     
@@ -197,7 +197,7 @@ async function manageRestaurant(restaurantId) {
     }
   } catch (e) {
     console.error('Failed to manage restaurant:', e);
-    alert('Error switching to restaurant');
+    window.appShowAlert('Error switching to restaurant', 'Switch Failed');
   }
 }
 

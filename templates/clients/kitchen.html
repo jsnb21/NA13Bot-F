@@ -225,11 +225,11 @@ async function updateOrderStatus(orderId, newStatus) {
                 updateStats();
             }
         } else {
-            alert('Failed to update order: ' + data.error);
+            window.appShowAlert('Failed to update order: ' + data.error, 'Update Failed');
         }
     } catch (error) {
         console.error('Failed to update order status:', error);
-        alert('Error updating order status');
+        window.appShowAlert('Error updating order status', 'Update Failed');
     }
 }
 

@@ -554,7 +554,7 @@
 
   if (autoCategorizeBtn) {
     autoCategorizeBtn.addEventListener('click', async () => {
-      const proceed = window.confirm('Auto-categorize all uncategorized items using Gemini AI?');
+      const proceed = await window.appShowConfirm('Auto-categorize all uncategorized items using Gemini AI?', 'Auto-Categorize');
       if (!proceed) return;
 
       const original = autoCategorizeBtn.innerHTML;

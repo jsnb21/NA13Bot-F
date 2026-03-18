@@ -276,7 +276,7 @@ function postOrderForm(orderData) {
         const tableNumber = document.getElementById('order-table').value.trim();
         
         if (!name || !tableNumber) {
-            alert('Please provide your name and table number');
+            window.appShowAlert('Please provide your name and table number', 'Missing Information');
             return;
         }
         

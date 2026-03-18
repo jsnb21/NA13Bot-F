@@ -1,6 +1,37 @@
 // Global variable to store report data for export
 window.reportData = {};
 
+function showReportAlert(message, title = 'Notice') {
+    const modal = document.getElementById('reportAlertModal');
+    const titleEl = document.getElementById('reportAlertTitle');
+    const msgEl = document.getElementById('reportAlertMessage');
+    const okBtn = document.getElementById('reportAlertOkBtn');
+
+    if (!modal || !okBtn) {
+        window.appShowAlert(message, title || 'Notice');
+        return;
+    }
+
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+
+    const close = () => {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        okBtn.removeEventListener('click', onOk);
+        modal.removeEventListener('click', onBackdrop);
+    };
+    const onOk = () => close();
+    const onBackdrop = (e) => {
+        if (e.target === modal) close();
+    };
+
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    okBtn.addEventListener('click', onOk);
+    modal.addEventListener('click', onBackdrop);
+}
+
 function setReportsLoading(isLoading) {
     const loadingEl = document.getElementById('reportsLoading');
     if (!loadingEl) return;
@@ -10,7 +41,7 @@ function setReportsLoading(isLoading) {
 function exportReportAsCSV() {
     const data = window.reportData;
     if (!data.orders || data.orders.length === 0) {
-        alert('No data available to export');
+        showReportAlert('No data available to export', 'Export Report');
         return;
     }
 

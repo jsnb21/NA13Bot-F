@@ -566,8 +566,9 @@ selectAll.addEventListener('change', (e) => {
 
 deleteSelectedBtn.addEventListener('click', async () => {
     if (selectedFiles.size === 0) return;
-    
-    if (!confirm(`Delete ${selectedFiles.size} selected file(s)?`)) return;
+
+    const shouldDelete = await window.appShowConfirm(`Delete ${selectedFiles.size} selected file(s)?`, 'Delete Files');
+    if (!shouldDelete) return;
     
     const promises = Array.from(selectedFiles).map(fileId => 
         fetch(`${FILES_ENDPOINT}/${fileId}`, {
@@ -1067,7 +1068,7 @@ if (menuPhotoTrigger && menuPhotoInput) {
 
 if (clearMenuBtn) {
     clearMenuBtn.addEventListener('click', async () => {
-        const ok = window.confirm('Clear all menu items? This cannot be undone.');
+        const ok = await window.appShowConfirm('Clear all menu items? This cannot be undone.', 'Clear Menu');
         if (!ok) {
             return;
         }

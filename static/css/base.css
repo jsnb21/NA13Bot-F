@@ -359,6 +359,29 @@ font-size:0.9rem;
   padding-left: 24px;
 }
 
+.ui-dialog-overlay {
+position: fixed;
+inset: 0;
+display: none;
+align-items: center;
+justify-content: center;
+background: rgba(15, 23, 42, 0.45);
+z-index: 12000;
+padding: 20px;
+}
+
+.ui-dialog-overlay.open {
+display: flex;
+}
+
+.ui-dialog {
+width: min(440px, 95vw);
+background: #ffffff;
+border-radius: 14px;
+padding: 20px;
+box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+}
+
 .chat-msg.bot .bubble li {
   margin: 4px 0;
 }

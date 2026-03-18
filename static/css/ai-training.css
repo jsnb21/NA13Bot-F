@@ -449,3 +449,24 @@
     @keyframes aiReadSpin {
         to { transform: rotate(360deg); }
     }
+
+    .action-confirm-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 11010;
+        padding: 20px;
+    }
+    .action-confirm-modal.open {
+        display: flex;
+    }
+    .action-confirm-modal__content {
+        width: min(460px, 95vw);
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+    }

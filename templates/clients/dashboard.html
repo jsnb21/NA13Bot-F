@@ -377,7 +377,7 @@ document.addEventListener('turbo:load', function initDashboard() {
                 showInsights(orders);
             } catch (error) {
                 console.error('Error fetching orders for insights:', error);
-                alert('Failed to load insights');
+                window.appShowAlert('Failed to load insights', 'Insights');
             }
         });
     }

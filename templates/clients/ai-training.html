@@ -243,5 +243,16 @@
     </div>
 </div>
 
+<div id="actionConfirmModal" class="action-confirm-modal" aria-hidden="true">
+    <div class="action-confirm-modal__content" role="dialog" aria-modal="true" aria-labelledby="actionConfirmTitle">
+        <h5 id="actionConfirmTitle" class="mb-2">Please Confirm</h5>
+        <p id="actionConfirmMessage" class="text-muted mb-3">Are you sure you want to continue?</p>
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-light" id="actionConfirmCancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="actionConfirmOk">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <script src="{{ url_for('static', filename='js/ai-training.js')}}"></script>
 {% endblock %}
