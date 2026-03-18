@@ -14,6 +14,97 @@
         <p>Upload training files and knowledge bases to enhance your AI agent's responses</p>
     </div>
 
+    {% set menu_items = cfg.get('menu_items', []) %}
+    {% set ns = namespace(menu_categories=[]) %}
+    {% for item in menu_items %}
+      {% set cat = (item.get('category', '') or '').strip() %}
+      {% if cat and cat not in ns.menu_categories %}
+        {% set ns.menu_categories = ns.menu_categories + [cat] %}
+      {% endif %}
+    {% endfor %}
+
+    <div class="card-surface mb-4" id="menuSyncSection">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+                <h5 class="mb-1">Menu Sync for AI</h5>
+                <p class="text-muted mb-0">Upload menu files and photos here so menu data and AI training stay in sync.</p>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" type="button" id="clearMenuBtnAiTraining">
+                <i class="fas fa-trash me-2"></i>Clear Menu Items
+            </button>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <div class="menu-sync-card" id="menuUploadCardAiTraining">
+                    <input type="file" id="menuUploadAiTraining" hidden accept=".pdf,.txt,.png">
+                    <div class="menu-sync-icon"><i class="fa-solid fa-file-arrow-up"></i></div>
+                    <h6 class="fw-bold">Upload Menu File</h6>
+                    <p class="text-muted small mb-3">Sync TXT, PDF, or PNG menu files directly to menu items.</p>
+                    <button class="btn btn-sm btn-outline-dark" type="button" id="menuUploadTriggerAiTraining">Choose Menu File</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="menu-sync-card" id="menuPhotoCardAiTraining">
+                    <input type="file" id="menuPhotoUploadAiTraining" hidden accept=".png,.jpg,.jpeg,.gif,.svg" multiple>
+                    <div class="menu-sync-icon"><i class="fa-solid fa-images"></i></div>
+                    <h6 class="fw-bold">Upload Menu Photos</h6>
+                    <p class="text-muted small mb-3">Upload item photos and match them by filename to menu item names.</p>
+                    <button class="btn btn-sm btn-outline-dark" type="button" id="menuPhotoTriggerAiTraining">Choose Photos</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-3 col-6">
+                <div class="stat-card">
+                    <div class="stat-value">{{ menu_items|length }}</div>
+                    <div class="stat-label">Menu Items</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6">
+                <div class="stat-card">
+                    <div class="stat-value">{{ ns.menu_categories|length }}</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in menu_items[:12] %}
+                    <tr>
+                        <td>{{ item.get('name', '') }}</td>
+                        <td>{{ item.get('category', 'Uncategorized') }}</td>
+                        <td>
+                            {% set symbol = cfg.get('currency_symbol', '₱') %}
+                            {% if symbol == 'None' or symbol == '' %}{% set symbol = '₱' %}{% endif %}
+                            {{ symbol }}{{ item.get('price', '') }}
+                        </td>
+                        <td>{{ item.get('status', 'Live') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-muted text-center py-3">No menu items yet. Upload a menu file to get started.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if menu_items|length > 12 %}
+        <p class="text-muted small mt-2 mb-0">Showing first 12 of {{ menu_items|length }} items.</p>
+        {% endif %}
+    </div>
+
     <div class="row mb-4">
         <div class="col-md-8">
             <div class="card-surface mb-4">
