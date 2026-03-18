@@ -69,3 +69,26 @@
     padding: 12px;
     margin-top: 8px;
 }
+
+.report-alert-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 11000;
+    padding: 20px;
+}
+
+.report-alert-modal.open {
+    display: flex;
+}
+
+.report-alert-modal__content {
+    width: min(420px, 95vw);
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+}

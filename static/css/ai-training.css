@@ -245,6 +245,8 @@
         font-family: 'Courier New', monospace;
         font-size: 0.85rem;
         margin: 10px 0;
+        white-space: pre-wrap;
+        line-height: 1.5;
     }
     
     .toast-container {
@@ -368,4 +370,103 @@
         font-size: 0.9rem;
         overflow: auto;
         white-space: pre-wrap;
+    }
+
+    .menu-sync-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+        height: 100%;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .menu-sync-card:hover {
+        border-color: #0b343d;
+        box-shadow: 0 6px 14px rgba(2, 6, 23, 0.08);
+    }
+    .menu-sync-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 9px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #0b343d;
+        margin-bottom: 10px;
+    }
+
+    .training-example-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px;
+        min-height: 220px;
+    }
+    .training-example-card p {
+        margin: 0 0 8px;
+        color: #334155;
+        line-height: 1.45;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 0.95rem;
+    }
+    .training-example-card hr {
+        margin: 10px 0;
+        border: none;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .ai-read-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 11000;
+        padding: 20px;
+    }
+    .ai-read-modal.open {
+        display: flex;
+    }
+    .ai-read-modal__content {
+        width: min(480px, 95vw);
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 24px;
+        text-align: center;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+    }
+    .ai-read-spinner {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: 4px solid #e5e7eb;
+        border-top-color: #0b343d;
+        margin: 0 auto 14px;
+        animation: aiReadSpin 0.9s linear infinite;
+    }
+    @keyframes aiReadSpin {
+        to { transform: rotate(360deg); }
+    }
+
+    .action-confirm-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 11010;
+        padding: 20px;
+    }
+    .action-confirm-modal.open {
+        display: flex;
+    }
+    .action-confirm-modal__content {
+        width: min(460px, 95vw);
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
     }

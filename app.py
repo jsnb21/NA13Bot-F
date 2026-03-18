@@ -123,7 +123,7 @@ from email.message import EmailMessage
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
-load_dotenv(override=True)
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / '.env', override=True)
 
 # after app is created, before routes
 init_db()
@@ -400,6 +400,60 @@ def parse_menu_txt(content: str):
     return items
 
 
+def _extract_known_categories(menu_items):
+    known = []
+    for item in menu_items or []:
+        cat = (item.get('category') or '').strip()
+        if cat and cat not in known:
+            known.append(cat)
+    return known
+
+
+def infer_menu_category(name: str, description: str = '', known_categories=None) -> str:
+    text = f"{name or ''} {description or ''}".lower()
+    known_categories = known_categories or []
+
+    # Prefer matching already-used restaurant categories if any of their terms appear.
+    known_scores = []
+    for category in known_categories:
+        clean = (category or '').strip()
+        if not clean or clean.lower() == 'uncategorized':
+            continue
+        tokens = [tok for tok in re.split(r'[^a-z0-9]+', clean.lower()) if len(tok) >= 3]
+        score = sum(1 for token in tokens if token in text)
+        if score > 0:
+            known_scores.append((score, clean))
+    if known_scores:
+        known_scores.sort(key=lambda row: (-row[0], row[1]))
+        return known_scores[0][1]
+
+    keyword_map = [
+        ('Drinks/Beverages', [
+            'drink', 'beverage', 'coffee', 'latte', 'espresso', 'mocha', 'cappuccino',
+            'tea', 'juice', 'soda', 'cola', 'shake', 'smoothie', 'milk tea', 'boba',
+            'frappe', 'cocktail', 'mocktail', 'wine', 'beer'
+        ]),
+        ('Desserts', [
+            'dessert', 'cake', 'ice cream', 'gelato', 'brownie', 'cookie', 'pastry',
+            'donut', 'doughnut', 'pie', 'pudding', 'sweet'
+        ]),
+        ('Appetizers', [
+            'appetizer', 'starter', 'side', 'fries', 'nachos', 'wings', 'dumpling',
+            'spring roll', 'salad', 'soup', 'sampler'
+        ]),
+        ('Main Course', [
+            'main', 'entree', 'rice', 'pasta', 'noodle', 'burger', 'pizza', 'steak',
+            'chicken', 'beef', 'pork', 'seafood', 'fish', 'adobo', 'sisig', 'curry'
+        ])
+    ]
+
+    for default_category, keywords in keyword_map:
+        if any(keyword in text for keyword in keywords):
+            return default_category
+
+    return 'Uncategorized'
+
+
 def parse_menu_txt_with_ai(content: str):
     if not content:
         return []
@@ -453,6 +507,7 @@ def parse_menu_txt_with_ai(content: str):
             return []
 
         items = []
+        known_categories = []
         for row in data:
             if not isinstance(row, dict):
                 continue
@@ -461,8 +516,10 @@ def parse_menu_txt_with_ai(content: str):
                 continue
             description = (row.get('description') or '').strip()
             price = (row.get('price') or '').strip()
-            category = (row.get('category') or '').strip() or 'Uncategorized'
+            category = (row.get('category') or '').strip() or infer_menu_category(name, description, known_categories)
             status = (row.get('status') or '').strip() or 'Live'
+            if category and category not in known_categories and category.lower() != 'uncategorized':
+                known_categories.append(category)
             items.append({
                 'name': name,
                 'description': description,
@@ -803,11 +860,9 @@ def cleanup_expired_device_tokens():
 
 # Configure Google AI - environment variable only
 def get_google_api_key():
-    # First check environment variable
-    key = os.environ.get('GOOGLE_API_KEY', '')
-    if key:
-        return key
-    return ''
+    # Accept either GOOGLE_API_KEY or GEMINI_API_KEY and normalize accidental quotes/spaces.
+    key = os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY') or ''
+    return key.strip().strip('"').strip("'")
 
 @app.route('/')
 def index():
@@ -1007,7 +1062,9 @@ def menu_add_item():
     name = request.form.get('name', '').strip()
     description = request.form.get('description', '').strip()
     price = request.form.get('price', '').strip()
-    category = request.form.get('category', '').strip() or 'Uncategorized'
+    known_categories = _extract_known_categories(cfg.get('menu_items', []))
+    category_input = request.form.get('category', '').strip()
+    category = category_input or infer_menu_category(name, description, known_categories)
     status = request.form.get('status', '').strip() or 'Live'
     image_url = request.form.get('image_url', '').strip()
 
@@ -1047,11 +1104,16 @@ def menu_update_item():
     if not name:
         return redirect(url_for('menu'))
 
+    description = request.form.get('description', '').strip()
+    known_categories = _extract_known_categories(items)
+    category_input = request.form.get('category', '').strip()
+    category = category_input or infer_menu_category(name, description, known_categories)
+
     items[index] = {
         'name': name,
-        'description': request.form.get('description', '').strip(),
+        'description': description,
         'price': request.form.get('price', '').strip(),
-        'category': request.form.get('category', '').strip() or 'Uncategorized',
+        'category': category,
         'status': request.form.get('status', '').strip() or 'Live',
         'image_url': request.form.get('image_url', '').strip()
     }
@@ -1093,6 +1155,161 @@ def menu_bulk_category_update():
         save_config(cfg, restaurant_id)
         
     return redirect(url_for('menu'))
+
+
+@app.route('/menu/auto-categorize-uncategorized', methods=['POST'])
+@login_required
+def menu_auto_categorize_uncategorized():
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
+    menu_items = cfg.get('menu_items', [])
+
+    uncategorized_rows = []
+    for idx, item in enumerate(menu_items):
+        category = (item.get('category') or '').strip().lower()
+        if not category or category == 'uncategorized':
+            uncategorized_rows.append((idx, item))
+
+    if not uncategorized_rows:
+        return jsonify({'updated': 0, 'total_uncategorized': 0, 'message': 'No uncategorized items found.'})
+
+    known_categories = _extract_known_categories(menu_items)
+    allowed_categories = [c for c in known_categories if c.strip().lower() != 'uncategorized']
+    for default_cat in ['Appetizers', 'Main Course', 'Desserts', 'Drinks/Beverages']:
+        if default_cat not in allowed_categories:
+            allowed_categories.append(default_cat)
+
+    payload_items = []
+    for idx, item in uncategorized_rows:
+        payload_items.append({
+            'index': idx,
+            'name': (item.get('name') or '').strip(),
+            'description': (item.get('description') or '').strip(),
+            'price': (item.get('price') or '').strip()
+        })
+
+    def fallback_categorize(reason: str):
+        updated_local = 0
+        for idx, item in uncategorized_rows:
+            current = (menu_items[idx].get('category') or '').strip().lower()
+            if current and current != 'uncategorized':
+                continue
+            normalized = infer_menu_category(item.get('name', ''), item.get('description', ''), allowed_categories)
+            if not normalized or normalized.strip().lower() == 'uncategorized':
+                normalized = 'Main Course'
+            menu_items[idx]['category'] = normalized
+            updated_local += 1
+
+        if updated_local > 0:
+            cfg['menu_items'] = menu_items
+            save_config(cfg, restaurant_id)
+
+        return jsonify({
+            'updated': updated_local,
+            'total_uncategorized': len(uncategorized_rows),
+            'categories': allowed_categories,
+            'fallback': True,
+            'warning': reason
+        })
+
+    api_key = get_google_api_key()
+    if not api_key:
+        return fallback_categorize('Google API key not configured. Used local categorization instead.')
+
+    try:
+        client = genai.Client(api_key=api_key)
+        system_instruction = (
+            'You categorize restaurant menu items. '
+            'Return JSON only: an array of objects with keys index and category. '
+            'Use only categories from the provided allowed_categories list. '
+            'Do not invent categories. '
+            'If unsure, choose the closest allowed category.'
+        )
+        user_payload = {
+            'allowed_categories': allowed_categories,
+            'items': payload_items
+        }
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[{"role": "user", "parts": [{"text": json.dumps(user_payload)}]}],
+            config=genai.types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                response_mime_type='application/json',
+                temperature=0.1,
+                max_output_tokens=6000
+            )
+        )
+
+        text = (response.text or '').strip()
+        if not text:
+            raise ValueError('Empty AI response')
+        if not text.startswith('['):
+            start = text.find('[')
+            end = text.rfind(']')
+            if start != -1 and end != -1 and end > start:
+                text = text[start:end + 1]
+
+        suggestions = json.loads(text)
+        if not isinstance(suggestions, list):
+            raise ValueError('AI response is not a list')
+
+        allowed_lookup = {c.lower(): c for c in allowed_categories}
+        classified_indices = set()
+        updated = 0
+        for row in suggestions:
+            if not isinstance(row, dict):
+                continue
+            idx = row.get('index')
+            category_raw = (row.get('category') or '').strip()
+            if not isinstance(idx, int):
+                continue
+            if idx < 0 or idx >= len(menu_items):
+                continue
+            classified_indices.add(idx)
+
+            normalized = allowed_lookup.get(category_raw.lower())
+            if not normalized:
+                item = menu_items[idx]
+                normalized = infer_menu_category(item.get('name', ''), item.get('description', ''), allowed_categories)
+                if normalized.lower() == 'uncategorized':
+                    normalized = 'Main Course'
+
+            current = (menu_items[idx].get('category') or '').strip().lower()
+            if not current or current == 'uncategorized':
+                menu_items[idx]['category'] = normalized
+                updated += 1
+
+        # Fill any missing AI classifications with local categorization.
+        for idx, item in uncategorized_rows:
+            if idx in classified_indices:
+                continue
+            current = (menu_items[idx].get('category') or '').strip().lower()
+            if current and current != 'uncategorized':
+                continue
+            normalized = infer_menu_category(item.get('name', ''), item.get('description', ''), allowed_categories)
+            if not normalized or normalized.strip().lower() == 'uncategorized':
+                normalized = 'Main Course'
+            menu_items[idx]['category'] = normalized
+            updated += 1
+
+        if updated > 0:
+            cfg['menu_items'] = menu_items
+            save_config(cfg, restaurant_id)
+
+        return jsonify({
+            'updated': updated,
+            'total_uncategorized': len(uncategorized_rows),
+            'categories': allowed_categories
+        })
+    except Exception as exc:
+        app.logger.exception('Auto-categorization failed; using fallback')
+        err = str(exc)
+        if 'API_KEY_INVALID' in err or 'API key not valid' in err or 'INVALID_ARGUMENT' in err:
+            reason = 'Gemini API key is invalid. Used local categorization instead.'
+        else:
+            reason = 'Gemini is unavailable right now. Used local categorization instead.'
+        return fallback_categorize(reason)
 
 
 def _normalize_menu_key(value: str) -> str:
@@ -1148,6 +1365,7 @@ def menu_upload_menu_file():
                 unique_items.append(item)
 
         cfg = load_config(restaurant_id)
+        known_categories = _extract_known_categories(cfg.get('menu_items', []))
         existing_items = cfg.get('menu_items', [])
         image_map = {}
         for item in existing_items:
@@ -1156,6 +1374,12 @@ def menu_upload_menu_file():
                 image_map[key] = item.get('image_url')
 
         for item in unique_items:
+            category = (item.get('category') or '').strip()
+            if not category or category.lower() == 'uncategorized':
+                item['category'] = infer_menu_category(item.get('name', ''), item.get('description', ''), known_categories)
+            elif category not in known_categories:
+                known_categories.append(category)
+
             key = _normalize_menu_key(item.get('name', ''))
             if key and key in image_map:
                 item['image_url'] = image_map[key]

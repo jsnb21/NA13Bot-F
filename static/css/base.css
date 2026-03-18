@@ -74,7 +74,7 @@ position: relative;
 padding: 12px 14px !important;
 margin-bottom: 6px;
 border-radius: 8px;
-transition: all 0.3s ease;
+transition: background-color 0.2s ease, color 0.2s ease;
 color: var(--main-foreground) !important;
 display: flex;
 align-items: center;
@@ -91,7 +91,6 @@ opacity: 0.7;
 .nav-link:hover {
 background-color: rgba(255, 255, 255, 0.08);
 color: var(--main-foreground) !important;
-padding-left: 18px !important;
 }
 
 .nav-link.active {
@@ -357,6 +356,29 @@ font-size:0.9rem;
 .chat-msg.bot .bubble ol {
   margin: 8px 0;
   padding-left: 24px;
+}
+
+.ui-dialog-overlay {
+position: fixed;
+inset: 0;
+display: none;
+align-items: center;
+justify-content: center;
+background: rgba(15, 23, 42, 0.45);
+z-index: 12000;
+padding: 20px;
+}
+
+.ui-dialog-overlay.open {
+display: flex;
+}
+
+.ui-dialog {
+width: min(440px, 95vw);
+background: #ffffff;
+border-radius: 14px;
+padding: 20px;
+box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
 }
 
 .chat-msg.bot .bubble li {

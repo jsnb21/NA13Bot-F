@@ -366,7 +366,7 @@
         if (!clearBtn) return;
 
         clearBtn.addEventListener('click', async () => {
-            const ok = confirm('Clear all menu items? This cannot be undone.');
+            const ok = await window.appShowConfirm('Clear all menu items? This cannot be undone.', 'Clear Menu');
             if (!ok) return;
 
             clearBtn.disabled = true;
@@ -376,12 +376,12 @@
                     credentials: 'same-origin'
                 });
                 if (!res.ok) {
-                    alert('Unable to clear menu items.');
+                    window.appShowAlert('Unable to clear menu items.', 'Clear Menu');
                     return;
                 }
-                alert('Menu items cleared.');
+                window.appShowAlert('Menu items cleared.', 'Clear Menu');
             } catch (err) {
-                alert('Unable to clear menu items.');
+                window.appShowAlert('Unable to clear menu items.', 'Clear Menu');
             } finally {
                 clearBtn.disabled = false;
             }

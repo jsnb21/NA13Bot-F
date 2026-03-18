@@ -29,8 +29,20 @@
     <footer class="auth-footer">
       Powered by Neuronet A.I © 2026
     </footer>
+
+    <div id="uiDialogOverlay" class="ui-dialog-overlay" aria-hidden="true">
+      <div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="uiDialogTitle">
+        <h5 id="uiDialogTitle" class="mb-2">Notice</h5>
+        <p id="uiDialogMessage" class="text-muted mb-3">Message</p>
+        <div class="d-flex justify-content-end gap-2">
+          <button id="uiDialogCancel" type="button" class="btn btn-light">Cancel</button>
+          <button id="uiDialogOk" type="button" class="btn btn-dark" style="background: var(--brand-dark);">OK</button>
+        </div>
+      </div>
+    </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/ui-dialog.js') }}"></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

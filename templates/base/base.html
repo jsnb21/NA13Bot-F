@@ -121,6 +121,18 @@
       </div>
     </div>
 
+    <div id="uiDialogOverlay" class="ui-dialog-overlay" aria-hidden="true">
+      <div class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="uiDialogTitle">
+        <h5 id="uiDialogTitle" class="mb-2">Notice</h5>
+        <p id="uiDialogMessage" class="text-muted mb-3">Message</p>
+        <div class="d-flex justify-content-end gap-2">
+          <button id="uiDialogCancel" type="button" class="btn btn-light">Cancel</button>
+          <button id="uiDialogOk" type="button" class="btn btn-dark" style="background: var(--brand-dark);">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/ui-dialog.js') }}"></script>
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
     <script src="{{ url_for('static', filename='js/turbo-enhancements.js') }}"></script>
     <!-- Turbo event listeners for tracking active nav links -->

@@ -566,8 +566,9 @@ selectAll.addEventListener('change', (e) => {
 
 deleteSelectedBtn.addEventListener('click', async () => {
     if (selectedFiles.size === 0) return;
-    
-    if (!confirm(`Delete ${selectedFiles.size} selected file(s)?`)) return;
+
+    const shouldDelete = await window.appShowConfirm(`Delete ${selectedFiles.size} selected file(s)?`, 'Delete Files');
+    if (!shouldDelete) return;
     
     const promises = Array.from(selectedFiles).map(fileId => 
         fetch(`${FILES_ENDPOINT}/${fileId}`, {
@@ -971,6 +972,120 @@ dashboard.
     URL.revokeObjectURL(url);
     
     showToast('success', 'Downloaded restaurant template');
+}
+
+// Unified menu + AI training controls on this page
+const menuUploadTrigger = document.getElementById('menuUploadTriggerAiTraining');
+const menuUploadInput = document.getElementById('menuUploadAiTraining');
+const menuPhotoTrigger = document.getElementById('menuPhotoTriggerAiTraining');
+const menuPhotoInput = document.getElementById('menuPhotoUploadAiTraining');
+const clearMenuBtn = document.getElementById('clearMenuBtnAiTraining');
+const aiReadModal = document.getElementById('aiReadModal');
+const aiReadStatus = document.getElementById('aiReadStatus');
+
+function showAiReadModal(message) {
+    if (!aiReadModal) return;
+    if (aiReadStatus && message) {
+        aiReadStatus.textContent = message;
+    }
+    aiReadModal.classList.add('open');
+    aiReadModal.setAttribute('aria-hidden', 'false');
+}
+
+function hideAiReadModal() {
+    if (!aiReadModal) return;
+    aiReadModal.classList.remove('open');
+    aiReadModal.setAttribute('aria-hidden', 'true');
+}
+
+if (menuUploadTrigger && menuUploadInput) {
+    menuUploadTrigger.addEventListener('click', () => menuUploadInput.click());
+    menuUploadInput.addEventListener('change', async () => {
+        if (!menuUploadInput.files || menuUploadInput.files.length === 0) {
+            return;
+        }
+
+        const file = menuUploadInput.files[0];
+        const formData = new FormData();
+        formData.append('menu_file', file, file.name);
+        showAiReadModal(`Reading ${file.name} with AI. This may take a moment...`);
+
+        try {
+            const res = await fetch('/menu/upload', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'Menu upload failed');
+            }
+            showToast('success', `Menu synced: ${data.saved || 0} item(s) processed.`);
+            setTimeout(() => window.location.reload(), 900);
+        } catch (err) {
+            showToast('error', err.message || 'Menu upload failed');
+        } finally {
+            hideAiReadModal();
+            menuUploadInput.value = '';
+        }
+    });
+}
+
+if (menuPhotoTrigger && menuPhotoInput) {
+    menuPhotoTrigger.addEventListener('click', () => menuPhotoInput.click());
+    menuPhotoInput.addEventListener('change', async () => {
+        if (!menuPhotoInput.files || menuPhotoInput.files.length === 0) {
+            return;
+        }
+
+        const formData = new FormData();
+        Array.from(menuPhotoInput.files).forEach((file) => {
+            formData.append('menu_photos', file, file.name);
+        });
+        const count = menuPhotoInput.files.length;
+        showAiReadModal(`Processing ${count} image file${count > 1 ? 's' : ''}. Please wait...`);
+
+        try {
+            const res = await fetch('/menu/photos/upload', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'Photo upload failed');
+            }
+            showToast('success', `Photos uploaded: ${data.uploaded || 0}, matched: ${data.matched || 0}.`);
+            setTimeout(() => window.location.reload(), 900);
+        } catch (err) {
+            showToast('error', err.message || 'Photo upload failed');
+        } finally {
+            hideAiReadModal();
+            menuPhotoInput.value = '';
+        }
+    });
+}
+
+if (clearMenuBtn) {
+    clearMenuBtn.addEventListener('click', async () => {
+        const ok = await window.appShowConfirm('Clear all menu items? This cannot be undone.', 'Clear Menu');
+        if (!ok) {
+            return;
+        }
+        try {
+            const res = await fetch('/settings/clear-menu', {
+                method: 'POST',
+                credentials: 'same-origin'
+            });
+            if (!res.ok) {
+                throw new Error('Failed to clear menu');
+            }
+            showToast('success', 'All menu items cleared.');
+            setTimeout(() => window.location.reload(), 800);
+        } catch (err) {
+            showToast('error', err.message || 'Failed to clear menu');
+        }
+    });
 }
 
 // Drag and drop functionality

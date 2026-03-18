@@ -13,24 +13,41 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold" style="color: var(--brand-dark)">Menu Kiosk</h2>
-            <p class="text-secondary mb-0">Manage digital menu items and AI training documents</p>
+        <p class="text-secondary mb-0">Add and edit menu items directly here.</p>
         </div>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-danger px-3 py-2" style="border-radius: 10px;" type="button" onclick="openClearMenuModal()">
-                <i class="fas fa-trash me-2"></i>Clear All Menu
-            </button>
-            <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" id="menuEditorToggle">
-                <i class="fas fa-pen-to-square me-2"></i>Edit Menu
-            </button>
+        <button class="btn btn-dark px-4 py-2" style="background: var(--brand-dark); border-radius: 10px;" type="button" id="menuEditorToggle">
+          <i class="fas fa-sliders me-2"></i>Manage Menu Items
+        </button>
         </div>
     </div>
 
+    {% set ns = namespace(menu_categories=[]) %}
+    {% for item in cfg.get('menu_items', []) %}
+      {% set cat = (item.get('category', '') or '').strip() %}
+      {% if cat and cat not in ns.menu_categories %}
+        {% set ns.menu_categories = ns.menu_categories + [cat] %}
+      {% endif %}
+    {% endfor %}
+    {% set default_categories = ['Appetizers', 'Main Course', 'Desserts', 'Drinks/Beverages'] %}
+    {% for cat in default_categories %}
+      {% if cat not in ns.menu_categories %}
+        {% set ns.menu_categories = ns.menu_categories + [cat] %}
+      {% endif %}
+    {% endfor %}
+    {% set unc = namespace(count=0) %}
+    {% for item in cfg.get('menu_items', []) %}
+      {% set c = (item.get('category', '') or '').strip().lower() %}
+      {% if not c or c == 'uncategorized' %}
+        {% set unc.count = unc.count + 1 %}
+      {% endif %}
+    {% endfor %}
+
     <div class="category-tabs mb-4">
-      <button class="category-btn active">All Items</button>
-      <button class="category-btn">Appetizers</button>
-      <button class="category-btn">Main Course</button>
-      <button class="category-btn">Desserts</button>
-      <button class="category-btn">Drinks/Beverages</button>
+      <button class="category-btn active" data-category="__all__">All Items</button>
+      {% for cat in ns.menu_categories %}
+      <button class="category-btn" data-category="{{ cat|lower }}">{{ cat }}</button>
+      {% endfor %}
     </div>
 
 
@@ -41,6 +58,9 @@
           <p class="text-secondary small mb-0">Update items or add new ones.</p>
         </div>
         <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-dark text-nowrap" style="background: var(--brand-dark);" id="autoCategorizeBtn" {% if unc.count == 0 %}disabled{% endif %}>
+            <i class="fas fa-wand-magic-sparkles me-1"></i>Auto-Categorize ({{ unc.count }})
+          </button>
           <input type="text" class="form-control form-control-sm" id="menuSearch" placeholder="Search items..." aria-label="Search menu items">
           <button type="button" class="btn btn-sm btn-outline-secondary" id="menuEditorClose">Close</button>
         </div>
@@ -68,10 +88,9 @@
                   <label class="form-label fw-semibold small text-secondary">Category</label>
                   <select name="category" class="form-select">
                     <option value="" selected disabled>Select Category</option>
-                    <option value="Appetizers">Appetizers</option>
-                    <option value="Main Course">Main Course</option>
-                    <option value="Desserts">Desserts</option>
-                    <option value="Drinks/Beverages">Drinks/Beverages</option>
+                    {% for cat in ns.menu_categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
                   </select>
                 </div>
                 <div class="col-md-6">
@@ -121,10 +140,9 @@
                   <label class="form-label fw-semibold small text-secondary">Category</label>
                   <select name="category" class="form-select" id="menuEditCategory">
                     <option value="" selected disabled>Select Category</option>
-                    <option value="Appetizers">Appetizers</option>
-                    <option value="Main Course">Main Course</option>
-                    <option value="Desserts">Desserts</option>
-                    <option value="Drinks/Beverages">Drinks/Beverages</option>
+                    {% for cat in ns.menu_categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
                   </select>
                 </div>
                 <div class="col-md-6">
@@ -163,10 +181,9 @@
             <span class="small text-secondary fw-semibold">Move to:</span>
             <select name="category" class="form-select form-select-sm border-0 shadow-sm" style="width: 180px;" required>
               <option value="" selected disabled>Select Category...</option>
-              <option value="Appetizers">Appetizers</option>
-              <option value="Main Course">Main Course</option>
-              <option value="Desserts">Desserts</option>
-              <option value="Drinks/Beverages">Drinks/Beverages</option>
+              {% for cat in ns.menu_categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+              {% endfor %}
             </select>
             <button type="submit" class="btn btn-sm btn-dark shadow-sm" style="background: var(--brand-dark);">Apply</button>
           </form>
@@ -249,37 +266,6 @@
     </div>
 
     <div class="kiosk-grid" id="menuGrid">
-        <div class="upload-menu-card" id="uploadCard" onclick="document.getElementById('menuUpload').click()">
-          <input type="file" id="menuUpload" hidden accept=".pdf,.txt,.png">
-            <div class="upload-icon-wrap">
-                <i class="fa-solid fa-file-pdf"></i>
-            </div>
-            <h5 class="fw-bold mb-2">Sync Menu File</h5>
-            <p class="text-secondary small mb-4">Upload a PDF, TXT, or PNG menu to train the AI and keep items in sync.</p>
-            <span class="btn btn-sm btn-outline-dark px-3 fw-bold" style="border-radius: 8px;">Browse Files</span>
-            
-            <div class="upload-progress-overlay" id="uploadProgress">
-                <div class="upload-spinner"></div>
-                <div class="upload-status-text">Processing menu file...</div>
-                <div class="upload-filename" id="uploadFilename"></div>
-            </div>
-        </div>
-
-      <div class="upload-menu-card" id="photoUploadCard" onclick="document.getElementById('menuPhotoUpload').click()">
-        <input type="file" id="menuPhotoUpload" hidden accept=".png,.jpg,.jpeg,.gif,.svg" multiple>
-        <div class="upload-icon-wrap">
-          <i class="fa-solid fa-image"></i>
-        </div>
-        <h5 class="fw-bold mb-2">Upload Menu Photos</h5>
-        <p class="text-secondary small mb-4">Upload one or multiple images. Name each file to match the menu item (ex: "Chicken Parmesan.jpg").</p>
-        <span class="btn btn-sm btn-outline-dark px-3 fw-bold" style="border-radius: 8px;">Browse Photos</span>
-
-        <div class="upload-progress-overlay" id="photoUploadProgress">
-            <div class="upload-spinner"></div>
-            <div class="upload-status-text">Uploading photos...</div>
-            <div class="upload-filename" id="photoUploadFilename"></div>
-        </div>
-      </div>
 
         {% for item in cfg.get('menu_items', []) %}
         <div class="menu-card" data-category="{{ item.get('category', '') }}">
@@ -357,24 +343,6 @@
     </div>
 </div>
 
-<div class="modal fade" id="clearMenuModal" tabindex="-1" aria-labelledby="clearMenuModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius: 14px;">
-      <div class="modal-header">
-        <h5 class="modal-title" id="clearMenuModalLabel">Clear All Menu Items</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        This action will permanently delete all menu items. This cannot be undone.
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmClearMenuBtn">Yes, Clear All</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
   // Define the init function outside to allow reference for removal (if needed, though anonymous here)
   // or use a check to preventing stacking turbo:load listeners if the script is re-executed.
@@ -391,14 +359,6 @@
     const uploadFilename = document.getElementById('uploadFilename');
     const photoUploadProgress = document.getElementById('photoUploadProgress');
     const photoUploadFilename = document.getElementById('photoUploadFilename');
-    const clearMenuModalEl = document.getElementById('clearMenuModal');
-    const confirmClearMenuBtn = document.getElementById('confirmClearMenuBtn');
-    const clearMenuModal = (window.bootstrap && clearMenuModalEl)
-      ? new bootstrap.Modal(clearMenuModalEl)
-      : null;
-
-    // Guard: Only initialize if elements exist
-    if (!menuUploadInput || !uploadCard) return;
     
     // Guard: Prevent re-attaching event listeners on Turbo navigation
     if (menuUploadInput.dataset.listenerAttached === '1') return;
@@ -435,6 +395,7 @@
     }, 4000);
   }
 
+  if (menuUploadInput) {
   menuUploadInput.addEventListener('change', async () => {
     if (!menuUploadInput.files || menuUploadInput.files.length === 0) {
       return;
@@ -485,6 +446,7 @@
       menuUploadInput.value = '';
     }
   });
+  }
 
   if (menuPhotoUpload) {
     // Guard: Prevent re-attaching event listeners
@@ -596,6 +558,7 @@
   // "Close" button inside the editor to go back to Grid View
   const menuEditorClose = document.getElementById('menuEditorClose');
   const menuSearch = document.getElementById('menuSearch');
+  const autoCategorizeBtn = document.getElementById('autoCategorizeBtn');
 
   // Forms
   const menuAddForm = document.getElementById('menuAddForm');
@@ -638,6 +601,57 @@
   if (menuEditorClose && menuEditorClose.dataset.listenerAttached !== '1') {
     menuEditorClose.dataset.listenerAttached = '1';
     menuEditorClose.addEventListener('click', () => toggleMenuEditor(false));
+  }
+
+  if (autoCategorizeBtn) {
+    autoCategorizeBtn.addEventListener('click', async () => {
+      const proceed = await window.appShowConfirm('Auto-categorize all uncategorized items using Gemini AI?', 'Auto-Categorize');
+      if (!proceed) return;
+
+      const original = autoCategorizeBtn.innerHTML;
+      autoCategorizeBtn.disabled = true;
+      autoCategorizeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Categorizing...';
+
+      try {
+        const res = await fetch('/menu/auto-categorize-uncategorized', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to auto-categorize items.');
+        }
+
+        const updated = Number(data.updated || 0);
+        const total = Number(data.total_uncategorized || 0);
+        if (data.warning) {
+          showToast('error', data.warning);
+          setTimeout(() => {
+            showToast('success', `Categorized ${updated} of ${total} uncategorized item(s).`);
+          }, 250);
+        } else {
+          showToast('success', `Categorized ${updated} of ${total} uncategorized item(s).`);
+        }
+        setTimeout(() => {
+          window.location.reload();
+        }, 900);
+      } catch (err) {
+        showToast('error', err.message || 'Failed to auto-categorize items.');
+        autoCategorizeBtn.disabled = false;
+        autoCategorizeBtn.innerHTML = original;
+      }
+    });
+  }
+
+  if (menuAddForm) {
+    menuAddForm.addEventListener('submit', () => {
+      sessionStorage.setItem('menuEditorOpen', 'true');
+    });
+  }
+  if (menuEditForm) {
+    menuEditForm.addEventListener('submit', () => {
+      sessionStorage.setItem('menuEditorOpen', 'true');
+    });
   }
 
   // Handle "Edit" button clicks in the table - Use a named function to avoid duplicates if possible, 
@@ -693,9 +707,7 @@
   document.body.style.overflow = '';
   document.body.style.paddingRight = '';
 
-  // Restore state on load
-  const shouldOpenEditor = sessionStorage.getItem('menuEditorOpen') === 'true';
-  if (shouldOpenEditor) {
+  if (sessionStorage.getItem('menuEditorOpen') === 'true') {
     toggleMenuEditor(true);
     sessionStorage.removeItem('menuEditorOpen');
   }
@@ -728,16 +740,13 @@
       btn.classList.add('active');
 
       // 2. Filter items
-      const selectedCategory = btn.textContent.trim();
-      const isAll = (selectedCategory === 'All Items');
+      const selectedCategory = (btn.dataset.category || '').trim().toLowerCase();
+      const isAll = (selectedCategory === '__all__');
 
       // Filter grid cards
       document.querySelectorAll('.menu-card').forEach(card => {
-        // Skip valid cards that don't have data-category if we're filtering
         const cat = (card.dataset.category || '').trim().toLowerCase();
-        // Simple flexible matching: checks if the item's category includes the button text
-        // e.g. "Main Course" button matches "Main Course", "Mains", etc.
-        const match = isAll || cat.includes(selectedCategory.toLowerCase());
+        const match = isAll || cat === selectedCategory;
         
         // Use classList for performance instead of style manipulation
         if (match) {
@@ -752,7 +761,7 @@
       if (rows) {
         rows.forEach(row => {
           const cat = (row.dataset.category || '').trim().toLowerCase();
-          const match = isAll || cat.includes(selectedCategory.toLowerCase());
+          const match = isAll || cat === selectedCategory;
           if (match) {
             row.classList.remove('d-none');
           } else {
