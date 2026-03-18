@@ -74,7 +74,7 @@ position: relative;
 padding: 12px 14px !important;
 margin-bottom: 6px;
 border-radius: 8px;
-transition: all 0.3s ease;
+transition: background-color 0.2s ease, color 0.2s ease;
 color: var(--main-foreground) !important;
 display: flex;
 align-items: center;
@@ -91,7 +91,6 @@ opacity: 0.7;
 .nav-link:hover {
 background-color: rgba(255, 255, 255, 0.08);
 color: var(--main-foreground) !important;
-padding-left: 18px !important;
 }
 
 .nav-link.active {
