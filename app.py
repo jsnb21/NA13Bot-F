@@ -2118,37 +2118,10 @@ def qr_codes():
 
 def get_local_network_url(request_obj):
     """
-    Get the most appropriate URL for QR codes.
-    If running locally (127.0.0.1), tries to get the local network IP.
-    Otherwise, returns the request host URL as-is.
+    Get the appropriate URL for QR codes.
+    Returns the host URL as-is (works for both localhost and network access).
     """
-    host_url = request_obj.host_url.rstrip('/')
-    
-    # If not localhost, use the request URL as-is
-    if '127.0.0.1' not in request_obj.host and 'localhost' not in request_obj.host:
-        return host_url
-    
-    # Try to get local network IP
-    try:
-        import socket
-        # Get hostname
-        hostname = socket.gethostname()
-        # Get IP address of this machine
-        local_ip = socket.gethostbyname(hostname)
-        
-        # Only use if it's a valid local network IP (not 127.0.0.1)
-        if local_ip and local_ip != '127.0.0.1':
-            # Reconstruct URL with local IP
-            port = request_obj.host.split(':')[1] if ':' in request_obj.host else ''
-            if port:
-                return f"http://{local_ip}:{port}"
-            else:
-                return f"http://{local_ip}"
-    except Exception:
-        pass
-    
-    # Fallback to original URL
-    return host_url
+    return request_obj.host_url.rstrip('/')
 
 
 @app.route('/api/generate-qr-codes', methods=['POST'])
@@ -2219,4 +2192,4 @@ def api_generate_qr_codes():
 
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
