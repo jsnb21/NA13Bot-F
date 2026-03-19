@@ -17,7 +17,7 @@
         <button class="page-action-btn" type="button" onclick="document.getElementById('saveSettingsBtn').click()">Save Changes</button>
     </div>
 
-    <form method="post" enctype="multipart/form-data" id="settingsForm">
+    <form method="post" enctype="multipart/form-data" id="settingsForm" data-turbo="false">
     <div class="settings-section is-collapsed" data-collapsible>
         <div class="section-header">
             <h5>Business & Branding</h5>
@@ -59,52 +59,24 @@
         <div class="row mb-3">
             <div class="col-6">
                 <label for="main_color_picker" class="form-label">Main Color</label>
-                <div class="color-picker is-collapsed" data-collapsible>
-                    <div class="color-picker-header">
-                        <span class="color-picker-title">Palette & Sliders</span>
-                        <button type="button" class="section-toggle" data-color-toggle>Show</button>
-                    </div>
-                    <div class="color-picker-body" data-default="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
-                    <div class="color-header">
-                        <div class="color-preview-wrap">
-                            <div class="color-preview" data-role="preview"></div>
-                            <input id="main_color_hex" class="color-hex" data-role="hex" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}" aria-label="Main color hex">
-                        </div>
-                        <input id="main_color" name="main_color" type="hidden" data-role="value" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
-                    </div>
-                    <div class="slider-label"><span>Hue</span><span data-role="hue-value">0</span></div>
-                    <input type="range" min="0" max="360" value="200" class="color-slider" data-role="hue">
-                    <div class="slider-label"><span>Saturation</span><span data-role="sat-value">70</span></div>
-                    <input type="range" min="0" max="100" value="70" class="color-slider" data-role="sat">
-                    <div class="slider-label"><span>Lightness</span><span data-role="light-value">40</span></div>
-                    <input type="range" min="0" max="100" value="40" class="color-slider" data-role="light">
-                    <div class="color-swatches" data-role="swatches"></div>
-                    </div>
+                <div class="modern-color-picker">
+                    <div id="main_color_picker" class="pickr-container" data-field="main_color" data-default="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}"></div>
+                    <input id="main_color" name="main_color" type="hidden" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
                 </div>
             </div>
             <div class="col-6">
                 <label for="sub_color_picker" class="form-label">Accent / Sub Color</label>
-                <div class="color-picker is-collapsed" data-collapsible>
-                    <div class="color-picker-header">
-                        <span class="color-picker-title">Palette & Sliders</span>
-                        <button type="button" class="section-toggle" data-color-toggle>Show</button>
-                    </div>
-                    <div class="color-picker-body" data-default="{{ cfg.get('sub_color', '#ffd41d') }}">
-                    <div class="color-header">
-                        <div class="color-preview-wrap">
-                            <div class="color-preview" data-role="preview"></div>
-                            <input id="sub_color_hex" class="color-hex" data-role="hex" value="{{ cfg.get('sub_color', '#ffd41d') }}" aria-label="Accent color hex">
-                        </div>
-                        <input id="sub_color" name="sub_color" type="hidden" data-role="value" value="{{ cfg.get('sub_color', '#ffd41d') }}">
-                    </div>
-                    <div class="slider-label"><span>Hue</span><span data-role="hue-value">50</span></div>
-                    <input type="range" min="0" max="360" value="50" class="color-slider" data-role="hue">
-                    <div class="slider-label"><span>Saturation</span><span data-role="sat-value">90</span></div>
-                    <input type="range" min="0" max="100" value="90" class="color-slider" data-role="sat">
-                    <div class="slider-label"><span>Lightness</span><span data-role="light-value">60</span></div>
-                    <input type="range" min="0" max="100" value="60" class="color-slider" data-role="light">
-                    <div class="color-swatches" data-role="swatches"></div>
-                    </div>
+                <div class="modern-color-picker">
+                    <div id="sub_color_picker" class="pickr-container" data-field="sub_color" data-default="{{ cfg.get('sub_color', '#ffd41d') }}"></div>
+                    <input id="sub_color" name="sub_color" type="hidden" value="{{ cfg.get('sub_color', '#ffd41d') }}">
+                </div>
+            </div>
+
+            <div class="col-6">
+                <label for="font_color_picker" class="form-label">Font / Text Color</label>
+                <div class="modern-color-picker">
+                    <div id="font_color_picker" class="pickr-container" data-field="text_primary" data-default="{{ cfg.get('text_primary', cfg.get('font_color', '#1f2937')) }}"></div>
+                    <input id="text_primary" name="text_primary" type="hidden" value="{{ cfg.get('text_primary', cfg.get('font_color', '#1f2937')) }}">
                 </div>
             </div>
             
@@ -356,6 +328,8 @@
             <button id="stickySave" type="button" class="btn btn-save ms-2">Save Settings</button>
         </div>
         </form>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr@1.8.2/dist/themes/classic.min.css" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr@1.8.2/dist/pickr.min.js" crossorigin="anonymous"></script>
         <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
 
     <div class="settings-section" style="border-top:2px solid #f0f0f0; padding-top:20px;">

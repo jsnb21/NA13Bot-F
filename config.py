@@ -338,6 +338,22 @@ def init_db():
                 .format(sql.Identifier(schema))
             )
             cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS main_foreground TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS sub_foreground TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS text_primary TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS text_secondary TEXT")
+                .format(sql.Identifier(schema))
+            )
+            cur.execute(
                 sql.SQL("ALTER TABLE {}.menu_items ADD COLUMN IF NOT EXISTS restaurant_id UUID")
                 .format(sql.Identifier(schema))
             )

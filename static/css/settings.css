@@ -247,3 +247,133 @@
 .sticky-save-bar.show { display: flex; }
 .sticky-save-bar .btn-save { background:#ff6b6b; color:#fff; border:none; }
 .sticky-save-bar .btn-cancel { background:transparent; border:1px solid #d1d5db; }
+
+/* Modern Pickr.js Color Picker Styles */
+.modern-color-picker {
+    width: 100%;
+}
+
+.pickr-container {
+    width: 100%;
+    display: block;
+}
+
+/* Override Pickr classic theme for better integration */
+.pickr .pcr-button {
+    width: 100%;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--input-border, #e5e7eb);
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary, #6b7280);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.pickr .pcr-button:hover {
+    border-color: var(--text-secondary, #6b7280);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    background: #fafbfc;
+}
+
+.pickr .pcr-button:focus,
+.pickr .pcr-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(11, 52, 61, 0.1), 0 4px 8px rgba(0, 0, 0, 0.08);
+    border-color: var(--main-color, #1e40af);
+}
+
+.pickr .pcr-button .pcr-result {
+    height: 28px;
+    width: 28px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    margin-right: 10px;
+}
+
+.pickr .pcr-palette {
+    border-radius: 12px;
+}
+
+.pickr.classic .pcr-color-preview {
+    display: none;
+}
+
+.pickr.classic .pcr-picker {
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    background: white;
+}
+
+.pickr.classic .pcr-input {
+    border: 1px solid var(--input-border, #e5e7eb);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    background: white;
+    color: var(--text-primary, #1f2937);
+}
+
+.pickr.classic .pcr-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(11, 52, 61, 0.1);
+    border-color: var(--main-color, #1e40af);
+}
+
+.pickr.classic .pcr-save,
+.pickr.classic .pcr-clear {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pickr.classic .pcr-save {
+    background: var(--main-color, #1e40af);
+    color: white;
+}
+
+.pickr.classic .pcr-save:hover {
+    background: var(--text-secondary, #4b5563);
+    opacity: 0.9;
+}
+
+.pickr.classic .pcr-clear {
+    background: #f3f4f6;
+    color: var(--text-secondary, #6b7280);
+}
+
+.pickr.classic .pcr-clear:hover {
+    background: #e5e7eb;
+}
+
+.pickr.classic .pcr-swatches {
+    padding: 10px 0;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* Make sure the picker container doesn't hide content */
+.pickr-container,
+.modern-color-picker {
+    z-index: auto;
+    position: relative;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .pickr .pcr-button {
+        height: 40px;
+        padding: 6px;
+    }
+}

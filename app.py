@@ -1566,6 +1566,21 @@ def reports():
 def settings():
     restaurant_id = get_current_restaurant_id()
     cfg = load_config(restaurant_id)
+
+    def _normalize_hex_color(value, fallback=''):
+        raw = (value or '').strip().lower()
+        if not raw:
+            return fallback
+        if not raw.startswith('#'):
+            raw = '#' + raw
+        if re.match(r'^#[0-9a-f]{3}$', raw):
+            raw = '#' + ''.join(ch * 2 for ch in raw[1:])
+        if re.match(r'^#[0-9a-f]{8}$', raw):
+            raw = '#' + raw[1:7]
+        if re.match(r'^#[0-9a-f]{6}$', raw):
+            return raw
+        return fallback
+
     if request.method == 'POST':
         # collect branding & display fields and merge into existing config
         currency_choice = request.form.get('currency_choice', '').strip()
@@ -1590,11 +1605,27 @@ def settings():
             else:
                 currency_code = currency_choice
                 currency_symbol = currency_map.get(currency_choice, currency_symbol)
+
+        main_color = _normalize_hex_color(
+            request.form.get('main_color', request.form.get('color_hex', cfg.get('main_color', cfg.get('color_hex', '')))),
+            cfg.get('main_color', cfg.get('color_hex', '#1e40af'))
+        )
+        sub_color = _normalize_hex_color(
+            request.form.get('sub_color', cfg.get('sub_color', '')),
+            cfg.get('sub_color', '#ffd41d')
+        )
+        text_primary = _normalize_hex_color(
+            request.form.get('text_primary', cfg.get('text_primary', cfg.get('font_color', ''))),
+            cfg.get('text_primary', cfg.get('font_color', '#1f2937'))
+        )
+
         data = {
             'establishment_name': request.form.get('establishment_name', cfg.get('establishment_name', '')),
             'logo_url': request.form.get('logo_url', cfg.get('logo_url', '')),
-            'main_color': request.form.get('main_color', request.form.get('color_hex', cfg.get('main_color', cfg.get('color_hex','')))),
-            'sub_color': request.form.get('sub_color', cfg.get('sub_color', '')),
+            'main_color': main_color,
+            'sub_color': sub_color,
+            'text_primary': text_primary,
+            'font_color': text_primary,
             'font_family': request.form.get('font_family', cfg.get('font_family', '')),
             'menu_text': request.form.get('menu_text', cfg.get('menu_text', '')),
             'image_urls': [u.strip() for u in request.form.get('image_urls', "\n".join(cfg.get('image_urls', []))).splitlines() if u.strip()],
