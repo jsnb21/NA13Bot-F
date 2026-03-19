@@ -120,6 +120,8 @@ import psycopg
 import smtplib
 import ssl
 from email.message import EmailMessage
+import qrcode
+from io import BytesIO
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -2104,5 +2106,90 @@ def logout():
     response.set_cookie('device_token', '', expires=0)
     return response
 
+
+@app.route('/qr-codes')
+@login_required
+def qr_codes():
+    """Display the QR codes management page."""
+    restaurant_id = get_current_restaurant_id()
+    cfg = load_config(restaurant_id)
+    return render_template('clients/qr-codes.html', cfg=cfg)
+
+
+def get_local_network_url(request_obj):
+    """
+    Get the appropriate URL for QR codes.
+    Returns the host URL as-is (works for both localhost and network access).
+    """
+    return request_obj.host_url.rstrip('/')
+
+
+@app.route('/api/generate-qr-codes', methods=['POST'])
+@login_required
+def api_generate_qr_codes():
+    """Generate QR codes for tables with links to the chatbot."""
+    try:
+        restaurant_id = get_current_restaurant_id()
+        cfg = load_config(restaurant_id)
+        
+        data = request.get_json() or {}
+        count = data.get('count', 10)
+        start_table = data.get('start_table', 1)
+        
+        # Validate inputs
+        if not isinstance(count, int) or count < 1 or count > 500:
+            return jsonify({'error': 'Count must be between 1 and 500'}), 400
+        if not isinstance(start_table, int) or start_table < 1:
+            return jsonify({'error': 'Starting table number must be at least 1'}), 400
+        
+        qr_codes = []
+        establishment_name = cfg.get('establishment_name', 'Restaurant')
+        
+        # Get the appropriate base URL for QR codes
+        base_url = get_local_network_url(request)
+        
+        for i in range(count):
+            table_number = start_table + i
+            
+            # Build the chatbot URL with table info using local network IP if applicable
+            chatbot_url = f"{base_url}/chatbot?restaurant_id={restaurant_id}&table={table_number}"
+            
+            # Generate QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(chatbot_url)
+            qr.make(fit=True)
+            
+            # Create image
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            # Convert to base64
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            buffer.seek(0)
+            img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            image_url = f"data:image/png;base64,{img_base64}"
+            
+            qr_codes.append({
+                'table_number': table_number,
+                'image': image_url,
+                'url': chatbot_url
+            })
+        
+        return jsonify({
+            'count': count,
+            'qr_codes': qr_codes,
+            'establishment': establishment_name
+        })
+    
+    except Exception as e:
+        app.logger.exception('QR code generation failed')
+        return jsonify({'error': f'Failed to generate QR codes: {str(e)}'}), 500
+
+
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

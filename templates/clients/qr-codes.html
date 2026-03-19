@@ -1,0 +1,125 @@
+{% extends 'base/base.html' %}
+
+{% block title %}QR Codes — Resto Admin{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/qr-codes.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="page-header">
+        <div>
+            <h2 class="page-title">Table QR Codes</h2>
+            <p class="page-subtitle">Generate and print QR codes for your tables. Customers scan to access the chatbot.</p>
+        </div>
+    </div>
+
+    <!-- QR Generation Section -->
+    <div class="row mb-4">
+        <div class="col-lg-5">
+            <div class="card-surface">
+                <h5 class="mb-3" style="font-weight: 600;">Generate Table QR Codes</h5>
+                
+                <div class="form-group mb-3">
+                    <label for="tableCount" class="form-label">Number of Tables</label>
+                    <input 
+                        type="number" 
+                        id="tableCount" 
+                        class="form-control" 
+                        min="1" 
+                        max="500" 
+                        value="10"
+                        placeholder="Enter number of tables"
+                    >
+                    <small class="text-secondary">Enter how many table QR codes you want to generate</small>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="startTable" class="form-label">Starting Table Number</label>
+                    <input 
+                        type="number" 
+                        id="startTable" 
+                        class="form-control" 
+                        min="1" 
+                        value="1"
+                        placeholder="Enter starting table number"
+                    >
+                    <small class="text-secondary">Tables will be numbered sequentially from this number</small>
+                </div>
+
+                <button class="btn btn-primary w-100 mb-2" id="generateBtn">
+                    <i class="fas fa-qrcode"></i> Generate QR Codes
+                </button>
+
+                <button class="btn btn-outline-primary w-100" id="printBtn" disabled>
+                    <i class="fas fa-print"></i> Print QR Codes
+                </button>
+
+                <div id="loadingSpinner" class="d-none mt-3">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Generating...</span>
+                    </div>
+                    <span class="ms-2">Generating QR codes...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="col-lg-7">
+            <div class="card-surface" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05)); border-left: 4px solid var(--primary);">
+                <h5 class="mb-3" style="font-weight: 600;">
+                    <i class="fas fa-info-circle text-info"></i> How it Works
+                </h5>
+                <ul class="mb-0" style="list-style: none; padding: 0;">
+                    <li class="mb-2">
+                        <strong>Generate:</strong> Enter the number of tables and starting number, then click "Generate"
+                    </li>
+                    <li class="mb-2">
+                        <strong>Preview:</strong> QR codes will appear below. Each code links to your chatbot with the table number
+                    </li>
+                    <li class="mb-2">
+                        <strong>Print:</strong> Click "Print QR Codes" to open the print preview. Print in color for best scanning
+                    </li>
+                    <li class="mb-2">
+                        <strong>Placement:</strong> Place printed QR codes on each table or at the entrance
+                    </li>
+                    <li class="mb-2">
+                        <strong>Scanning:</strong> When customers scan, they're taken to your chatbot with their table number already set
+                    </li>
+                    <li>
+                        <strong>Local Network:</strong> QR codes automatically work on any device connected to your local network
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Codes Display Section -->
+    <div id="qrCodesContainer" class="d-none">
+        <div class="card-surface">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 style="font-weight: 600; margin: 0;">Generated QR Codes (<span id="qrCountDisplay">0</span>)</h5>
+                <small class="text-secondary">Preview your QR codes below</small>
+            </div>
+            
+            <!-- QR Codes Grid -->
+            <div id="qrGrid" class="qr-grid">
+                <!-- QR codes will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Layout (Hidden until print) -->
+    <div id="printLayout" style="display: none;">
+        <div id="printContent" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5cm; padding: 0.5cm; width: 100%; margin: 0;">
+            <!-- Print content will be generated here -->
+        </div>
+    </div>
+
+
+</div>
+
+<script src="{{ url_for('static', filename='js/qr-codes.js') }}"></script>
+{% endblock %}
