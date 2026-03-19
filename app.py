@@ -1622,6 +1622,19 @@ def settings():
             return raw
         return fallback
 
+    def _auto_foreground(bg_color: str, light: str = '#ffffff', dark: str = '#000000') -> str:
+        color = _normalize_hex_color(bg_color, '#1e40af')
+        hex_value = color[1:]
+        r = int(hex_value[0:2], 16) / 255.0
+        g = int(hex_value[2:4], 16) / 255.0
+        b = int(hex_value[4:6], 16) / 255.0
+
+        def _lin(channel):
+            return channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+
+        luminance = 0.2126 * _lin(r) + 0.7152 * _lin(g) + 0.0722 * _lin(b)
+        return dark if luminance > 0.5 else light
+
     if request.method == 'POST':
         # collect branding & display fields and merge into existing config
         currency_choice = request.form.get('currency_choice', '').strip()
@@ -1655,18 +1668,17 @@ def settings():
             request.form.get('sub_color', cfg.get('sub_color', '')),
             cfg.get('sub_color', '#ffd41d')
         )
-        text_primary = _normalize_hex_color(
-            request.form.get('text_primary', cfg.get('text_primary', cfg.get('font_color', ''))),
-            cfg.get('text_primary', cfg.get('font_color', '#1f2937'))
-        )
+
+        main_foreground = _auto_foreground(main_color)
+        sub_foreground = _auto_foreground(sub_color)
 
         data = {
             'establishment_name': request.form.get('establishment_name', cfg.get('establishment_name', '')),
             'logo_url': request.form.get('logo_url', cfg.get('logo_url', '')),
             'main_color': main_color,
+            'main_foreground': main_foreground,
             'sub_color': sub_color,
-            'text_primary': text_primary,
-            'font_color': text_primary,
+            'sub_foreground': sub_foreground,
             'font_family': request.form.get('font_family', cfg.get('font_family', '')),
             'menu_text': request.form.get('menu_text', cfg.get('menu_text', '')),
             'image_urls': [u.strip() for u in request.form.get('image_urls', "\n".join(cfg.get('image_urls', []))).splitlines() if u.strip()],

@@ -417,23 +417,31 @@ document.addEventListener('keydown', (event) => {
 function applyConfig(cfg) {
     if (!cfg) return;
     const root = document.documentElement;
-    
-    // Debug: Log color values to help troubleshoot
-    if (cfg.font_color || cfg.text_primary) {
-        console.log('Config colors loaded:', {
-            font_color: cfg.font_color,
-            text_primary: cfg.text_primary,
-            main_color: cfg.main_color
-        });
+
+    function toReadableForeground(bgColor) {
+        const color = (bgColor || '').toString().trim();
+        const hexMatch = color.match(/^#([0-9a-fA-F]{6})$/);
+        if (!hexMatch) return '#ffffff';
+
+        const hex = hexMatch[1];
+        const r = parseInt(hex.slice(0, 2), 16) / 255;
+        const g = parseInt(hex.slice(2, 4), 16) / 255;
+        const b = parseInt(hex.slice(4, 6), 16) / 255;
+
+        const linear = (channel) => channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+        const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+        return luminance > 0.5 ? '#000000' : '#ffffff';
     }
     
     // Apply main brand color
     if (cfg.main_color) {
         root.style.setProperty('--main-color', cfg.main_color);
         root.style.setProperty('--accent', cfg.main_color);
+        root.style.setProperty('--main-foreground', toReadableForeground(cfg.main_color));
     } else if (cfg.color_hex) {
         root.style.setProperty('--main-color', cfg.color_hex);
         root.style.setProperty('--accent', cfg.color_hex);
+        root.style.setProperty('--main-foreground', toReadableForeground(cfg.color_hex));
     }
     
     // Apply main foreground color
@@ -445,6 +453,7 @@ function applyConfig(cfg) {
     if (cfg.sub_color) {
         root.style.setProperty('--sub-color', cfg.sub_color);
         root.style.setProperty('--bubble-user', cfg.sub_color);
+        root.style.setProperty('--sub-foreground', toReadableForeground(cfg.sub_color));
     }
     
     // Apply sub foreground color
@@ -452,19 +461,12 @@ function applyConfig(cfg) {
         root.style.setProperty('--sub-foreground', cfg.sub_foreground);
     }
     
-    // Apply text colors - ONLY if they're explicitly set and look valid
-    if (cfg.text_primary && isValidColor(cfg.text_primary)) {
-        root.style.setProperty('--text-primary', cfg.text_primary);
-        root.style.setProperty('--text', cfg.text_primary);
-    }
     if (cfg.text_secondary && isValidColor(cfg.text_secondary)) {
         root.style.setProperty('--text-secondary', cfg.text_secondary);
     }
-    // Only apply font_color if it looks like a valid hex color
-    if (cfg.font_color && isValidColor(cfg.font_color)) {
-        root.style.setProperty('--text', cfg.font_color);
-        root.style.setProperty('--text-primary', cfg.font_color);
-    }
+    // Keep body copy readable and stable.
+    root.style.setProperty('--text', '#1f2937');
+    root.style.setProperty('--text-primary', '#1f2937');
     
     // Apply other settings
     if (cfg.menu_text) {

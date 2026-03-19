@@ -172,8 +172,7 @@
         console.log('Initializing Pickr color pickers...');
         const pickers = {
             main_color: null,
-            sub_color: null,
-            text_primary: null
+            sub_color: null
         };
 
         document.querySelectorAll('.pickr-container').forEach(container => {
