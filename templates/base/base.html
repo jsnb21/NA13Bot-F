@@ -41,7 +41,7 @@
         <div class="sidebar-inner">
           <div class="sidebar-brand">
             {% if cfg.get('logo_url') %}
-              <div class="sidebar-brand-icon" style="background-image: url('{{ cfg.get('logo_url') }}'); background-size: cover; background-position: center; background-repeat: no-repeat; border-radius: 12px;"></div>
+              <div class="sidebar-brand-icon" style="background-image: url('{{ cfg.get('logo_url') }}'), url('{{ url_for('static', filename='uploads/logo.png') }}'); background-size: cover; background-position: center; background-repeat: no-repeat; border-radius: 12px;"></div>
             {% else %}
               <div class="sidebar-brand-icon">R</div>
             {% endif %}

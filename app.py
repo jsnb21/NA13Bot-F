@@ -151,7 +151,7 @@ from functools import wraps
 from flask import flash
 
 # allowed logo extensions
-ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+ALLOWED_EXT = {'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'}
 TRAINING_ALLOWED_EXT = {'txt', 'pdf', 'docx', 'json', 'csv'}
 MAX_TRAINING_FILE_MB = 50
 OTP_TTL_SECONDS = 300
@@ -170,8 +170,39 @@ BRAND_IMAGE_COLUMNS = {
 }
 
 
+def _detect_image_mime(image_bytes: bytes, fallback: str = 'application/octet-stream') -> str:
+    """Best-effort image mime detection to avoid serving images as text/plain/octet-stream."""
+    if not image_bytes:
+        return fallback
+
+    head = bytes(image_bytes[:32])
+    if head.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'image/png'
+    if head.startswith(b'\xff\xd8\xff'):
+        return 'image/jpeg'
+    if head.startswith(b'GIF87a') or head.startswith(b'GIF89a'):
+        return 'image/gif'
+    if head.startswith(b'RIFF') and b'WEBP' in bytes(image_bytes[8:16]):
+        return 'image/webp'
+
+    # Basic SVG detection (handles optional BOM/whitespace)
+    probe = bytes(image_bytes[:512]).lstrip(b'\xef\xbb\xbf\x00\t\r\n ')
+    if probe.startswith(b'<?xml') or probe.startswith(b'<svg'):
+        return 'image/svg+xml'
+
+    return fallback
+
+
+def _normalize_image_mime(mime_type: str, image_bytes: bytes) -> str:
+    mime = (mime_type or '').strip().lower()
+    if mime.startswith('image/'):
+        return mime
+    return _detect_image_mime(image_bytes, fallback='application/octet-stream')
+
+
 def _get_brand_image_url(image_kind: str, restaurant_id: str) -> str:
-    return f"/brand/image/{image_kind}/{restaurant_id}"
+    version = f"{int(time.time() * 1000)}-{uuid.uuid4().hex[:8]}"
+    return f"/brand/image/{image_kind}/{restaurant_id}?v={version}"
 
 
 def _store_brand_image_bytes(restaurant_id: str, image_kind: str, image_bytes: bytes, mime_type: str) -> str:
@@ -181,6 +212,7 @@ def _store_brand_image_bytes(restaurant_id: str, image_kind: str, image_bytes: b
         raise ValueError('Image data is empty')
 
     data_col, mime_col = BRAND_IMAGE_COLUMNS[image_kind]
+    normalized_mime = _normalize_image_mime(mime_type, image_bytes)
     schema = get_db_schema()
 
     with get_connection() as conn:
@@ -202,7 +234,7 @@ def _store_brand_image_bytes(restaurant_id: str, image_kind: str, image_bytes: b
                     psycopg.sql.Identifier(mime_col),
                     psycopg.sql.Identifier(mime_col)
                 ),
-                [restaurant_id, image_bytes, mime_type or 'application/octet-stream']
+                [restaurant_id, image_bytes, normalized_mime]
             )
 
     return _get_brand_image_url(image_kind, restaurant_id)
@@ -219,6 +251,8 @@ def _store_brand_image_upload(restaurant_id: str, image_kind: str, upload_file) 
     if not mime_type or mime_type == 'application/octet-stream':
         guessed_mime, _ = mimetypes.guess_type(safe_name)
         mime_type = guessed_mime or 'application/octet-stream'
+
+    mime_type = _normalize_image_mime(mime_type, image_bytes)
 
     return _store_brand_image_bytes(restaurant_id, image_kind, image_bytes, mime_type)
 
@@ -1540,8 +1574,15 @@ def brand_get_image(image_kind, restaurant_id):
         if not row or not row[0]:
             return jsonify({'error': 'Image not found'}), 404
 
-        response = Response(row[0], mimetype=row[1] or 'application/octet-stream')
-        response.headers['Cache-Control'] = 'public, max-age=31536000'
+        image_data = row[0]
+        if isinstance(image_data, memoryview):
+            image_data = image_data.tobytes()
+
+        mime_type = _normalize_image_mime(row[1] if len(row) > 1 else '', image_data)
+        response = Response(image_data, mimetype=mime_type)
+        response.headers['Cache-Control'] = 'no-store, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
         return response
     except Exception:
         app.logger.exception('Failed to fetch brand image')
@@ -1680,8 +1721,9 @@ def settings():
 
         data['chatbot_avatar'] = avatar_url
 
-        cfg.update(data)
-        save_config(cfg, restaurant_id)
+        # Persist only the POST-normalized payload. Avoid re-saving stale blob fields
+        # (logo_data/chatbot_avatar_data) from the pre-request cfg snapshot.
+        save_config(data, restaurant_id)
         return redirect(url_for('settings'))
     return render_template('clients/settings.html', cfg=cfg)
 

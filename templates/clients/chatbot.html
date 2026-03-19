@@ -32,7 +32,7 @@
       <div class="header" id="resto-name">
         <div class="header-brand">
           {% if cfg.get('logo_url') %}
-            <img src="{{ cfg.get('logo_url') }}" alt="Resto logo" class="header-logo">
+            <img src="{{ cfg.get('logo_url') }}" alt="Resto logo" class="header-logo" onerror="this.onerror=null;this.src='{{ url_for('static', filename='uploads/logo.png') }}';">
           {% else %}
             <img src="{{ url_for('static', filename='uploads/logo.png') }}" alt="Resto logo" class="header-logo">
           {% endif %}
@@ -40,7 +40,10 @@
         </div>
         <div class="header-actions">
           <span class="order-badge" id="order-number">Order #--</span>
-          <button type="button" id="menu-filter-toggle" class="menu-filter-toggle-btn" aria-controls="kiosk-filter-drawer" aria-expanded="false" aria-label="Open menu filters">☰</button>
+          <button type="button" id="menu-filter-toggle" class="menu-filter-toggle-btn" aria-controls="kiosk-filter-drawer" aria-expanded="false" aria-label="Open menu category filters">
+            <span class="menu-filter-icon" aria-hidden="true">☰</span>
+            <span class="menu-filter-label">Filter</span>
+          </button>
         </div>
       </div>
       <div class="customer-layout">

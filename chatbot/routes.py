@@ -37,10 +37,40 @@ from chatbot.ai import GeminiChatbot
 from chatbot.prompts import build_system_prompt
 from chatbot.training import build_training_context
 import re
+from datetime import date, datetime
 
 
 STATUS_TRIGGER_PATTERN = re.compile(r'\[CHECK_ORDER_STATUS:(.+?)\]')
 READY_TO_ORDER_MARKER = '[READY_TO_ORDER]'
+
+_CONFIG_EXCLUDED_FIELDS = {
+    'logo_data',
+    'logo_mime',
+    'chatbot_avatar_data',
+    'chatbot_avatar_mime'
+}
+
+
+def _json_safe_config(cfg: dict) -> dict:
+    if not isinstance(cfg, dict):
+        return {}
+
+    safe = {}
+    for key, value in cfg.items():
+        if key in _CONFIG_EXCLUDED_FIELDS:
+            continue
+
+        if isinstance(value, memoryview):
+            continue
+        if isinstance(value, (bytes, bytearray)):
+            continue
+        if isinstance(value, (datetime, date)):
+            safe[key] = value.isoformat()
+            continue
+
+        safe[key] = value
+
+    return safe
 
 
 def _resolve_restaurant_id():
@@ -236,7 +266,7 @@ def api_config():
     """Return admin config as JSON"""
     restaurant_id = _resolve_restaurant_id()
     cfg = load_config(restaurant_id)
-    return jsonify(cfg)
+    return jsonify(_json_safe_config(cfg))
 
 @chatbot_bp.route('/models', methods=['GET'])
 def api_models():

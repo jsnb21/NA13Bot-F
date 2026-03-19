@@ -223,10 +223,6 @@ function getKioskData() {
 }
 
 function buildMiniKioskHtml(items, categories) {
-    const categoryChips = categories
-        .map((category) => `<button type="button" class="kiosk-category-btn" data-category="${escapeHtml(slugifyCategory(category))}">${escapeHtml(category)}</button>`)
-        .join('');
-
     const cards = items
         .map((item) => {
             const desc = item.description ? `<div class="kiosk-item-desc">${escapeHtml(item.description)}</div>` : '';
@@ -254,10 +250,6 @@ function buildMiniKioskHtml(items, categories) {
             <div class="kiosk-header">
                 <div class="kiosk-title">Deals & Menu</div>
                 <div class="kiosk-subtitle">Tap a food card to add it to your order</div>
-            </div>
-            <div class="kiosk-categories">
-                <button type="button" class="kiosk-category-btn is-active" data-category="all">All</button>
-                ${categoryChips}
             </div>
             <div class="kiosk-grid">
                 ${cards}

@@ -27,7 +27,7 @@
     <nav class="kitchen-navbar">
         <div class="navbar-brand">
             {% if cfg.get('logo_url') %}
-                <img src="{{ cfg.get('logo_url') }}" alt="Logo" class="logo-icon">
+                <img src="{{ cfg.get('logo_url') }}" alt="Logo" class="logo-icon" onerror="this.onerror=null;this.src='{{ url_for('static', filename='uploads/logo.png') }}';">
             {% else %}
                 <i class="fas fa-utensils"></i>
             {% endif %}
