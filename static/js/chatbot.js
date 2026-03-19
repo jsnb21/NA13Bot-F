@@ -580,7 +580,7 @@ function postOrderForm(orderData) {
         </div>
         <form id="order-form" class="order-form-fields">
             <input type="text" id="order-name" placeholder="Your name" required class="order-form-input">
-            <input type="text" id="order-table" placeholder="Table number" required class="order-form-input">
+            <input type="text" id="order-table" placeholder="Table number" value="${orderState.tableNumber || ''}" required class="order-form-input">
             <button type="button" id="confirm-order-btn" class="order-form-confirm">Confirm & Place Order</button>
         </form>
     `;
@@ -721,6 +721,13 @@ if (txtInput) {
     syncAssistantUnreadBadge();
     setAssistantOpen(false);
     setKioskFilterOpen(false);
+    
+    // Read table number from QR code URL parameter
+    const params = new URLSearchParams(window.location.search);
+    const tableFromQR = params.get('table');
+    if (tableFromQR) {
+        orderState.tableNumber = tableFromQR;
+    }
 })();
 
 // Quick-reply definitions
