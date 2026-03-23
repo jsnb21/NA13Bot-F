@@ -297,6 +297,8 @@ def api_chat():
     data = request.get_json()
     user_message = data.get('message', '')
     conversation_history = data.get('history', [])
+    cart_items = data.get('cart_items', []) or []
+    cart_context = (data.get('cart_context') or '').strip()
     
     if not user_message:
         return jsonify({'error': 'No message provided'}), 400
@@ -307,7 +309,26 @@ def api_chat():
     menu_text, menu_items = _build_menu_text(cfg)
 
     training_context = build_training_context(restaurant_id, user_message)
-    system_prompt = build_system_prompt(establishment_name, menu_text, training_context)
+    if not cart_context and cart_items:
+        currency = cfg.get('currency_symbol', '₱')
+        parts = []
+        for item in cart_items:
+            name = (item.get('name') or '').strip()
+            try:
+                quantity = int(item.get('quantity') or 0)
+            except (TypeError, ValueError):
+                quantity = 0
+            try:
+                price = float(item.get('price') or 0)
+            except (TypeError, ValueError):
+                price = 0
+            if not name or quantity <= 0:
+                continue
+            parts.append(f"{quantity}x {name} ({currency}{(price * quantity):.2f})")
+        if parts:
+            cart_context = ', '.join(parts)
+
+    system_prompt = build_system_prompt(establishment_name, menu_text, training_context, cart_context)
     response = ai.get_response(user_message, system_prompt, conversation_history)
 
     status_payload = _build_order_status_response(response, restaurant_id)

@@ -64,7 +64,13 @@
         <section id="assistant-panel" class="assistant-panel is-closed" aria-label="Chat assistant section" aria-hidden="true">
           <div class="assistant-header">
             <span class="assistant-header-title">Assistant Chat</span>
-            <button type="button" id="assistant-close" class="assistant-close-btn" aria-label="Close assistant">✕</button>
+            <div class="assistant-header-actions">
+              <button type="button" id="assistant-open-cart" class="assistant-switch-btn" aria-label="Open cart">
+                <span class="switch-btn-icon" aria-hidden="true">&#128722;</span>
+                <span>Open Cart</span>
+              </button>
+              <button type="button" id="assistant-close" class="assistant-close-btn" aria-label="Close assistant">✕</button>
+            </div>
           </div>
 
           <div class="messages" id="messages">
@@ -101,10 +107,26 @@
           </div>
         </section>
 
-        <button type="button" id="assistant-toggle" class="assistant-toggle-btn" aria-controls="assistant-panel" aria-expanded="false">
-          <span class="assistant-toggle-label">Chat</span>
+        <button type="button" id="assistant-toggle" class="assistant-toggle-btn" aria-controls="assistant-panel cart-popup" aria-expanded="false">
+          <span class="switch-btn-icon" aria-hidden="true">&#128722;</span>
+          <span class="assistant-toggle-label">Cart</span>
           <span id="assistant-unread" class="assistant-unread-dot" style="display:none;">0</span>
         </button>
+
+        <div id="cart-backdrop" class="cart-backdrop is-closed" aria-hidden="true"></div>
+        <aside id="cart-popup" class="cart-popup is-closed" aria-hidden="true">
+          <div class="cart-popup-header">
+            <strong class="cart-popup-title">Current Cart</strong>
+            <div class="cart-popup-actions">
+              <button type="button" id="cart-open-chat" class="cart-popup-switch" aria-label="Open chat">
+                <span class="switch-btn-icon" aria-hidden="true">&#128172;</span>
+                <span>Open Chat</span>
+              </button>
+              <button type="button" id="cart-close" class="cart-popup-close" aria-label="Close cart">✕</button>
+            </div>
+          </div>
+          <div id="cart-popup-body" class="cart-popup-body"></div>
+        </aside>
       </div>
     </div>
 
@@ -170,7 +192,7 @@
         }
         
         // Update button and badge colors when they use the main color
-        document.querySelectorAll('.kiosk-category-btn.is-active, .kiosk-add-btn, .assistant-toggle-btn, .composer button').forEach(el => {
+        document.querySelectorAll('.kiosk-category-btn.is-active, .kiosk-add-btn, .assistant-toggle-btn, .cart-toggle-btn, .composer button').forEach(el => {
           el.style.color = isMainLight ? '#000000' : '#ffffff';
         });
         

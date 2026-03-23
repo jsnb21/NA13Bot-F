@@ -14,18 +14,60 @@ let orderState = {
     isCollectingOrder: false
 };
 
+let cartState = {
+    items: []
+};
+
 const assistantPanel = document.getElementById('assistant-panel');
 const assistantToggleButton = document.getElementById('assistant-toggle');
+const assistantToggleLabel = assistantToggleButton ? assistantToggleButton.querySelector('.assistant-toggle-label') : null;
 const assistantCloseButton = document.getElementById('assistant-close');
+const assistantOpenCartButton = document.getElementById('assistant-open-cart');
 const assistantUnreadBadge = document.getElementById('assistant-unread');
 const menuFilterToggleButton = document.getElementById('menu-filter-toggle');
 const kioskFilterDrawer = document.getElementById('kiosk-filter-drawer');
 const kioskFilterBackdrop = document.getElementById('kiosk-filter-backdrop');
 const kioskFilterCloseButton = document.getElementById('kiosk-filter-close');
 const kioskFilterList = document.getElementById('kiosk-filter-list');
+const cartPopup = document.getElementById('cart-popup');
+const cartPopupBody = document.getElementById('cart-popup-body');
+const cartBackdrop = document.getElementById('cart-backdrop');
+const cartCloseButton = document.getElementById('cart-close');
+const cartOpenChatButton = document.getElementById('cart-open-chat');
 let assistantUnreadCount = 0;
 let activeKioskCategory = 'all';
 let availableKioskCategories = [];
+
+function parseItemUnitPrice(priceValue) {
+    const raw = (priceValue || '').toString().trim();
+    if (!raw) return 0;
+    const cleaned = raw.replace(/[^0-9.]/g, '');
+    const parsed = parseFloat(cleaned);
+    return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function normalizeItemName(name) {
+    return (name || '').toString().trim().toLowerCase();
+}
+
+function getCartTotal() {
+    return cartState.items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0);
+}
+
+function getCartPayload() {
+    return cartState.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price
+    }));
+}
+
+function getCartContextText() {
+    if (!cartState.items.length) return 'Cart is currently empty.';
+    const currency = chatbotConfig.currency_symbol || '₱';
+    const lines = cartState.items.map((item) => `${item.quantity}x ${item.name} (${currency}${(item.price * item.quantity).toFixed(2)})`);
+    return `${lines.join(', ')}. Total: ${currency}${getCartTotal().toFixed(2)}`;
+}
 
 function pushHistory(entry) {
     conversationHistory.push(entry);
@@ -73,12 +115,12 @@ function setAssistantOpen(open) {
     if (!assistantPanel || !assistantToggleButton) return;
     assistantPanel.classList.toggle('is-closed', !open);
     assistantPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
-    assistantToggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) {
         clearAssistantUnread();
         const txt = document.getElementById('txt');
         if (txt) txt.focus();
     }
+    syncUnifiedToggleState();
 }
 
 function isKioskFilterOpen() {
@@ -92,6 +134,31 @@ function setKioskFilterOpen(open) {
     kioskFilterDrawer.setAttribute('aria-hidden', open ? 'false' : 'true');
     kioskFilterBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
     menuFilterToggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function isCartPopupOpen() {
+    return Boolean(cartPopup && !cartPopup.classList.contains('is-closed'));
+}
+
+function setCartPopupOpen(open) {
+    if (!cartPopup || !cartBackdrop || !assistantToggleButton) return;
+    cartPopup.classList.toggle('is-closed', !open);
+    cartBackdrop.classList.toggle('is-closed', !open);
+    cartPopup.setAttribute('aria-hidden', open ? 'false' : 'true');
+    cartBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+    syncUnifiedToggleState();
+}
+
+function syncUnifiedToggleState() {
+    if (!assistantToggleButton) return;
+    const expanded = (isAssistantOpen() || isCartPopupOpen()) ? 'true' : 'false';
+    assistantToggleButton.setAttribute('aria-expanded', expanded);
+}
+
+function syncCartBadge() {
+    if (!assistantToggleLabel) return;
+    const count = cartState.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    assistantToggleLabel.textContent = count > 0 ? `Cart (${count})` : 'Cart';
 }
 
 function syncKioskCategoryUI() {
@@ -237,7 +304,7 @@ function buildMiniKioskHtml(items, categories) {
                         <div class="kiosk-item-name">${escapeHtml(item.name)}</div>
                         ${desc}
                         <div class="kiosk-item-footer">
-                            <button type="button" class="kiosk-add-btn" data-item-name="${escapeHtml(item.name)}">Add To Order</button>
+                            <button type="button" class="kiosk-add-btn" data-item-name="${escapeHtml(item.name)}">Add To Cart</button>
                         </div>
                     </div>
                 </article>
@@ -249,13 +316,122 @@ function buildMiniKioskHtml(items, categories) {
         <div class="mini-kiosk">
             <div class="kiosk-header">
                 <div class="kiosk-title">Deals & Menu</div>
-                <div class="kiosk-subtitle">Tap a food card to add it to your order</div>
+                <div class="kiosk-subtitle">Tap a food card to add it to your cart</div>
             </div>
             <div class="kiosk-grid">
                 ${cards}
             </div>
         </div>
     `;
+}
+
+function renderCartPanel() {
+    const cartEl = document.getElementById('kiosk-cart');
+    const popupEl = cartPopupBody;
+    if (!cartEl && !popupEl) return;
+
+    const currency = chatbotConfig.currency_symbol || '₱';
+
+    const buildMarkup = () => {
+        if (!cartState.items.length) {
+            return `
+                <div class="kiosk-cart-card is-empty">
+                    <div class="kiosk-cart-title">Your Cart</div>
+                    <div class="kiosk-cart-empty">No items yet. Add dishes from the menu below.</div>
+                </div>
+            `;
+        }
+
+        const rows = cartState.items.map((item) => `
+            <div class="kiosk-cart-item">
+                <div class="kiosk-cart-item-main">
+                    <div class="kiosk-cart-item-name">${escapeHtml(item.name)}</div>
+                    <div class="kiosk-cart-item-price">${currency}${(item.price * item.quantity).toFixed(2)}</div>
+                </div>
+                <div class="kiosk-cart-item-actions">
+                    <button type="button" class="kiosk-cart-qty-btn" data-cart-action="dec" data-item-name="${escapeHtml(item.name)}">-</button>
+                    <span class="kiosk-cart-qty">${item.quantity}</span>
+                    <button type="button" class="kiosk-cart-qty-btn" data-cart-action="inc" data-item-name="${escapeHtml(item.name)}">+</button>
+                    <button type="button" class="kiosk-cart-remove-btn" data-cart-action="remove" data-item-name="${escapeHtml(item.name)}">Remove</button>
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <div class="kiosk-cart-card">
+                <div class="kiosk-cart-top">
+                    <div class="kiosk-cart-title">Your Cart (${cartState.items.length})</div>
+                    <button type="button" class="kiosk-cart-clear-btn" data-cart-action="clear">Clear</button>
+                </div>
+                <div class="kiosk-cart-items">${rows}</div>
+                <div class="kiosk-cart-footer">
+                    <div class="kiosk-cart-total">Total: ${currency}${getCartTotal().toFixed(2)}</div>
+                    <div class="kiosk-cart-footer-actions">
+                        <button type="button" class="kiosk-cart-chat-btn" data-cart-action="ask">Ask About Cart</button>
+                        <button type="button" class="kiosk-cart-checkout-btn" data-cart-action="checkout">Checkout</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    const markup = buildMarkup();
+    if (cartEl) cartEl.innerHTML = markup;
+    if (popupEl) popupEl.innerHTML = markup;
+    syncCartBadge();
+}
+
+function addItemToCartByName(itemName) {
+    const { items } = getKioskData();
+    const normalizedName = normalizeItemName(itemName);
+    const source = items.find((item) => normalizeItemName(item.name) === normalizedName);
+    if (!source) return;
+
+    const existing = cartState.items.find((item) => normalizeItemName(item.name) === normalizedName);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cartState.items.push({
+            name: source.name,
+            quantity: 1,
+            price: parseItemUnitPrice(source.priceLabel)
+        });
+    }
+
+    renderCartPanel();
+}
+
+function updateCartItemQuantity(itemName, delta) {
+    const normalizedName = normalizeItemName(itemName);
+    const existing = cartState.items.find((item) => normalizeItemName(item.name) === normalizedName);
+    if (!existing) return;
+
+    existing.quantity += delta;
+    if (existing.quantity <= 0) {
+        cartState.items = cartState.items.filter((item) => normalizeItemName(item.name) !== normalizedName);
+    }
+    renderCartPanel();
+}
+
+function removeCartItem(itemName) {
+    const normalizedName = normalizeItemName(itemName);
+    cartState.items = cartState.items.filter((item) => normalizeItemName(item.name) !== normalizedName);
+    renderCartPanel();
+}
+
+function clearCart() {
+    cartState.items = [];
+    renderCartPanel();
+}
+
+function syncCartFromAIItems(aiItems) {
+    if (!Array.isArray(aiItems) || aiItems.length === 0) return;
+    cartState.items = aiItems.map((item) => ({
+        name: (item.name || '').toString().trim(),
+        quantity: Number(item.quantity || 1),
+        price: Number(item.price || 0)
+    })).filter((item) => item.name);
+    renderCartPanel();
 }
 
 function focusKioskPanel() {
@@ -282,6 +458,7 @@ function renderKioskPanel() {
     availableKioskCategories = categories.map((category) => slugifyCategory(category));
     renderKioskFilterList(categories);
     setKioskCategory(activeKioskCategory);
+    renderCartPanel();
 }
 
 function postMiniKiosk() {
@@ -316,18 +493,18 @@ function postMiniKiosk() {
 
 function renderAIResult(result) {
     if (result.orderReady) {
+        if (result.items && result.items.length) {
+            syncCartFromAIItems(result.items);
+        }
         postOrderForm(result);
         return;
     }
 
-    const hasCart = result.currentItems && result.currentItems.length > 0;
-    if (!hasCart) {
-        postMessage(result.message || result, 'bot');
+    if (result.currentItems && result.currentItems.length > 0) {
+        syncCartFromAIItems(result.currentItems);
     }
 
-    if (hasCart) {
-        postCartSummary(result.currentItems, result.currentTotal);
-    }
+    postMessage(result.message || result, 'bot');
 }
 
 // Shared send handler used by click and Enter key.
@@ -374,7 +551,16 @@ if (sendButton) {
 
 if (assistantToggleButton) {
     assistantToggleButton.onclick = () => {
-        setAssistantOpen(!isAssistantOpen());
+        if (isAssistantOpen()) {
+            setAssistantOpen(false);
+            return;
+        }
+        if (isCartPopupOpen()) {
+            setCartPopupOpen(false);
+            return;
+        }
+        // Unified behavior: open cart first.
+        setCartPopupOpen(true);
     };
 }
 
@@ -402,8 +588,38 @@ if (kioskFilterBackdrop) {
     };
 }
 
+if (cartCloseButton) {
+    cartCloseButton.onclick = () => {
+        setCartPopupOpen(false);
+    };
+}
+
+if (assistantOpenCartButton) {
+    assistantOpenCartButton.onclick = () => {
+        setAssistantOpen(false);
+        setCartPopupOpen(true);
+    };
+}
+
+if (cartOpenChatButton) {
+    cartOpenChatButton.onclick = () => {
+        setCartPopupOpen(false);
+        setAssistantOpen(true);
+    };
+}
+
+if (cartBackdrop) {
+    cartBackdrop.onclick = () => {
+        setCartPopupOpen(false);
+    };
+}
+
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
+        if (isCartPopupOpen()) {
+            setCartPopupOpen(false);
+            return;
+        }
         if (isKioskFilterOpen()) {
             setKioskFilterOpen(false);
             return;
@@ -715,7 +931,9 @@ async function sendToAI(message) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 message,
-                history: conversationHistory.slice(0, -1) // Send history excluding current message
+                history: conversationHistory.slice(0, -1), // Send history excluding current message
+                cart_items: getCartPayload(),
+                cart_context: getCartContextText()
             })
         });
         const data = await res.json();
@@ -773,6 +991,8 @@ if (txtInput) {
     syncAssistantUnreadBadge();
     setAssistantOpen(false);
     setKioskFilterOpen(false);
+    setCartPopupOpen(false);
+    syncCartBadge();
     
     // Read table number from QR code URL parameter
     const params = new URLSearchParams(window.location.search);
@@ -881,6 +1101,7 @@ async function submitOrder() {
             postMessage(`✓ ${data.message}`, 'bot');
             // Reset order state and conversation history
             orderState = { items: [], customerName: '', tableNumber: '', isCollectingOrder: false };
+            clearCart();
             conversationHistory = [];
         } else {
             postMessage(`Order failed: ${data.error}`, 'bot');
@@ -912,13 +1133,15 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
                 }
             }, 350);
         } else if (action === 'order') {
-            orderState.isCollectingOrder = true;
-            showTyping();
-            const reply = canned[action]();
-            setTimeout(() => {
-                hideTyping();
-                postMessage(reply, 'bot');
-            }, 500);
+            if (!cartState.items.length) {
+                postMessage('Your cart is empty. Add items from the kiosk first, and I will help you checkout.', 'bot');
+            } else {
+                setAssistantOpen(true);
+                postOrderForm({
+                    items: cartState.items,
+                    total: getCartTotal()
+                });
+            }
         } else if (canned[action]) {
             showTyping();
             // Using the already-loaded chatbotConfig
@@ -954,18 +1177,61 @@ const handleKioskInteraction = async (event) => {
         }
 
         const addBtn = event.target.closest('.kiosk-add-btn');
-        if (!addBtn) return;
+        if (addBtn) {
+            const itemName = (addBtn.dataset.itemName || '').trim();
+            if (!itemName) return;
+            addItemToCartByName(itemName);
+            return;
+        }
 
-        const itemName = (addBtn.dataset.itemName || '').trim();
-        if (!itemName) return;
+        const cartActionBtn = event.target.closest('[data-cart-action]');
+        if (!cartActionBtn) return;
 
-        const orderMessage = `I'd like to order 1 ${itemName}`;
-        postMessage(orderMessage, 'user');
-
-        showTyping();
-        const result = await sendToAI(orderMessage);
-        hideTyping();
-        renderAIResult(result);
+        const action = (cartActionBtn.dataset.cartAction || '').trim();
+        const itemName = (cartActionBtn.dataset.itemName || '').trim();
+        if (action === 'inc' && itemName) {
+            updateCartItemQuantity(itemName, 1);
+            return;
+        }
+        if (action === 'dec' && itemName) {
+            updateCartItemQuantity(itemName, -1);
+            return;
+        }
+        if (action === 'remove' && itemName) {
+            removeCartItem(itemName);
+            return;
+        }
+        if (action === 'clear') {
+            clearCart();
+            return;
+        }
+        if (action === 'ask') {
+            if (!cartState.items.length) {
+                postMessage('Your cart is currently empty.', 'bot');
+                return;
+            }
+            setCartPopupOpen(false);
+            setAssistantOpen(true);
+            const userPrompt = `Please review my cart and suggest complements. Cart: ${getCartContextText()}`;
+            postMessage('Can you review my cart and suggest complements?', 'user');
+            showTyping();
+            const result = await sendToAI(userPrompt);
+            hideTyping();
+            renderAIResult(result);
+            return;
+        }
+        if (action === 'checkout') {
+            if (!cartState.items.length) {
+                postMessage('Your cart is currently empty. Add at least one item before checkout.', 'bot');
+                return;
+            }
+            setCartPopupOpen(false);
+            setAssistantOpen(true);
+            postOrderForm({
+                items: cartState.items,
+                total: getCartTotal()
+            });
+        }
 };
 
 const messagesContainer = document.getElementById('messages');
@@ -980,4 +1246,8 @@ if (kioskPanel) {
 
 if (kioskFilterList) {
     kioskFilterList.onclick = handleKioskInteraction;
+}
+
+if (cartPopupBody) {
+    cartPopupBody.onclick = handleKioskInteraction;
 }

@@ -1,6 +1,6 @@
 // QR Codes Page JavaScript
 
-document.addEventListener('DOMContentLoaded', function() {
+function initializeQRCodesPage() {
     const generateBtn = document.getElementById('generateBtn');
     const printBtn = document.getElementById('printBtn');
     const tableCountInput = document.getElementById('tableCount');
@@ -9,6 +9,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const qrCodesContainer = document.getElementById('qrCodesContainer');
     const qrGrid = document.getElementById('qrGrid');
     const qrCountDisplay = document.getElementById('qrCountDisplay');
+
+    // Exit when not on the QR page.
+    if (!generateBtn || !printBtn || !tableCountInput || !startTableInput || !loadingSpinner || !qrCodesContainer || !qrGrid || !qrCountDisplay) {
+        return;
+    }
+
+    // Prevent duplicate listeners across Turbo navigations.
+    if (generateBtn.dataset.qrInitialized === '1') {
+        return;
+    }
+    generateBtn.dataset.qrInitialized = '1';
 
     // Generate QR codes
     generateBtn.addEventListener('click', async function() {
@@ -236,7 +247,11 @@ document.addEventListener('DOMContentLoaded', function() {
             generateBtn.click();
         }
     });
-});
+}
+
+document.addEventListener('DOMContentLoaded', initializeQRCodesPage);
+document.addEventListener('turbo:load', initializeQRCodesPage);
+document.addEventListener('turbo:frame-load', initializeQRCodesPage);
 
 function displayQRCodes(qrCodes, count) {
     const qrGrid = document.getElementById('qrGrid');

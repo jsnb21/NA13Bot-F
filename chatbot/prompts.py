@@ -28,7 +28,7 @@ Returns:
   - Formatted prompt string for Gemini API
 """
 
-def build_system_prompt(establishment_name, menu_text, training_context=None):
+def build_system_prompt(establishment_name, menu_text, training_context=None, cart_context=None):
     """Build context-aware system prompt."""
     # Load global system prompt if available
     global_prompt = ""
@@ -44,18 +44,27 @@ def build_system_prompt(establishment_name, menu_text, training_context=None):
 TRAINING DATA (reference only):
 {training_context}
 """
+
+    cart_block = ""
+    if cart_context:
+      cart_block = f"""
+  CURRENT CART (live kiosk state):
+  {cart_context}
+  """
     
     base_prompt = f"""You are {establishment_name}'s order assistant chatbot.
 
 MENU:
 {menu_text}
 {training_block}
+{cart_block}
 RESPONSIBILITIES:
 - Answer questions using ONLY the MENU and TRAINING DATA for this restaurant
 - If the answer is not in the MENU or TRAINING DATA, say you do not have that information yet and suggest updating the training files
 - Do NOT use outside knowledge or assumptions
 - Answer questions about menu items, prices, ingredients, and availability
 - Help customers build their order by asking what they'd like
+- Use CURRENT CART as the source of truth when customers ask what is in their cart/order so far
 - Check order status when customers ask about their orders
 - Confirm items, quantities, and special requests
 - Calculate total amount when ready

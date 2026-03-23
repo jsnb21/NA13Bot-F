@@ -102,7 +102,9 @@ import time
 import secrets
 import uuid
 import hashlib
+import socket
 from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse, urlunparse
 from chatbot.routes import chatbot_bp
 from chatbot.training import (
     build_training_context,
@@ -2347,12 +2349,55 @@ def qr_codes():
     return render_template('clients/qr-codes.html', cfg=cfg)
 
 
+def _detect_lan_ip() -> str:
+    """Best-effort detection of the server's LAN IPv4 address."""
+    sock = None
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # No packets are sent; this is used to select the active outbound interface.
+        sock.connect(('8.8.8.8', 80))
+        ip = sock.getsockname()[0]
+        if ip and not ip.startswith('127.'):
+            return ip
+    except Exception:
+        pass
+    finally:
+        if sock is not None:
+            try:
+                sock.close()
+            except Exception:
+                pass
+
+    try:
+        fallback = socket.gethostbyname(socket.gethostname())
+        if fallback and not fallback.startswith('127.'):
+            return fallback
+    except Exception:
+        pass
+
+    return ''
+
+
 def get_local_network_url(request_obj):
-    """
-    Get the appropriate URL for QR codes.
-    Returns the host URL as-is (works for both localhost and network access).
-    """
-    return request_obj.host_url.rstrip('/')
+    """Return a QR base URL that works for devices on the same network."""
+    # Optional override for reverse proxies or custom domains.
+    configured = (os.environ.get('QR_BASE_URL') or '').strip().rstrip('/')
+    if configured:
+        return configured
+
+    base = request_obj.host_url.rstrip('/')
+    parsed = urlparse(base)
+    host = (parsed.hostname or '').strip().lower()
+
+    # Replace local-only hosts with LAN IP so phones/tablets can open QR links.
+    if host in ('localhost', '127.0.0.1', '::1', '0.0.0.0'):
+        lan_ip = _detect_lan_ip()
+        if lan_ip:
+            port = f":{parsed.port}" if parsed.port else ''
+            netloc = f"{lan_ip}{port}"
+            return urlunparse((parsed.scheme, netloc, '', '', '', '')).rstrip('/')
+
+    return base
 
 
 @app.route('/api/generate-qr-codes', methods=['POST'])
