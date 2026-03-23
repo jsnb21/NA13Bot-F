@@ -90,6 +90,7 @@ import json
 import re
 import logging
 import uuid
+import shutil
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
@@ -825,3 +826,207 @@ def get_platform_stats():
             'total_menu_items': 0,
             'active_restaurants': 0
         }
+
+
+def get_restaurant_details(restaurant_id: str, days: int = 14):
+        """Get detailed tenant info for superadmin view, including traffic timeline."""
+        schema = get_db_schema()
+        rid = (restaurant_id or '').strip()
+        if not rid:
+                return None
+
+        safe_days = max(7, min(int(days or 14), 90))
+
+        try:
+                with get_connection() as conn:
+                        with conn.cursor() as cur:
+                                cur.execute(
+                                        sql.SQL(
+                                                """
+                                                SELECT
+                                                    b.establishment_name,
+                                                    b.business_email,
+                                                    b.updated_at,
+                                                    (
+                                                        SELECT a.email
+                                                        FROM {}.accounts a
+                                                        WHERE a.restaurant_id = %s
+                                                        ORDER BY a.created_at ASC
+                                                        LIMIT 1
+                                                    ) AS owner_email,
+                                                    (
+                                                        SELECT COUNT(*)
+                                                        FROM {}.orders o
+                                                        WHERE o.restaurant_id = %s
+                                                    ) AS total_traffic,
+                                                    GREATEST(
+                                                        COALESCE(b.updated_at, to_timestamp(0)),
+                                                        COALESCE((SELECT MAX(m.updated_at) FROM {}.menu_items m WHERE m.restaurant_id = %s), to_timestamp(0)),
+                                                        COALESCE((SELECT MAX(o.updated_at) FROM {}.orders o WHERE o.restaurant_id = %s), to_timestamp(0)),
+                                                        COALESCE((SELECT MAX(tf.updated_at) FROM {}.training_files tf WHERE tf.restaurant_id = %s), to_timestamp(0))
+                                                    ) AS last_modified
+                                                FROM {}.brand_settings b
+                                                WHERE b.restaurant_id = %s
+                                                LIMIT 1
+                                                """
+                                        ).format(
+                                                sql.Identifier(schema),
+                                                sql.Identifier(schema),
+                                                sql.Identifier(schema),
+                                                sql.Identifier(schema),
+                                                sql.Identifier(schema),
+                                                sql.Identifier(schema),
+                                        ),
+                                        [rid, rid, rid, rid, rid, rid]
+                                )
+                                row = cur.fetchone()
+
+                                if not row:
+                                        return None
+
+                                establishment_name = row[0] or 'Unnamed Restaurant'
+                                business_email = row[1] or ''
+                                owner_email = row[3] or ''
+                                total_traffic = int(row[4] or 0)
+                                last_modified = row[5]
+
+                                cur.execute(
+                                        sql.SQL(
+                                                """
+                                                WITH day_series AS (
+                                                    SELECT generate_series(
+                                                        current_date - (%s::int - 1),
+                                                        current_date,
+                                                        interval '1 day'
+                                                    )::date AS day
+                                                )
+                                                SELECT
+                                                    ds.day,
+                                                    COALESCE(COUNT(o.id), 0) AS traffic
+                                                FROM day_series ds
+                                                LEFT JOIN {}.orders o
+                                                    ON o.restaurant_id = %s
+                                                 AND o.created_at::date = ds.day
+                                                GROUP BY ds.day
+                                                ORDER BY ds.day ASC
+                                                """
+                                        ).format(sql.Identifier(schema)),
+                                        [safe_days, rid]
+                                )
+                                traffic_rows = cur.fetchall() or []
+
+                traffic_series = [
+                        {
+                                'date': day.isoformat() if day else '',
+                                'value': int(value or 0)
+                        }
+                        for day, value in traffic_rows
+                ]
+
+                email_used = owner_email or business_email
+
+                return {
+                        'restaurant_id': rid,
+                        'establishment_name': establishment_name,
+                        'email_used': email_used,
+                        'last_modified': last_modified.isoformat() if last_modified else None,
+                        'total_traffic': total_traffic,
+                        'traffic_series': traffic_series,
+                }
+        except Exception:
+                logger.exception("Error fetching restaurant details")
+                return None
+
+
+def delete_tenant_data(restaurant_id: str):
+    """Delete a tenant and all tenant-scoped data from database and local storage."""
+    schema = get_db_schema()
+    rid = (restaurant_id or '').strip()
+    if not rid:
+        return {'success': False, 'message': 'Missing restaurant_id.'}
+
+    deleted_counts = {
+        'orders': 0,
+        'menu_items': 0,
+        'training_history': 0,
+        'training_files': 0,
+        'brand_settings': 0,
+        'accounts': 0,
+        'device_tokens': 0,
+    }
+
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    sql.SQL(
+                        """
+                        SELECT DISTINCT lower(email)
+                        FROM {}.accounts
+                        WHERE restaurant_id::text = %s
+                           OR COALESCE(meta->>'restaurant_id', '') = %s
+                        """
+                    ).format(sql.Identifier(schema)),
+                    [rid, rid]
+                )
+                tenant_emails = [row[0] for row in (cur.fetchall() or []) if row and row[0]]
+
+                for table_name in ['orders', 'menu_items', 'training_history', 'training_files', 'brand_settings']:
+                    cur.execute(
+                        sql.SQL("DELETE FROM {}.{} WHERE restaurant_id::text = %s").format(
+                            sql.Identifier(schema),
+                            sql.Identifier(table_name),
+                        ),
+                        [rid],
+                    )
+                    deleted_counts[table_name] = cur.rowcount or 0
+
+                cur.execute(
+                    sql.SQL(
+                        """
+                        DELETE FROM {}.accounts
+                        WHERE restaurant_id::text = %s
+                           OR COALESCE(meta->>'restaurant_id', '') = %s
+                        """
+                    ).format(sql.Identifier(schema)),
+                    [rid, rid],
+                )
+                deleted_counts['accounts'] = cur.rowcount or 0
+
+                if tenant_emails:
+                    cur.execute(
+                        sql.SQL("DELETE FROM {}.device_tokens WHERE lower(email) = ANY(%s)").format(
+                            sql.Identifier(schema)
+                        ),
+                        [tenant_emails],
+                    )
+                    deleted_counts['device_tokens'] = cur.rowcount or 0
+
+        project_root = Path(__file__).resolve().parent
+        file_paths = [
+            project_root / 'training_data' / rid,
+            project_root / 'uploads' / rid,
+            project_root / 'static' / 'uploads' / rid,
+        ]
+
+        removed_paths = []
+        for target in file_paths:
+            try:
+                if target.is_dir():
+                    shutil.rmtree(target)
+                    removed_paths.append(str(target))
+                elif target.is_file():
+                    target.unlink(missing_ok=True)
+                    removed_paths.append(str(target))
+            except Exception:
+                logger.exception("Failed cleaning tenant file path: %s", target)
+
+        return {
+            'success': True,
+            'restaurant_id': rid,
+            'deleted_counts': deleted_counts,
+            'removed_paths': removed_paths,
+        }
+    except Exception:
+        logger.exception("Error deleting tenant: %s", rid)
+        return {'success': False, 'message': 'Failed to delete tenant data.'}

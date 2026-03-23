@@ -1186,6 +1186,80 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+
+def _get_superadmin_credentials():
+    default_user = 'admin'
+    default_password = 'admin123'
+
+    env_user = (os.environ.get('SUPERADMIN_USER') or '').strip()
+    env_password = (os.environ.get('SUPERADMIN_PASSWORD') or '').strip()
+    if env_user and env_password:
+        return env_user, env_password
+
+    config_path = Path(__file__).resolve().parent / 'config.json'
+    try:
+        if config_path.exists():
+            data = json.loads(config_path.read_text(encoding='utf-8'))
+            user = (
+                (data.get('superadmin_username') or '').strip()
+                or (data.get('superadmin_user') or '').strip()
+            )
+            password = (
+                (data.get('superadmin_password') or '').strip()
+                or (data.get('superadmin_pass') or '').strip()
+            )
+            if user and password:
+                return user, password
+    except Exception:
+        pass
+
+    return default_user, default_password
+
+
+def _is_superadmin_authenticated():
+    return bool(session.get('superadmin_authenticated'))
+
+
+def _set_superadmin_authenticated(value: bool):
+    if value:
+        session['superadmin_authenticated'] = True
+        session['is_superadmin'] = True
+        return
+    session.pop('superadmin_authenticated', None)
+    session.pop('is_superadmin', None)
+
+
+def _verify_superadmin_credentials(username: str, password: str):
+    expected_user, expected_password = _get_superadmin_credentials()
+    provided_user = (username or '').strip()
+    provided_password = password or ''
+    return (
+        secrets.compare_digest(provided_user, expected_user)
+        and secrets.compare_digest(provided_password, expected_password)
+    )
+
+
+def _verify_superadmin_password(password: str):
+    _, expected_password = _get_superadmin_credentials()
+    provided_password = password or ''
+    return secrets.compare_digest(provided_password, expected_password)
+
+
+def _superadmin_unauthorized_response():
+    return jsonify({
+        'ok': False,
+        'message': 'Superadmin authentication required.'
+    }), 401
+
+
+def superadmin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if _is_superadmin_authenticated():
+            return f(*args, **kwargs)
+        return _superadmin_unauthorized_response()
+    return decorated
+
 def get_current_restaurant_id():
     rid = session.get('restaurant_id')
     if rid:
@@ -1512,20 +1586,57 @@ def admin():
     return redirect(url_for('superadmin'))
 
 
+@app.route('/api/superadmin/auth/status', methods=['GET'])
+def api_superadmin_auth_status():
+    return jsonify({'authenticated': _is_superadmin_authenticated()})
+
+
+@app.route('/api/superadmin/auth/login', methods=['POST'])
+def api_superadmin_auth_login():
+    data = request.get_json(silent=True) or {}
+    username = data.get('username', '')
+    password = data.get('password', '')
+
+    if _verify_superadmin_credentials(username, password):
+        _set_superadmin_authenticated(True)
+        return jsonify({'ok': True, 'authenticated': True})
+
+    _set_superadmin_authenticated(False)
+    return jsonify({
+        'ok': False,
+        'authenticated': False,
+        'message': 'Invalid superadmin credentials.'
+    }), 401
+
+
+@app.route('/api/superadmin/auth/logout', methods=['POST'])
+def api_superadmin_auth_logout():
+    _set_superadmin_authenticated(False)
+    return jsonify({'ok': True, 'authenticated': False})
+
+
 @app.route('/superadmin', methods=['GET', 'POST'])
 def superadmin():
     # Clear restaurant_id when entering superadmin mode
     if 'restaurant_id' in session:
         session.pop('restaurant_id')
+
+    # Force re-authentication on every page load/refresh.
+    if request.method == 'GET':
+        _set_superadmin_authenticated(False)
     
     if request.method == 'POST':
         config_val = request.form.get('config', '')
         save_config({'config': config_val})
         return redirect(url_for('superadmin'))
-    return render_template('superadmin/superadmin.html')
+    return render_template(
+        'superadmin/superadmin.html',
+        superadmin_authenticated=_is_superadmin_authenticated()
+    )
 
 
 @app.route('/api/superadmin/restaurants', methods=['GET'])
+@superadmin_required
 def api_superadmin_restaurants():
     """List all registered restaurants."""
     from tools import get_all_restaurants
@@ -1534,6 +1645,7 @@ def api_superadmin_restaurants():
 
 
 @app.route('/api/superadmin/stats', methods=['GET'])
+@superadmin_required
 def api_superadmin_stats():
     """Get platform-wide statistics."""
     from tools import get_platform_stats
@@ -1541,7 +1653,47 @@ def api_superadmin_stats():
     return jsonify(stats)
 
 
+@app.route('/api/superadmin/tenant/<restaurant_id>/details', methods=['GET'])
+@superadmin_required
+def api_superadmin_tenant_details(restaurant_id):
+    """Get detailed tenant data for superadmin modal view."""
+    from tools import get_restaurant_details
+
+    days_raw = request.args.get('days', '14')
+    try:
+        days = int(days_raw)
+    except Exception:
+        days = 14
+
+    details = get_restaurant_details(restaurant_id, days=days)
+    if not details:
+        return jsonify({'error': 'Tenant not found'}), 404
+    return jsonify(details)
+
+
+@app.route('/api/superadmin/tenant/<restaurant_id>/delete', methods=['POST'])
+@superadmin_required
+def api_superadmin_delete_tenant(restaurant_id):
+    """Delete a tenant and all tenant-scoped data after password reconfirmation."""
+    from tools import delete_tenant_data
+
+    payload = request.get_json(silent=True) or {}
+    password = payload.get('password', '')
+    if not _verify_superadmin_password(password):
+        return jsonify({'success': False, 'message': 'Password confirmation failed.'}), 403
+
+    result = delete_tenant_data(restaurant_id)
+    if not result.get('success'):
+        return jsonify({'success': False, 'message': result.get('message', 'Unable to delete tenant.')}), 500
+
+    if session.get('restaurant_id') == restaurant_id:
+        session.pop('restaurant_id', None)
+
+    return jsonify({'success': True, 'result': result})
+
+
 @app.route('/api/superadmin/manage/<restaurant_id>', methods=['POST'])
+@superadmin_required
 def api_superadmin_manage_restaurant(restaurant_id):
     """Switch to manage a specific restaurant."""
     # Store the current superadmin status before switching
@@ -1554,6 +1706,7 @@ def api_superadmin_manage_restaurant(restaurant_id):
 
 
 @app.route('/api/superadmin/system-prompt', methods=['GET'])
+@superadmin_required
 def api_get_global_system_prompt():
     """Get the global system prompt."""
     from tools import load_global_system_prompt
@@ -1562,6 +1715,7 @@ def api_get_global_system_prompt():
 
 
 @app.route('/api/superadmin/system-prompt', methods=['POST'])
+@superadmin_required
 def api_save_global_system_prompt():
     """Save the global system prompt."""
     from tools import save_global_system_prompt
@@ -2892,6 +3046,8 @@ def signup_verify():
 def logout():
     session.pop('user', None)
     session.pop('restaurant_id', None)
+    session.pop('superadmin_authenticated', None)
+    session.pop('is_superadmin', None)
     response = make_response(redirect(url_for('login')))
     # Clear device token cookie on logout
     response.set_cookie('device_token', '', expires=0)

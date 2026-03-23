@@ -9,6 +9,49 @@
 
   body { background-color: #f1f5f9; }
 
+  body.superadmin-modal-open {
+    overflow: hidden;
+    height: 100vh;
+    overscroll-behavior: none;
+  }
+
+  .superadmin-shell {
+    transition: filter 220ms ease, transform 220ms ease;
+  }
+
+  .superadmin-shell--locked {
+    filter: blur(18px) brightness(0.5) saturate(0.7);
+    pointer-events: none;
+    user-select: none;
+    transform: scale(1.01);
+  }
+
+  .superadmin-auth-shield {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(7, 12, 18, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .superadmin-auth-card {
+    width: min(440px, 94vw);
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #d8e1e7;
+    padding: 22px 20px;
+    box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
+  }
+
+  .superadmin-auth-submit {
+    border-radius: 12px;
+  }
+
   /* --- Modern Sticky Topbar --- */
   .superadmin-nav {
     background: var(--header-blur);
@@ -72,4 +115,8 @@
     font-weight: 600;
     font-size: 0.85rem;
     transition: 0.2s;
+  }
+
+  .auth-footer {
+    position: static;
   }

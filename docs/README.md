@@ -252,6 +252,9 @@ Add the following content to `.env`:
 # Google Gemini API
 GOOGLE_API_KEY=your_gemini_api_key_here
 
+# Flask session security
+FLASK_SECRET=replace_with_a_long_random_secret
+
 # Database Configuration (fallback to config.json if not set)
 DB_HOST=localhost
 DB_PORT=5432
@@ -259,7 +262,40 @@ DB_NAME=Restaurant_Chatbot
 DB_USER=postgres
 DB_PASSWORD=admin
 DB_SCHEMA=public
+
+# Superadmin login credentials (used by /superadmin modal login)
+SUPERADMIN_USER=admin
+SUPERADMIN_PASSWORD=admin123
+
+# SMTP / OTP Email (optional but recommended for OTP flows)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USE_SSL=true
+SMTP_USE_TLS=false
+SMTP_USER=your_email@example.com
+SMTP_PASSWORD=your_app_password
+SMTP_FROM=your_email@example.com
+SMTP_FROM_NAME=Resto AI
 ```
+
+### Change Superadmin Username and Password
+
+The superadmin modal login reads credentials from environment variables first.
+
+1. Open your `.env` file in the project root.
+2. Update these two keys:
+
+```env
+SUPERADMIN_USER=your_new_superadmin_username
+SUPERADMIN_PASSWORD=your_new_superadmin_password
+```
+
+3. Save the file.
+4. Restart the Flask app so new environment values are loaded.
+
+Notes:
+- If `SUPERADMIN_USER` and `SUPERADMIN_PASSWORD` are missing, the app falls back to values in `config.json` (`superadmin_username` / `superadmin_password`) and then defaults.
+- Avoid using easy credentials in production.
 
 **3.5 Verify config.json Database Settings**
 

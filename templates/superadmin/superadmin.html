@@ -1,11 +1,17 @@
 {% extends 'base/auth_base.html' %} {% block title %}Super Admin — Neuronet A.I{% endblock %}
 
+{% block topbar_action %}
+<button id="superadminHeaderSignOutBtn" type="button" class="btn btn-sm btn-outline-light" style="font-size: 0.8rem; border-color: rgba(255,255,255,0.45);">
+  <i class="fa-solid fa-right-from-bracket me-1"></i>Sign out superadmin
+</button>
+{% endblock %}
+
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/superadmin.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="w-100 px-4">
+<div id="superadminContentRoot" class="w-100 px-4 superadmin-shell {% if not superadmin_authenticated %}superadmin-shell--locked{% endif %}">
   
   <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
     <div>
@@ -95,12 +101,115 @@
     </div>
   </div>
 
+  <div class="modal fade" id="tenantDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">Tenant Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <div class="small text-muted">Tenant</div>
+              <div class="fw-bold" id="tenantDetailName">—</div>
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted">Email Used</div>
+              <div class="fw-semibold" id="tenantDetailEmail">—</div>
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted">Last Modified</div>
+              <div class="fw-semibold" id="tenantDetailLastModified">—</div>
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted">Total Traffic</div>
+              <div class="fw-semibold" id="tenantDetailTrafficTotal">—</div>
+            </div>
+          </div>
+
+          <div class="border rounded-3 p-3 bg-light-subtle position-relative">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="small fw-bold text-secondary">Traffic (Last 30 Days)</div>
+              <div class="small text-muted" id="tenantDetailTrafficRange"></div>
+            </div>
+            <svg id="tenantTrafficChart" viewBox="0 0 640 220" width="100%" height="220" role="img" aria-label="Tenant traffic graph">
+              <rect x="0" y="0" width="640" height="220" fill="transparent"></rect>
+              <g id="tenantTrafficGrid"></g>
+              <polyline id="tenantTrafficLine" fill="none" stroke="#0b3d47" stroke-width="3" points=""></polyline>
+              <g id="tenantTrafficDots"></g>
+            </svg>
+            <div class="small text-muted" id="tenantTrafficFallback"></div>
+            <div
+              id="tenantTrafficTooltip"
+              class="d-none"
+              style="position:absolute; pointer-events:none; background:#0b3d47; color:#fff; font-size:0.75rem; padding:6px 8px; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:5;"
+            ></div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-outline-danger" id="tenantDetailDeleteBtn">Delete Tenant</button>
+          <button type="button" class="btn text-white" style="background: var(--brand-dark)" id="tenantDetailManageBtn">Manage Tenant</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="superadminAuthShield" class="superadmin-auth-shield {% if superadmin_authenticated %}d-none{% endif %}" role="dialog" aria-modal="true" aria-labelledby="superadminAuthTitle">
+  <div class="superadmin-auth-card">
+    <div class="small text-uppercase fw-bold text-secondary mb-2">Restricted Area</div>
+    <h4 id="superadminAuthTitle" class="fw-bold mb-2">Superadmin Login Required</h4>
+    <p class="text-muted small mb-4">Enter superadmin credentials to unlock tenant controls.</p>
+    <form id="superadminAuthForm" autocomplete="off">
+      <div class="mb-3">
+        <label for="superadminUsername" class="form-label small fw-semibold">Username</label>
+        <input id="superadminUsername" class="form-control" type="text" name="username" required>
+      </div>
+      <div class="mb-3">
+        <label for="superadminPassword" class="form-label small fw-semibold">Password</label>
+        <input id="superadminPassword" class="form-control" type="password" name="password" required>
+      </div>
+      <div id="superadminAuthError" class="small text-danger mb-3" style="min-height: 1.25rem;"></div>
+      <button id="superadminAuthSubmit" class="btn text-white w-100 superadmin-auth-submit" style="background: var(--brand-dark)" type="submit">Unlock Superadmin</button>
+    </form>
+  </div>
 </div>
 
 <script>
+let superadminAuthed = {{ 'true' if superadmin_authenticated else 'false' }};
+
+function setSuperadminLocked(locked) {
+  const contentRoot = document.getElementById('superadminContentRoot');
+  const shield = document.getElementById('superadminAuthShield');
+  const body = document.body;
+
+  if (contentRoot) {
+    contentRoot.classList.toggle('superadmin-shell--locked', locked);
+  }
+  if (shield) {
+    shield.classList.toggle('d-none', !locked);
+  }
+  if (body) {
+    body.classList.toggle('superadmin-modal-open', locked);
+  }
+
+  superadminAuthed = !locked;
+}
+
+async function superadminFetch(url, options = {}) {
+  const res = await fetch(url, options);
+  if (res.status === 401) {
+    setSuperadminLocked(true);
+  }
+  return res;
+}
+
 async function loadPlatformStats() {
   try {
-    const res = await fetch('/api/superadmin/stats');
+    const res = await superadminFetch('/api/superadmin/stats');
     if (!res.ok) return;
     const data = await res.json();
     document.getElementById('totalTenants').textContent = data.total_restaurants || 0;
@@ -113,10 +222,13 @@ async function loadPlatformStats() {
 }
 
 let allRestaurants = [];
+let tenantDetailsModal = null;
+let tenantDeleteModal = null;
+let selectedTenantId = null;
 
 async function loadRestaurants() {
   try {
-    const res = await fetch('/api/superadmin/restaurants');
+    const res = await superadminFetch('/api/superadmin/restaurants');
     if (!res.ok) return;
     const data = await res.json();
     allRestaurants = data.restaurants || [];
@@ -154,6 +266,7 @@ function renderRestaurants(restaurants) {
       <td>${statusBadge}</td>
       <td class="text-end">
         <button class="btn btn-sm btn-light border btn-action" onclick="manageRestaurant('${resto.restaurant_id}')">Manage</button>
+        <button class="btn btn-sm btn-outline-danger btn-action ms-1" onclick='promptDeleteTenant(${JSON.stringify(resto.restaurant_id || "")}, ${JSON.stringify(resto.establishment_name || "Unnamed Restaurant")})'>Delete</button>
       </td>
     `;
     tbody.appendChild(row);
@@ -180,8 +293,144 @@ function filterRestaurants() {
 }
 
 async function manageRestaurant(restaurantId) {
+  selectedTenantId = restaurantId;
+
+  if (!tenantDetailsModal) {
+    const modalEl = document.getElementById('tenantDetailsModal');
+    if (modalEl && window.bootstrap && bootstrap.Modal) {
+      tenantDetailsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    }
+  }
+
   try {
-    const res = await fetch(`/api/superadmin/manage/${restaurantId}`, {
+    const res = await superadminFetch(`/api/superadmin/tenant/${restaurantId}/details?days=30`);
+    if (!res.ok) {
+      window.appShowAlert('Failed to load tenant details.', 'Tenant Details');
+      return;
+    }
+
+    const details = await res.json();
+    renderTenantDetails(details);
+    if (tenantDetailsModal) tenantDetailsModal.show();
+  } catch (e) {
+    console.error('Failed to load tenant details:', e);
+    window.appShowAlert('Error loading tenant details.', 'Tenant Details');
+  }
+}
+
+function renderTenantDetails(details) {
+  const nameEl = document.getElementById('tenantDetailName');
+  const emailEl = document.getElementById('tenantDetailEmail');
+  const modifiedEl = document.getElementById('tenantDetailLastModified');
+  const trafficTotalEl = document.getElementById('tenantDetailTrafficTotal');
+  const rangeEl = document.getElementById('tenantDetailTrafficRange');
+
+  if (nameEl) nameEl.textContent = details.establishment_name || 'Unnamed Restaurant';
+  if (emailEl) emailEl.textContent = details.email_used || 'No email recorded';
+  if (modifiedEl) {
+    modifiedEl.textContent = details.last_modified
+      ? new Date(details.last_modified).toLocaleString()
+      : 'No updates yet';
+  }
+  if (trafficTotalEl) trafficTotalEl.textContent = Number(details.total_traffic || 0).toLocaleString();
+
+  const series = Array.isArray(details.traffic_series) ? details.traffic_series : [];
+  if (series.length) {
+    const first = new Date(series[0].date);
+    const last = new Date(series[series.length - 1].date);
+    if (rangeEl) rangeEl.textContent = `${first.toLocaleDateString()} - ${last.toLocaleDateString()}`;
+  } else if (rangeEl) {
+    rangeEl.textContent = 'No traffic data';
+  }
+
+  drawTrafficChart(series);
+}
+
+function drawTrafficChart(series) {
+  const width = 640;
+  const height = 220;
+  const pad = { top: 16, right: 16, bottom: 30, left: 36 };
+  const innerW = width - pad.left - pad.right;
+  const innerH = height - pad.top - pad.bottom;
+  const gridEl = document.getElementById('tenantTrafficGrid');
+  const lineEl = document.getElementById('tenantTrafficLine');
+  const dotsEl = document.getElementById('tenantTrafficDots');
+  const fallbackEl = document.getElementById('tenantTrafficFallback');
+  const tooltipEl = document.getElementById('tenantTrafficTooltip');
+
+  if (!gridEl || !lineEl || !dotsEl || !fallbackEl || !tooltipEl) return;
+
+  gridEl.innerHTML = '';
+  dotsEl.innerHTML = '';
+  lineEl.setAttribute('points', '');
+  lineEl.setAttribute('stroke-width', '3');
+  tooltipEl.classList.add('d-none');
+
+  if (!Array.isArray(series) || !series.length) {
+    fallbackEl.textContent = 'No traffic data available for this period.';
+    return;
+  }
+
+  fallbackEl.textContent = '';
+  const values = series.map(row => Number(row.value || 0));
+  const maxVal = Math.max(1, ...values);
+
+  // Draw horizontal grid lines.
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (innerH / 4) * i;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', String(pad.left));
+    line.setAttribute('x2', String(width - pad.right));
+    line.setAttribute('y1', String(y));
+    line.setAttribute('y2', String(y));
+    line.setAttribute('stroke', '#d4dde3');
+    line.setAttribute('stroke-width', '1');
+    gridEl.appendChild(line);
+  }
+
+  const points = values.map((value, index) => {
+    const x = pad.left + (series.length === 1 ? innerW / 2 : (index / (series.length - 1)) * innerW);
+    const y = pad.top + innerH - (value / maxVal) * innerH;
+    return { x, y, value };
+  });
+
+  lineEl.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' '));
+
+  points.forEach((p, index) => {
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', String(p.x));
+    dot.setAttribute('cy', String(p.y));
+    dot.setAttribute('r', '3.5');
+    dot.setAttribute('fill', '#0b3d47');
+    dot.style.cursor = 'pointer';
+
+    const row = series[index] || {};
+    const rowDate = row.date ? new Date(row.date) : null;
+    const dateLabel = rowDate ? rowDate.toLocaleDateString() : 'Unknown date';
+    const valueLabel = Number(row.value || 0).toLocaleString();
+
+    dot.addEventListener('mouseenter', () => {
+      lineEl.setAttribute('stroke-width', '4');
+      dot.setAttribute('r', '5');
+      tooltipEl.textContent = `${dateLabel}: ${valueLabel}`;
+      tooltipEl.classList.remove('d-none');
+      tooltipEl.style.left = `${Math.max(8, (p.x / width) * 100)}%`;
+      tooltipEl.style.top = `${Math.max(6, ((p.y - 18) / height) * 100)}%`;
+    });
+
+    dot.addEventListener('mouseleave', () => {
+      lineEl.setAttribute('stroke-width', '3');
+      dot.setAttribute('r', '3.5');
+      tooltipEl.classList.add('d-none');
+    });
+
+    dotsEl.appendChild(dot);
+  });
+}
+
+async function continueManageTenant(restaurantId) {
+  try {
+    const res = await superadminFetch(`/api/superadmin/manage/${restaurantId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -201,9 +450,87 @@ async function manageRestaurant(restaurantId) {
   }
 }
 
+function promptDeleteTenant(restaurantId, tenantName) {
+  selectedTenantId = restaurantId;
+
+  if (!tenantDeleteModal) {
+    const deleteModalEl = document.getElementById('tenantDeleteConfirmModal');
+    if (deleteModalEl && window.bootstrap && bootstrap.Modal) {
+      tenantDeleteModal = bootstrap.Modal.getInstance(deleteModalEl) || new bootstrap.Modal(deleteModalEl);
+    }
+  }
+
+  const tenantNameEl = document.getElementById('deleteTenantName');
+  const pwdInput = document.getElementById('deleteTenantPassword');
+  const errEl = document.getElementById('deleteTenantError');
+  const confirmBtn = document.getElementById('confirmDeleteTenantBtn');
+
+  if (tenantNameEl) tenantNameEl.textContent = tenantName || 'this tenant';
+  if (pwdInput) pwdInput.value = '';
+  if (errEl) errEl.textContent = '';
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Delete Tenant Permanently';
+  }
+
+  if (tenantDeleteModal) tenantDeleteModal.show();
+}
+
+async function handleDeleteTenantConfirm() {
+  const pwdInput = document.getElementById('deleteTenantPassword');
+  const errEl = document.getElementById('deleteTenantError');
+  const confirmBtn = document.getElementById('confirmDeleteTenantBtn');
+  const password = (pwdInput?.value || '').trim();
+
+  if (!selectedTenantId) {
+    if (errEl) errEl.textContent = 'No tenant selected.';
+    return;
+  }
+
+  if (!password) {
+    if (errEl) errEl.textContent = 'Please re-enter your superadmin password.';
+    return;
+  }
+
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Deleting...';
+  }
+  if (errEl) errEl.textContent = '';
+
+  try {
+    const res = await superadminFetch(`/api/superadmin/tenant/${selectedTenantId}/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload.success) {
+      if (errEl) errEl.textContent = payload.message || 'Failed to delete tenant.';
+      return;
+    }
+
+    if (tenantDeleteModal) tenantDeleteModal.hide();
+    if (tenantDetailsModal) tenantDetailsModal.hide();
+    selectedTenantId = null;
+    window.appShowAlert('Tenant deleted successfully.', 'Tenant Deleted');
+    await loadPlatformStats();
+    await loadRestaurants();
+  } catch (e) {
+    console.error('Failed to delete tenant:', e);
+    if (errEl) errEl.textContent = 'Error deleting tenant.';
+  } finally {
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete Tenant Permanently';
+    }
+  }
+}
+
 async function loadGlobalSystemPrompt() {
   try {
-    const res = await fetch('/api/superadmin/system-prompt');
+    const res = await superadminFetch('/api/superadmin/system-prompt');
     if (!res.ok) return;
     const data = await res.json();
     const textarea = document.getElementById('globalSystemPrompt');
@@ -227,7 +554,7 @@ async function saveGlobalSystemPrompt() {
     statusDiv.textContent = 'Saving...';
     statusDiv.className = 'small mt-2 text-center text-muted';
     
-    const res = await fetch('/api/superadmin/system-prompt', {
+    const res = await superadminFetch('/api/superadmin/system-prompt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt })
@@ -257,10 +584,132 @@ async function saveGlobalSystemPrompt() {
   }
 }
 
+async function handleSuperadminUnlock(event) {
+  event.preventDefault();
+
+  const form = document.getElementById('superadminAuthForm');
+  const submitBtn = document.getElementById('superadminAuthSubmit');
+  const errorEl = document.getElementById('superadminAuthError');
+  const username = document.getElementById('superadminUsername')?.value || '';
+  const password = document.getElementById('superadminPassword')?.value || '';
+
+  if (!form || !submitBtn || !errorEl) return;
+
+  errorEl.textContent = '';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Unlocking...';
+
+  try {
+    const res = await fetch('/api/superadmin/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok || !payload.ok) {
+      errorEl.textContent = payload.message || 'Invalid credentials.';
+      setSuperadminLocked(true);
+      return;
+    }
+
+    setSuperadminLocked(false);
+    form.reset();
+    loadPlatformStats();
+    loadRestaurants();
+    loadGlobalSystemPrompt();
+  } catch (e) {
+    console.error('Superadmin login failed:', e);
+    errorEl.textContent = 'Unable to verify credentials right now.';
+    setSuperadminLocked(true);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Unlock Superadmin';
+  }
+}
+
+async function handleSuperadminHeaderSignOut() {
+  try {
+    await fetch('/api/superadmin/auth/logout', { method: 'POST' });
+  } catch (e) {
+    console.error('Superadmin logout failed:', e);
+  } finally {
+    setSuperadminLocked(true);
+    selectedTenantId = null;
+    const authError = document.getElementById('superadminAuthError');
+    const userInput = document.getElementById('superadminUsername');
+    const passInput = document.getElementById('superadminPassword');
+    if (authError) authError.textContent = '';
+    if (userInput) userInput.value = '';
+    if (passInput) passInput.value = '';
+    if (userInput) userInput.focus();
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  loadPlatformStats();
-  loadRestaurants();
-  loadGlobalSystemPrompt();
+  const authForm = document.getElementById('superadminAuthForm');
+  const userInput = document.getElementById('superadminUsername');
+  const signOutBtn = document.getElementById('superadminHeaderSignOutBtn');
+
+  if (authForm) {
+    authForm.addEventListener('submit', handleSuperadminUnlock);
+  }
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', handleSuperadminHeaderSignOut);
+  }
+
+  const manageBtn = document.getElementById('tenantDetailManageBtn');
+  const deleteBtn = document.getElementById('tenantDetailDeleteBtn');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteTenantBtn');
+  if (manageBtn) {
+    manageBtn.addEventListener('click', () => {
+      if (!selectedTenantId) return;
+      continueManageTenant(selectedTenantId);
+    });
+  }
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      const tenantName = document.getElementById('tenantDetailName')?.textContent || 'this tenant';
+      promptDeleteTenant(selectedTenantId, tenantName);
+    });
+  }
+  if (confirmDeleteBtn) {
+    confirmDeleteBtn.addEventListener('click', handleDeleteTenantConfirm);
+  }
+
+  if (superadminAuthed) {
+    setSuperadminLocked(false);
+    loadPlatformStats();
+    loadRestaurants();
+    loadGlobalSystemPrompt();
+  } else {
+    setSuperadminLocked(true);
+    if (userInput) userInput.focus();
+  }
 });
 </script>
+
+<div class="modal fade" id="tenantDeleteConfirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-danger">Delete Tenant</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">This action permanently deletes <strong id="deleteTenantName">this tenant</strong> and its data.</p>
+        <p class="small text-muted mb-3">Please re-enter your superadmin password to confirm.</p>
+        <div class="mb-2">
+          <label for="deleteTenantPassword" class="form-label small fw-semibold">Superadmin Password</label>
+          <input id="deleteTenantPassword" type="password" class="form-control" autocomplete="current-password">
+        </div>
+        <div id="deleteTenantError" class="small text-danger" style="min-height: 1.25rem;"></div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteTenantBtn">Delete Tenant Permanently</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
