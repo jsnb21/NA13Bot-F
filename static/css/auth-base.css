@@ -132,7 +132,7 @@
         display: none;
         align-items: center;
         justify-content: center;
-        background: rgba(15, 23, 42, 0.45);
+        background: rgba(15, 23, 42, 0.15);
         z-index: 12000;
         padding: 20px;
       }
@@ -147,4 +147,29 @@
         border-radius: 14px;
         padding: 20px;
         box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+      }
+
+      /* Adaptive close button styling */
+      .btn-close {
+        --bs-btn-close-color: var(--text-primary, #ffffff);
+        --bs-btn-close-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z' fill='%23ffffff'/%3e%3c/svg%3e");
+        background-color: var(--brand-dark, #0b343d);
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.85;
+        transition: opacity 0.2s ease, background-color 0.2s ease;
+      }
+
+      .btn-close:hover,
+      .btn-close:focus {
+        opacity: 1;
+        background-color: var(--main-color, #1e40af);
+      }
+
+      .btn-close:focus {
+        box-shadow: 0 0 0 0.25rem rgba(11, 52, 61, 0.25);
       }

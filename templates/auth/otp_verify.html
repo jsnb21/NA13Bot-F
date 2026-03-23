@@ -30,6 +30,15 @@
           <input type="text" name="otp" class="form-control" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" required>
         </div>
 
+        {% if purpose == 'login' %}
+        <div class="mb-3 form-check">
+          <input type="checkbox" name="remember_device" class="form-check-input" id="rememberDevice" checked>
+          <label class="form-check-label small text-secondary" for="rememberDevice">
+            Remember this device for 30 days - no OTP needed next time
+          </label>
+        </div>
+        {% endif %}
+
         <button type="submit" class="btn w-100 fw-bold py-3 text-white" style="background: var(--brand-dark); border-radius: 12px;">
           Verify OTP
         </button>

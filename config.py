@@ -290,6 +290,33 @@ def init_db():
                 ).format(sql.Identifier(schema))
             )
 
+            # Device tokens for remember-this-device functionality
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {}.device_tokens (
+                      id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                      email     TEXT NOT NULL,
+                      token_hash TEXT NOT NULL,
+                      expires_at TIMESTAMPTZ NOT NULL,
+                      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+                    """
+                ).format(sql.Identifier(schema))
+            )
+
+            # Index for efficient device token lookup and cleanup
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS device_tokens_email_idx ON {}.device_tokens (email)"
+                ).format(sql.Identifier(schema))
+            )
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS device_tokens_expires_at_idx ON {}.device_tokens (expires_at)"
+                ).format(sql.Identifier(schema))
+            )
+
             # Legacy schema migration: allow multi-tenant rows and add missing columns.
             cur.execute(
                 sql.SQL("ALTER TABLE {}.brand_settings ADD COLUMN IF NOT EXISTS restaurant_id UUID")

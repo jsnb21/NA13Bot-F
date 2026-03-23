@@ -272,6 +272,8 @@
           <div class="menu-card-image-box">
             {% if item.get('image_url') %}
               <img src="{{ item.get('image_url') }}" alt="{{ item.get('name','') }}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" loading="lazy">
+            {% elif item.get('id') %}
+              <img src="/menu/photo/{{ item.get('id') }}?t={{ range(1, 1000000) | random }}" alt="{{ item.get('name','') }}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;" loading="lazy" onerror="this.parentElement.textContent='🍽️'">
             {% else %}
               🍽️
             {% endif %}
@@ -409,47 +411,92 @@
 
     const file = menuUploadInput.files[0];
     
-    // Show loading state
-    if (uploadCard) uploadCard.classList.add('uploading');
-    if (uploadProgress) uploadProgress.classList.add('active');
-    if (uploadFilename) uploadFilename.textContent = file.name;
-
-    try {
-      const formData = new FormData();
-      formData.append('menu_file', file, file.name);
-      const res = await fetch('/menu/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'same-origin'
-      });
-      
-      if (!res.ok) {
-        let message = 'Upload failed. Please check the file format.';
-        try {
-          const data = await res.json();
-          if (data && data.error) message = data.error;
-          if (data && data.detail) message = `${message}: ${data.detail}`;
-        } catch (err) {}
-        showToast('error', message);
-      } else {
-        const data = await res.json();
-        const itemCount = data.saved || 0;
-        showToast('success', `Successfully imported ${itemCount} menu items!`);
+    // Ask user whether to merge or replace
+    const menuCount = document.querySelectorAll('table tbody tr').length;
+    let mergeMode = false;
+    
+    if (menuCount > 0) {
+      return new Promise((resolve) => {
+        // Create dialog
+        const dialog = document.createElement('div');
+        dialog.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+        dialog.innerHTML = `
+          <div style="background: white; border-radius: 12px; padding: 24px; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <h3 style="margin: 0 0 12px 0; color: var(--brand-dark);">Upload Menu Items</h3>
+            <p style="margin: 0 0 20px 0; color: #666; font-size: 0.95rem;">You already have ${menuCount} menu items. What would you like to do?</p>
+            <div style="display: flex; gap: 12px;">
+              <button id="dialog-replace" style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #f5f5f5; color: #333; cursor: pointer; font-weight: 500; transition: all 0.2s;">Replace All</button>
+              <button id="dialog-merge" style="flex: 1; padding: 12px; border: 1px solid var(--brand-dark); border-radius: 8px; background: var(--brand-dark); color: white; cursor: pointer; font-weight: 500; transition: all 0.2s;">Add Items</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(dialog);
         
-        // Reload after brief delay to show success state
+        const handleReplace = () => {
+          dialog.remove();
+          proceedUpload(false);
+          resolve();
+        };
+        
+        const handleMerge = () => {
+          dialog.remove();
+          proceedUpload(true);
+          resolve();
+        };
+        
+        dialog.querySelector('#dialog-replace').addEventListener('click', handleReplace);
+        dialog.querySelector('#dialog-merge').addEventListener('click', handleMerge);
+      });
+    } else {
+      proceedUpload(false);
+    }
+    
+    async function proceedUpload(merge) {
+      // Show loading state
+      if (uploadCard) uploadCard.classList.add('uploading');
+      if (uploadProgress) uploadProgress.classList.add('active');
+      if (uploadFilename) uploadFilename.textContent = file.name;
+
+      try {
+        const formData = new FormData();
+        formData.append('menu_file', file, file.name);
+        formData.append('merge_mode', merge.toString());
+        const res = await fetch('/menu/upload', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        });
+        
+        if (!res.ok) {
+          let message = 'Upload failed. Please check the file format.';
+          try {
+            const data = await res.json();
+            if (data && data.error) message = data.error;
+            if (data && data.detail) message = `${message}: ${data.detail}`;
+          } catch (err) {}
+          showToast('error', message);
+        } else {
+          const data = await res.json();
+          const itemCount = data.saved || 0;
+          let successMsg = `Successfully imported ${itemCount} menu items!`;
+          if (data.message) successMsg = data.message;
+          showToast('success', successMsg);
+          
+          // Reload after brief delay to show success state
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+      } catch (err) {
+        showToast('error', 'Upload failed. Please try again.');
+      } finally {
+        // Hide loading state
         setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+          if (uploadCard) uploadCard.classList.remove('uploading');
+          if (uploadProgress) uploadProgress.classList.remove('active');
+        }, 500);
+        menuUploadInput.value = '';
       }
-    } catch (err) {
-      showToast('error', 'Upload failed. Please try again.');
-    } finally {
-      // Hide loading state
-      setTimeout(() => {
-        if (uploadCard) uploadCard.classList.remove('uploading');
-        if (uploadProgress) uploadProgress.classList.remove('active');
-      }, 500);
-      menuUploadInput.value = '';
     }
   });
   }

@@ -1112,7 +1112,24 @@ def menu_add_item():
         return redirect(url_for('menu'))
 
     items = cfg.get('menu_items', [])
+    item_id = str(uuid.uuid4())
+    
+    # Store the item in database with ID
+    schema = get_db_schema()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                psycopg.sql.SQL(
+                    """
+                    INSERT INTO {}.menu_items (id, restaurant_id, name, description, price, category, status, image_url)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                ).format(psycopg.sql.Identifier(schema)),
+                [item_id, restaurant_id, name, description, price, category, status, image_url]
+            )
+    
     items.append({
+        'id': item_id,
         'name': name,
         'description': description,
         'price': price,
@@ -1149,7 +1166,12 @@ def menu_update_item():
     category_input = request.form.get('category', '').strip()
     category = category_input or infer_menu_category(name, description, known_categories)
 
-    items[index] = {
+    # Preserve ID from existing item
+    existing_item = items[index]
+    item_id = existing_item.get('id') or str(uuid.uuid4())
+    
+    updated_item = {
+        'id': item_id,
         'name': name,
         'description': description,
         'price': request.form.get('price', '').strip(),
@@ -1157,6 +1179,24 @@ def menu_update_item():
         'status': request.form.get('status', '').strip() or 'Live',
         'image_url': request.form.get('image_url', '').strip()
     }
+    
+    # Update database
+    schema = get_db_schema()
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                psycopg.sql.SQL(
+                    """
+                    UPDATE {}.menu_items
+                    SET name = %s, description = %s, price = %s, category = %s, status = %s, image_url = %s, updated_at = now()
+                    WHERE id = %s AND restaurant_id = %s
+                    """
+                ).format(psycopg.sql.Identifier(schema)),
+                [name, description, updated_item['price'], category, updated_item['status'], 
+                 updated_item['image_url'], item_id, restaurant_id]
+            )
+    
+    items[index] = updated_item
     cfg['menu_items'] = items
     save_config(cfg, restaurant_id)
     return redirect(url_for('menu'))
@@ -1363,6 +1403,8 @@ def menu_upload_menu_file():
     try:
         restaurant_id = get_current_restaurant_id()
         file = request.files.get('menu_file')
+        merge_mode = request.form.get('merge_mode', 'replace') == 'true'
+        
         if not file or not file.filename:
             return jsonify({'error': 'No file provided'}), 400
         filename = file.filename.lower()
@@ -1424,12 +1466,45 @@ def menu_upload_menu_file():
             if key and key in image_map:
                 item['image_url'] = image_map[key]
 
-        cfg['menu_items'] = unique_items
+        # Handle merge mode
+        if merge_mode:
+            # Merge with existing items - detect similar items and update, add new ones
+            merged_items = list(existing_items)
+            existing_names_normalized = {_normalize_menu_key(item.get('name', '')): i for i, item in enumerate(merged_items)}
+            
+            added_count = 0
+            updated_count = 0
+            
+            for new_item in unique_items:
+                new_key = _normalize_menu_key(new_item.get('name', ''))
+                if new_key in existing_names_normalized:
+                    # Item already exists - update it with new info
+                    idx = existing_names_normalized[new_key]
+                    # Preserve ID and image if exists
+                    if 'id' in merged_items[idx]:
+                        new_item['id'] = merged_items[idx]['id']
+                    if not new_item.get('image_url') and merged_items[idx].get('image_url'):
+                        new_item['image_url'] = merged_items[idx].get('image_url')
+                    if not new_item.get('image_data') and merged_items[idx].get('image_data'):
+                        new_item['image_data'] = merged_items[idx].get('image_data')
+                    merged_items[idx] = new_item
+                    updated_count += 1
+                else:
+                    # New item - add it
+                    merged_items.append(new_item)
+                    added_count += 1
+            
+            cfg['menu_items'] = merged_items
+            result_message = f"Added {added_count} new items, updated {updated_count} existing items"
+        else:
+            # Replace mode (default)
+            cfg['menu_items'] = unique_items
+            result_message = f"Replaced menu with {len(unique_items)} items"
+        
         save_config(cfg, restaurant_id)
-
         save_training_upload_bytes(restaurant_id, file.filename, data_bytes)
 
-        return jsonify({'saved': len(items)})
+        return jsonify({'saved': len(unique_items), 'message': result_message, 'merge_mode': merge_mode})
     except Exception as exc:
         app.logger.exception('Menu upload failed')
         return jsonify({'error': 'Menu upload failed', 'detail': str(exc)}), 500
@@ -2132,7 +2207,8 @@ def login_verify():
         get_current_restaurant_id()
         
         # Check if user wants to remember this device
-        remember_device = session.pop('remember_device', False)
+        # Can be set either at login or at OTP verification
+        remember_device = session.pop('remember_device', False) or request.form.get('remember_device') == 'on'
         
         response = make_response(redirect(url_for('dashboard')))
         

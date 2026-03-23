@@ -51,7 +51,7 @@
                     </div>
                     <div class="input-hint">Paste an image URL or upload a local file. Upload overrides the URL.</div>
                     <div class="mt-2 d-flex align-items-center preview-row">
-                        <img id="logo_preview" src="{{ cfg.get('logo_url','') }}" alt="Logo" class="media-preview" onerror="this.style.display='none'">
+                        <img id="logo_preview" src="{% if cfg.get('logo_url') %}{{ cfg.get('logo_url') }}{% else %}/brand/image/logo/{{ session.get('restaurant_id') }}?t={{ range(1, 1000000) | random }}{% endif %}" alt="Logo" class="media-preview" onerror="this.style.display='none'">
                         <small class="text-muted">Preview (changes show after Save)</small>
                     </div>
                 </div>
@@ -149,7 +149,7 @@
                     </div>
                     <div class="input-hint">Paste an image URL or upload a local file. Upload overrides the URL.</div>
                     <div class="mt-2 d-flex align-items-center preview-row">
-                        <img id="chatbot_avatar_preview" src="{{ cfg.get('chatbot_avatar','/static/img/bot-avatar.svg') }}" alt="Chatbot avatar" class="media-preview is-cover">
+                        <img id="chatbot_avatar_preview" src="{% if cfg.get('chatbot_avatar') and not cfg.get('chatbot_avatar').startswith('/static/img/') %}{{ cfg.get('chatbot_avatar') }}{% else %}/brand/image/chatbot_avatar/{{ session.get('restaurant_id') }}?t={{ range(1, 1000000) | random }}{% endif %}" alt="Chatbot avatar" class="media-preview is-cover" onerror="this.src='{{ url_for('static', filename='img/bot-avatar.svg') }}'">
                         <small class="text-muted">Preview (changes show after Save)</small>
                     </div>
                     <script>
