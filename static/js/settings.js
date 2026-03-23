@@ -120,13 +120,43 @@
 })();
 
 (function(){
+    function syncSectionToggle(section) {
+        const btn = section.querySelector('[data-section-toggle]');
+        if (!btn) return;
+        const expanded = !section.classList.contains('is-collapsed');
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+
     document.querySelectorAll('[data-section-toggle]').forEach(btn => {
         btn.addEventListener('click', () => {
             const section = btn.closest('[data-collapsible]');
             if (!section) return;
             section.classList.toggle('is-collapsed');
-            btn.textContent = section.classList.contains('is-collapsed') ? 'Show' : 'Hide';
+            syncSectionToggle(section);
         });
+    });
+
+    document.querySelectorAll('[data-collapsible] .section-header').forEach(header => {
+        const section = header.closest('[data-collapsible]');
+        if (!section) return;
+
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('[data-section-toggle]')) return;
+            const btn = header.querySelector('[data-section-toggle]');
+            if (btn) btn.click();
+        });
+
+        header.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            const btn = header.querySelector('[data-section-toggle]');
+            if (btn) btn.click();
+        });
+
+        syncSectionToggle(section);
     });
 
     document.querySelectorAll('[data-color-toggle]').forEach(btn => {
@@ -161,6 +191,16 @@
         if (!color) return '';
         const raw = color.toHEXA().join('');
         return normalizeHex(raw);
+    }
+
+    function syncColorPreview(fieldName, value) {
+        const preview = document.querySelector(`[data-color-inline-preview="${fieldName}"]`);
+        if (!preview) return;
+        const dot = preview.querySelector('.color-label-dot');
+        const text = preview.querySelector('.color-label-hex');
+        const normalized = normalizeHex(value) || '#000000';
+        if (dot) dot.style.backgroundColor = normalized;
+        if (text) text.textContent = normalized;
     }
 
     function initPickr() {
@@ -209,20 +249,53 @@
                             const hex = colorToHex(color);
                             if (hex) {
                                 hiddenInput.value = hex;
+                                syncColorPreview(fieldName, hex);
                                 hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
                                 hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
                             }
                         }
                     }).on('clear', () => {
                         hiddenInput.value = '';
+                        syncColorPreview(fieldName, '');
                         hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
                     }).on('change', (color) => {
                         if (color) {
                             const hex = colorToHex(color);
-                            if (hex) hiddenInput.value = hex;
+                            if (hex) {
+                                hiddenInput.value = hex;
+                                syncColorPreview(fieldName, hex);
+                            }
                         }
                     });
                     console.log(`Pickr initialized for ${fieldName}`);
+                    syncColorPreview(fieldName, hiddenInput.value);
+                    hiddenInput.addEventListener('input', () => syncColorPreview(fieldName, hiddenInput.value));
+                    hiddenInput.addEventListener('change', () => syncColorPreview(fieldName, hiddenInput.value));
+
+                    const inlineTrigger = document.querySelector(`[data-color-inline-preview="${fieldName}"]`);
+                    if (inlineTrigger) {
+                        inlineTrigger.setAttribute('role', 'button');
+                        inlineTrigger.setAttribute('tabindex', '0');
+                        inlineTrigger.setAttribute('aria-label', `Pick ${fieldName.replace('_', ' ')} color`);
+
+                        const openPicker = () => {
+                            try {
+                                if (pickers[fieldName] && typeof pickers[fieldName].show === 'function') {
+                                    pickers[fieldName].show();
+                                    return;
+                                }
+                            } catch (e) {}
+                            const hiddenBtn = container.querySelector('.pcr-button');
+                            if (hiddenBtn) hiddenBtn.click();
+                        };
+
+                        inlineTrigger.addEventListener('click', openPicker);
+                        inlineTrigger.addEventListener('keydown', (e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return;
+                            e.preventDefault();
+                            openPicker();
+                        });
+                    }
                 } catch (err) {
                     console.error(`Failed to initialize Pickr for ${fieldName}:`, err);
                 }
@@ -241,11 +314,49 @@
 
 (function(){
     const items = document.querySelectorAll('.editable-item');
+    const controllers = [];
     items.forEach(item => {
         const editBtn = item.querySelector('[data-edit]');
-        const inputs = item.querySelectorAll('[data-input]');
+        const inputs = Array.from(item.querySelectorAll('[data-input]'));
         const display = item.querySelector('[data-display]');
+        const header = item.querySelector('.editable-header');
         const emptyLabel = item.getAttribute('data-empty') || 'Not set';
+        let snapshot = null;
+
+        let saveBtn = null;
+        let cancelBtn = null;
+        if (header) {
+            const actions = document.createElement('div');
+            actions.className = 'edit-mode-actions';
+            actions.innerHTML = [
+                '<button type="button" class="btn btn-sm btn-save-inline" data-edit-save>Save</button>',
+                '<button type="button" class="btn btn-sm btn-cancel-inline" data-edit-cancel>Cancel</button>'
+            ].join('');
+            header.appendChild(actions);
+            saveBtn = actions.querySelector('[data-edit-save]');
+            cancelBtn = actions.querySelector('[data-edit-cancel]');
+        }
+
+        function captureSnapshot() {
+            return inputs.map(input => ({ input, value: input.value }));
+        }
+
+        function restoreSnapshot(state) {
+            if (!state) return;
+            state.forEach(({ input, value }) => {
+                input.value = value;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            // File inputs cannot be restored for security reasons, so clear them on cancel.
+            item.querySelectorAll('input[type="file"]').forEach(fileInput => {
+                try {
+                    fileInput.value = '';
+                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                } catch (e) {}
+            });
+        }
 
         function getDisplayValue() {
             if (!inputs.length) return '';
@@ -265,23 +376,67 @@
 
         function setEditing(isEditing) {
             item.classList.toggle('is-editing', isEditing);
-            inputs.forEach(input => {
+            inputs.forEach((input, idx) => {
                 input.disabled = !isEditing;
-                if (isEditing) input.focus();
+                if (isEditing && idx === 0) input.focus();
             });
-            if (editBtn) editBtn.textContent = isEditing ? 'Done' : 'Edit';
-            if (!isEditing) syncDisplay();
+            if (editBtn) {
+                editBtn.classList.toggle('is-active', isEditing);
+                editBtn.setAttribute('aria-label', 'Edit field');
+            }
+            if (saveBtn && cancelBtn) {
+                saveBtn.parentElement.classList.toggle('show', isEditing);
+            }
+
+            if (isEditing) {
+                snapshot = captureSnapshot();
+            } else {
+                snapshot = null;
+                syncDisplay();
+            }
         }
+
+        function closeEditing(restore = false) {
+            if (!item.classList.contains('is-editing')) return;
+            if (restore) restoreSnapshot(snapshot);
+            setEditing(false);
+        }
+
+        controllers.push({ item, closeEditing });
 
         if (editBtn) {
             editBtn.addEventListener('click', () => {
-                setEditing(!item.classList.contains('is-editing'));
+                if (!item.classList.contains('is-editing')) {
+                    controllers.forEach(ctrl => {
+                        if (ctrl.item !== item) ctrl.closeEditing(false);
+                    });
+                    setEditing(true);
+                }
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                setEditing(false);
+            });
+        }
+
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                closeEditing(true);
             });
         }
 
         inputs.forEach(input => {
             input.addEventListener('input', syncDisplay);
             input.addEventListener('change', syncDisplay);
+        });
+
+        item.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            if (!item.classList.contains('is-editing')) return;
+            e.preventDefault();
+            closeEditing(true);
         });
 
         inputs.forEach(input => { input.disabled = true; });
@@ -291,6 +446,28 @@
     if (typeof window.__settingsResetInitial === 'function') {
         window.__settingsResetInitial();
     }
+})();
+
+(function(){
+    const fontSelect = document.getElementById('font_family');
+    const fontPreview = document.querySelector('[data-font-preview]');
+
+    if (!fontSelect || !fontPreview) return;
+
+    function syncFontPreview() {
+        const selectedFont = (fontSelect.value || '').trim();
+        if (selectedFont) {
+            fontPreview.style.fontFamily = selectedFont;
+            fontPreview.textContent = `Aa ${selectedFont}`;
+            return;
+        }
+        fontPreview.style.fontFamily = 'inherit';
+        fontPreview.textContent = 'Aa Default';
+    }
+
+    fontSelect.addEventListener('input', syncFontPreview);
+    fontSelect.addEventListener('change', syncFontPreview);
+    syncFontPreview();
 })();
 
 (function(){
