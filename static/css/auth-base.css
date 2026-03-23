@@ -167,7 +167,7 @@
       .btn-close:hover,
       .btn-close:focus {
         opacity: 1;
-        background-color: var(--main-color, #1e40af);
+        background-color: var(--brand-dark, #0b343d);
       }
 
       .btn-close:focus {

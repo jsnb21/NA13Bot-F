@@ -1212,8 +1212,7 @@ def superadmin():
         config_val = request.form.get('config', '')
         save_config({'config': config_val})
         return redirect(url_for('superadmin'))
-    cfg = load_config()
-    return render_template('superadmin/superadmin.html', cfg=cfg)
+    return render_template('superadmin/superadmin.html')
 
 
 @app.route('/api/superadmin/restaurants', methods=['GET'])
@@ -2382,14 +2381,13 @@ def login():
             return redirect(url_for('otp_verify_page', email=email, purpose='login'))
     # Return 422 for validation errors (Turbo requirement)
     if error:
-        return render_template('auth/login.html', cfg=cfg, error=error), 422
-    return render_template('auth/login.html', cfg=cfg, error=error)
+        return render_template('auth/login.html', error=error), 422
+    return render_template('auth/login.html', error=error)
 
 
 @app.route('/otp-verify', methods=['GET'])
 def otp_verify_page():
     """Display OTP verification page."""
-    cfg = load_config()
     email = request.args.get('email', '').strip().lower()
     purpose = request.args.get('purpose', 'login')
     error = request.args.get('error', '')
@@ -2404,7 +2402,6 @@ def otp_verify_page():
     
     return render_template(
         'auth/otp_verify.html',
-        cfg=cfg,
         email=email,
         purpose=purpose,
         error=error,
@@ -2502,8 +2499,8 @@ def signup():
 
     # Return 422 for validation errors (Turbo requirement)
     if error:
-        return render_template('auth/signup.html', cfg=cfg, error=error), 422
-    return render_template('auth/signup.html', cfg=cfg, error=error)
+        return render_template('auth/signup.html', error=error), 422
+    return render_template('auth/signup.html', error=error)
 
 
 @app.route('/signup/verify', methods=['POST'])
@@ -2514,7 +2511,7 @@ def signup_verify():
     if not pending or pending.get('email') != email:
         error = 'Signup session not found. Please start again.'
         # Return 422 for validation errors (Turbo requirement)
-        return render_template('auth/signup.html', cfg=cfg, error=error), 422
+        return render_template('auth/signup.html', error=error), 422
 
     code = request.form.get('otp', '').strip()
     ok, error = verify_otp(email, code, 'signup')
@@ -2534,7 +2531,7 @@ def signup_verify():
     if not success:
         error = 'A user with that email already exists.'
         # Return 422 for validation errors (Turbo requirement)
-        return render_template('auth/signup.html', cfg=cfg, error=error), 422
+        return render_template('auth/signup.html', error=error), 422
 
     cfg.update({
         'establishment_name': pending.get('establishment_name', ''),
