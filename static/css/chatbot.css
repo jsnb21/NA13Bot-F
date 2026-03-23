@@ -195,6 +195,38 @@ body {
   color: var(--text-secondary) !important;
 }
 
+.kiosk-search-wrap {
+  margin-top: 10px;
+}
+
+.kiosk-search-input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  outline: none;
+}
+
+.kiosk-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.12);
+}
+
+.kiosk-search-empty {
+  margin: 0 12px 12px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .kiosk-priority-header {
   padding: 12px;
   border-bottom: 1px solid var(--line);
@@ -519,9 +551,37 @@ body {
 .kiosk-item-footer {
   margin-top: auto;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 8px;
+}
+
+.kiosk-variant-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.kiosk-variant-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.kiosk-variant-select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 8px;
 }
 
 .kiosk-add-btn {
@@ -534,6 +594,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .kiosk-add-btn:active {

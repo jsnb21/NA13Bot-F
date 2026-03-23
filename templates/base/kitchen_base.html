@@ -29,8 +29,8 @@
         <div class="navbar-brand">
             {% if cfg.get('logo_url') %}
                 <img src="{{ cfg.get('logo_url') }}" alt="Logo" class="logo-icon" onerror="this.onerror=null;this.src='/brand/image/logo/{{ session.get('restaurant_id') }}';">
-            {% else %}
-                <img src="/brand/image/logo/{{ session.get('restaurant_id') }}?t={{ range(1, 1000000) | random }}" alt="Logo" class="logo-icon" onerror="this.onerror=null;this.src='{{ url_for('static', filename='uploads/logo.png') }}';">                
+            {% elif session.get('restaurant_id') %}
+                <img src="/brand/image/logo/{{ session.get('restaurant_id') }}?t={{ range(1, 1000000) | random }}" alt="Logo" class="logo-icon" onerror="this.onerror=null;this.src='{{ url_for('static', filename='uploads/logo.png') }}';">
             {% else %}
                 <i class="fas fa-utensils"></i>
             {% endif %}

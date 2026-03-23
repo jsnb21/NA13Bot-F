@@ -37,6 +37,7 @@ const cartOpenChatButton = document.getElementById('cart-open-chat');
 let assistantUnreadCount = 0;
 let activeKioskCategory = 'all';
 let availableKioskCategories = [];
+let activeKioskSearchQuery = '';
 
 function parseItemUnitPrice(priceValue) {
     const raw = (priceValue || '').toString().trim();
@@ -57,6 +58,8 @@ function getCartTotal() {
 function getCartPayload() {
     return cartState.items.map((item) => ({
         name: item.name,
+        base_name: item.baseName || item.name,
+        variant: item.variant || '',
         quantity: item.quantity,
         price: item.price
     }));
@@ -163,6 +166,7 @@ function syncCartBadge() {
 
 function syncKioskCategoryUI() {
     const selected = activeKioskCategory || 'all';
+    const searchQuery = (activeKioskSearchQuery || '').trim().toLowerCase();
 
     document.querySelectorAll('.kiosk-category-btn').forEach((btn) => {
         btn.classList.toggle('is-active', (btn.dataset.category || 'all') === selected);
@@ -172,10 +176,32 @@ function syncKioskCategoryUI() {
         btn.classList.toggle('is-active', (btn.dataset.category || 'all') === selected);
     });
 
+    let visibleCount = 0;
     document.querySelectorAll('.kiosk-item-card').forEach((card) => {
         const cardCategory = card.dataset.category || '';
-        card.style.display = (selected === 'all' || selected === cardCategory) ? '' : 'none';
+        const cardName = (card.dataset.searchName || '').toLowerCase();
+        const cardDescription = (card.dataset.searchDescription || '').toLowerCase();
+        const cardLabel = (card.dataset.searchLabel || '').toLowerCase();
+        const cardCategoryLabel = (card.dataset.searchCategory || '').toLowerCase();
+
+        const matchesCategory = (selected === 'all' || selected === cardCategory);
+        const matchesSearch = !searchQuery
+            || cardName.includes(searchQuery)
+            || cardDescription.includes(searchQuery)
+            || cardLabel.includes(searchQuery)
+            || cardCategoryLabel.includes(searchQuery);
+
+        const shouldShow = matchesCategory && matchesSearch;
+        card.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) {
+            visibleCount += 1;
+        }
     });
+
+    const emptyState = document.getElementById('kiosk-search-empty');
+    if (emptyState) {
+        emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
 }
 
 function setKioskCategory(category) {
@@ -261,6 +287,49 @@ function formatPriceForMenu(price) {
     return `${currency}${raw.replace(currency, '').trim()}`;
 }
 
+function formatCurrencyAmount(amount) {
+    const currency = chatbotConfig.currency_symbol || '₱';
+    const value = Number(amount || 0);
+    if (Number.isNaN(value)) return '';
+    return `${currency}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function parseVariantOptions(description) {
+    const text = (description || '').toString().trim();
+    const marker = text.match(/options\s*:/i);
+    if (!marker) {
+        return [];
+    }
+
+    const rawOptions = text.slice(marker.index + marker[0].length).trim();
+    if (!rawOptions) {
+        return [];
+    }
+
+    return rawOptions
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((part) => {
+            const match = part.match(/^([^=]+)=\s*(.+)$/);
+            if (!match) {
+                return null;
+            }
+            const label = (match[1] || '').trim();
+            const rawPrice = (match[2] || '').trim();
+            const priceValue = parseItemUnitPrice(rawPrice);
+            if (!label || !rawPrice || priceValue <= 0) {
+                return null;
+            }
+            return {
+                label,
+                rawPrice,
+                priceValue
+            };
+        })
+        .filter(Boolean);
+}
+
 function slugifyCategory(value) {
     return (value || 'Other').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
@@ -272,14 +341,26 @@ function getKioskData() {
             const category = (item.category || 'Other').toString().trim() || 'Other';
             const imageUrl = (item.image_url || '').toString().trim();
             const fallbackImage = (chatbotConfig.logo_url || '').toString().trim() || '/static/uploads/logo.png';
+            const variants = parseVariantOptions(item.description);
+            const hasVariants = variants.length > 0;
+            const variantPrices = variants.map((variant) => variant.priceValue).filter((price) => price > 0);
+            const parsedPrice = parseItemUnitPrice(item.price);
+            const unitPrice = variantPrices.length ? Math.min(...variantPrices) : parsedPrice;
+            const displayDescription = hasVariants
+                ? 'Choose a size before adding to cart.'
+                : (item.description || '').toString().trim();
             return {
                 name: (item.name || '').toString().trim(),
-                description: (item.description || '').toString().trim(),
+                description: displayDescription,
                 category,
                 categorySlug: slugifyCategory(category),
                 imageUrl,
                 displayImageUrl: imageUrl || fallbackImage,
-                priceLabel: formatPriceForMenu(item.price)
+                priceLabel: hasVariants
+                    ? `From ${formatCurrencyAmount(unitPrice)}`
+                    : formatPriceForMenu(item.price),
+                unitPrice,
+                variants
             };
         });
 
@@ -294,8 +375,22 @@ function buildMiniKioskHtml(items, categories) {
         .map((item) => {
             const desc = item.description ? `<div class="kiosk-item-desc">${escapeHtml(item.description)}</div>` : '';
             const priceBadge = item.priceLabel ? `<div class="kiosk-price-badge">${escapeHtml(item.priceLabel)}</div>` : '';
+            const variantControl = item.variants && item.variants.length
+                ? `
+                    <div class="kiosk-variant-wrap">
+                        <label class="kiosk-variant-label">Variant</label>
+                        <select class="kiosk-variant-select" data-item-name="${escapeHtml(item.name)}">
+                            ${item.variants.map((variant) => `
+                                <option value="${escapeHtml(variant.label)}" data-price="${escapeHtml(String(variant.priceValue))}">
+                                    ${escapeHtml(variant.label)} - ${escapeHtml(formatCurrencyAmount(variant.priceValue))}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                `
+                : '';
             return `
-                <article class="kiosk-item-card" data-category="${escapeHtml(item.categorySlug)}">
+                <article class="kiosk-item-card" data-category="${escapeHtml(item.categorySlug)}" data-search-name="${escapeHtml(item.name)}" data-search-description="${escapeHtml(item.description || '')}" data-search-label="${escapeHtml(item.priceLabel || '')}" data-search-category="${escapeHtml(item.category || '')}">
                     <div class="kiosk-item-media">
                         <img class="kiosk-item-image" src="${escapeHtml(item.displayImageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">
                         ${priceBadge}
@@ -304,6 +399,7 @@ function buildMiniKioskHtml(items, categories) {
                         <div class="kiosk-item-name">${escapeHtml(item.name)}</div>
                         ${desc}
                         <div class="kiosk-item-footer">
+                            ${variantControl}
                             <button type="button" class="kiosk-add-btn" data-item-name="${escapeHtml(item.name)}">Add To Cart</button>
                         </div>
                     </div>
@@ -317,10 +413,14 @@ function buildMiniKioskHtml(items, categories) {
             <div class="kiosk-header">
                 <div class="kiosk-title">Deals & Menu</div>
                 <div class="kiosk-subtitle">Tap a food card to add it to your cart</div>
+                <div class="kiosk-search-wrap">
+                    <input id="kiosk-search-input" class="kiosk-search-input" type="search" placeholder="Search menu items..." value="${escapeHtml(activeKioskSearchQuery)}" aria-label="Search menu items">
+                </div>
             </div>
             <div class="kiosk-grid">
                 ${cards}
             </div>
+            <div id="kiosk-search-empty" class="kiosk-search-empty" style="display:none;">No items match your search.</div>
         </div>
     `;
 }
@@ -381,20 +481,37 @@ function renderCartPanel() {
     syncCartBadge();
 }
 
-function addItemToCartByName(itemName) {
+function addItemToCartSelection(itemName, selectedVariantLabel = '', selectedVariantPrice = 0) {
     const { items } = getKioskData();
     const normalizedName = normalizeItemName(itemName);
     const source = items.find((item) => normalizeItemName(item.name) === normalizedName);
     if (!source) return;
 
-    const existing = cartState.items.find((item) => normalizeItemName(item.name) === normalizedName);
+    let variantLabel = (selectedVariantLabel || '').toString().trim();
+    let unitPrice = Number(selectedVariantPrice || 0);
+
+    if (source.variants && source.variants.length) {
+        const selected = source.variants.find((variant) => normalizeItemName(variant.label) === normalizeItemName(variantLabel));
+        const fallback = selected || source.variants[0];
+        variantLabel = fallback.label;
+        unitPrice = fallback.priceValue;
+    } else if (!unitPrice || unitPrice <= 0) {
+        unitPrice = source.unitPrice || parseItemUnitPrice(source.priceLabel);
+    }
+
+    const displayName = variantLabel ? `${source.name} (${variantLabel})` : source.name;
+    const normalizedDisplayName = normalizeItemName(displayName);
+
+    const existing = cartState.items.find((item) => normalizeItemName(item.name) === normalizedDisplayName);
     if (existing) {
         existing.quantity += 1;
     } else {
         cartState.items.push({
-            name: source.name,
+            name: displayName,
+            baseName: source.name,
+            variant: variantLabel,
             quantity: 1,
-            price: parseItemUnitPrice(source.priceLabel)
+            price: unitPrice
         });
     }
 
@@ -457,6 +574,16 @@ function renderKioskPanel() {
     panel.innerHTML = buildMiniKioskHtml(items, categories);
     availableKioskCategories = categories.map((category) => slugifyCategory(category));
     renderKioskFilterList(categories);
+
+    const searchInput = document.getElementById('kiosk-search-input');
+    if (searchInput) {
+        searchInput.value = activeKioskSearchQuery;
+        searchInput.oninput = (event) => {
+            activeKioskSearchQuery = (event.target.value || '').trim();
+            syncKioskCategoryUI();
+        };
+    }
+
     setKioskCategory(activeKioskCategory);
     renderCartPanel();
 }
@@ -711,7 +838,8 @@ function isValidColor(color) {
 }
 
 function escapeHtml(value) {
-    return value
+    return (value || '')
+        .toString()
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -1103,6 +1231,11 @@ async function submitOrder() {
             orderState = { items: [], customerName: '', tableNumber: '', isCollectingOrder: false };
             clearCart();
             conversationHistory = [];
+            setAssistantOpen(false);
+            setCartPopupOpen(false);
+            setKioskFilterOpen(false);
+            if (cartBackdrop) cartBackdrop.classList.add('is-closed');
+            if (kioskFilterBackdrop) kioskFilterBackdrop.classList.add('is-closed');
         } else {
             postMessage(`Order failed: ${data.error}`, 'bot');
         }
@@ -1180,7 +1313,12 @@ const handleKioskInteraction = async (event) => {
         if (addBtn) {
             const itemName = (addBtn.dataset.itemName || '').trim();
             if (!itemName) return;
-            addItemToCartByName(itemName);
+            const card = addBtn.closest('.kiosk-item-card');
+            const variantSelect = card ? card.querySelector('.kiosk-variant-select') : null;
+            const selectedOption = variantSelect && variantSelect.selectedOptions ? variantSelect.selectedOptions[0] : null;
+            const variantLabel = selectedOption ? (selectedOption.value || '').trim() : '';
+            const variantPrice = selectedOption ? Number(selectedOption.dataset.price || 0) : 0;
+            addItemToCartSelection(itemName, variantLabel, variantPrice);
             return;
         }
 

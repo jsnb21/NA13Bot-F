@@ -345,6 +345,217 @@ def save_training_upload_bytes(restaurant_id: str, filename: str, data_bytes: by
     return entry
 
 
+def _canonical_size_label(label: str) -> str:
+    token = (label or '').strip().lower()
+    mapping = {
+        's': 'Small',
+        'sm': 'Small',
+        'small': 'Small',
+        'm': 'Medium',
+        'md': 'Medium',
+        'med': 'Medium',
+        'medium': 'Medium',
+        'l': 'Large',
+        'lg': 'Large',
+        'large': 'Large',
+    }
+    return mapping.get(token, '')
+
+
+def _parse_price_value(price_text: str):
+    if not price_text:
+        return None
+    match = re.search(r"\d+(?:\.\d{1,2})?", price_text)
+    if not match:
+        return None
+    try:
+        return float(match.group(0))
+    except Exception:
+        return None
+
+
+def _parse_size_variant_line(line: str):
+    clean = (line or '').strip()
+    if not clean:
+        return None
+
+    variant_pattern = re.compile(
+        r"\b(?P<label>small|medium|large|sm|md|lg|s|m|l)\b\s*[:=\-]?\s*(?P<price>(?:[$₱]|php\.?|usd\.?|aud\.?|cad\.?|eur\.?)?\s*\d+(?:\.\d{1,2})?)",
+        re.IGNORECASE
+    )
+    matches = list(variant_pattern.finditer(clean))
+    if len(matches) < 2:
+        return None
+
+    name = clean[:matches[0].start()].strip(" -:\t|,")
+    if not name:
+        return None
+
+    options = []
+    seen = set()
+    for match in matches:
+        label = _canonical_size_label(match.group('label'))
+        price = (match.group('price') or '').strip()
+        if not label or not price or label in seen:
+            continue
+        seen.add(label)
+        options.append((label, price))
+
+    if len(options) < 2:
+        return None
+
+    option_text = ', '.join(f"{label}={price}" for label, price in options)
+    numeric_prices = [val for _, price in options if (val := _parse_price_value(price)) is not None]
+    base_price = str(int(min(numeric_prices))) if numeric_prices and min(numeric_prices).is_integer() else (str(min(numeric_prices)) if numeric_prices else options[0][1])
+
+    return {
+        'name': name,
+        'description': f"Options: {option_text}",
+        'price': base_price,
+        'category': 'Uncategorized',
+        'status': 'Live'
+    }
+
+
+def _merge_small_medium_large_variants(items):
+    if not items:
+        return []
+
+    variant_name_pattern = re.compile(r"^(?P<base>.+?)\s*(?:[-(]\s*)?(?P<label>small|medium|large|sm|md|lg|s|m|l)\s*\)?$", re.IGNORECASE)
+    merged = []
+    grouped = {}
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        name = (item.get('name') or '').strip()
+        if not name:
+            continue
+
+        description = (item.get('description') or '').strip()
+        if description.lower().startswith('options:'):
+            merged.append(item)
+            continue
+
+        match = variant_name_pattern.match(name)
+        if not match:
+            merged.append(item)
+            continue
+
+        label = _canonical_size_label(match.group('label'))
+        base_name = (match.group('base') or '').strip(" -:\t|,")
+        price = (item.get('price') or '').strip()
+        if not label or not base_name or not price:
+            merged.append(item)
+            continue
+
+        category = (item.get('category') or 'Uncategorized').strip() or 'Uncategorized'
+        key = (base_name.lower(), category.lower())
+        if key not in grouped:
+            grouped[key] = {
+                'item': {
+                    'name': base_name,
+                    'description': '',
+                    'price': price,
+                    'category': category,
+                    'status': (item.get('status') or 'Live').strip() or 'Live'
+                },
+                'options': [],
+                'seen_labels': set(),
+                'prices': []
+            }
+        group = grouped[key]
+        if label not in group['seen_labels']:
+            group['options'].append((label, price))
+            group['seen_labels'].add(label)
+        numeric = _parse_price_value(price)
+        if numeric is not None:
+            group['prices'].append(numeric)
+        if description and not group['item']['description']:
+            group['item']['description'] = description
+
+    for key, group in grouped.items():
+        options = group['options']
+        if len(options) < 2:
+            # If we only collected one size label, preserve original naming behavior by skipping merge.
+            label, price = options[0]
+            suffix_item = dict(group['item'])
+            suffix_item['name'] = f"{group['item']['name']} {label}"
+            suffix_item['price'] = price
+            merged.append(suffix_item)
+            continue
+
+        order = {'Small': 0, 'Medium': 1, 'Large': 2}
+        options.sort(key=lambda row: order.get(row[0], 99))
+        option_text = ', '.join(f"{label}={price}" for label, price in options)
+        merged_item = group['item']
+        merged_item['description'] = f"Options: {option_text}"
+        if group['prices']:
+            minimum = min(group['prices'])
+            merged_item['price'] = str(int(minimum)) if minimum.is_integer() else str(minimum)
+        merged.append(merged_item)
+
+    return merged
+
+
+def _strip_options_block(description: str) -> str:
+    text = (description or '').strip()
+    if not text:
+        return ''
+    return re.sub(r'\boptions\s*:\s*.*$', '', text, flags=re.IGNORECASE).strip(' -|,;')
+
+
+def _build_variant_options_from_form(form_data):
+    options = []
+
+    # Preferred format: customizable label + price pairs.
+    default_labels = ['Small', 'Medium', 'Large']
+    for idx in range(1, 4):
+        label = (form_data.get(f'variant_label_{idx}') or '').strip()
+        value = (form_data.get(f'variant_price_{idx}') or '').strip()
+        if not value:
+            continue
+        if not label:
+            label = default_labels[idx - 1]
+        options.append((label, value))
+
+    # Backward compatibility with older fixed field names.
+    if not options:
+        for label, key in (('Small', 'variant_small'), ('Medium', 'variant_medium'), ('Large', 'variant_large')):
+            value = (form_data.get(key) or '').strip()
+            if value:
+                options.append((label, value))
+
+    if not options:
+        return None
+
+    option_text = ', '.join(f"{label}={price}" for label, price in options)
+    numeric_prices = [val for _, price in options if (val := _parse_price_value(price)) is not None]
+    if numeric_prices:
+        minimum = min(numeric_prices)
+        price_value = str(int(minimum)) if minimum.is_integer() else str(minimum)
+    else:
+        price_value = options[0][1]
+
+    return {
+        'description_options': f"Options: {option_text}",
+        'price': price_value
+    }
+
+
+def _apply_variant_form_values(description: str, price: str, form_data):
+    variant_data = _build_variant_options_from_form(form_data)
+    if not variant_data:
+        return description, price
+
+    base_description = _strip_options_block(description)
+    if base_description:
+        full_description = f"{base_description}. {variant_data['description_options']}"
+    else:
+        full_description = variant_data['description_options']
+    return full_description, variant_data['price']
+
+
 def parse_menu_txt(content: str):
     if not content:
         return []
@@ -386,6 +597,10 @@ def parse_menu_txt(content: str):
         clean = line.strip()
         if not clean:
             continue
+        variant_item = _parse_size_variant_line(clean)
+        if variant_item:
+            items.append(variant_item)
+            continue
         match = price_pattern.search(clean)
         if not match:
             continue
@@ -402,7 +617,7 @@ def parse_menu_txt(content: str):
             'status': 'Live'
         })
     if items:
-        return items
+        return _merge_small_medium_large_variants(items)
 
     rows = []
     reader = csv.reader(io.StringIO(content))
@@ -436,7 +651,7 @@ def parse_menu_txt(content: str):
             'category': category or 'Uncategorized',
             'status': status or 'Live'
         })
-    return items
+    return _merge_small_medium_large_variants(items)
 
 
 def _extract_known_categories(menu_items):
@@ -566,7 +781,7 @@ def parse_menu_txt_with_ai(content: str):
                 'category': category,
                 'status': status
             })
-        return items
+        return _merge_small_medium_large_variants(items)
     except Exception:
         return []
 
@@ -1104,6 +1319,7 @@ def menu_add_item():
     name = request.form.get('name', '').strip()
     description = request.form.get('description', '').strip()
     price = request.form.get('price', '').strip()
+    description, price = _apply_variant_form_values(description, price, request.form)
     known_categories = _extract_known_categories(cfg.get('menu_items', []))
     category_input = request.form.get('category', '').strip()
     category = category_input or infer_menu_category(name, description, known_categories)
@@ -1164,6 +1380,8 @@ def menu_update_item():
         return redirect(url_for('menu'))
 
     description = request.form.get('description', '').strip()
+    incoming_price = request.form.get('price', '').strip()
+    description, final_price = _apply_variant_form_values(description, incoming_price, request.form)
     known_categories = _extract_known_categories(items)
     category_input = request.form.get('category', '').strip()
     category = category_input or infer_menu_category(name, description, known_categories)
@@ -1176,7 +1394,7 @@ def menu_update_item():
         'id': item_id,
         'name': name,
         'description': description,
-        'price': request.form.get('price', '').strip(),
+        'price': final_price,
         'category': category,
         'status': request.form.get('status', '').strip() or 'Live',
         'image_url': request.form.get('image_url', '').strip()

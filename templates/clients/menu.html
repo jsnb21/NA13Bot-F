@@ -79,7 +79,7 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <form method="POST" action="/menu/add" class="row g-3" id="menuAddForm">
+              <form method="POST" action="/menu/add" class="row g-3" id="menuAddForm" data-turbo="false">
                 <div class="col-12">
                   <label class="form-label fw-semibold small text-secondary">Item Name</label>
                   <input type="text" name="name" class="form-control" placeholder="e.g. Margherita Pizza" required>
@@ -103,6 +103,42 @@
                 <div class="col-12">
                   <label class="form-label fw-semibold small text-secondary">Description</label>
                   <textarea name="description" class="form-control" rows="3" placeholder="Describe ingredients, taste..."></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small text-secondary">Size Variants (Optional)</label>
+                  <div class="row g-2">
+                    <div class="col-md-4 col-12">
+                      <div class="row g-1">
+                        <div class="col-6">
+                          <input type="text" name="variant_label_1" class="form-control form-control-sm" value="Small" placeholder="Label">
+                        </div>
+                        <div class="col-6">
+                          <input type="text" name="variant_price_1" class="form-control form-control-sm" placeholder="120">
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4 col-12">
+                      <div class="row g-1">
+                        <div class="col-6">
+                          <input type="text" name="variant_label_2" class="form-control form-control-sm" value="Medium" placeholder="Label">
+                        </div>
+                        <div class="col-6">
+                          <input type="text" name="variant_price_2" class="form-control form-control-sm" placeholder="140">
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4 col-12">
+                      <div class="row g-1">
+                        <div class="col-6">
+                          <input type="text" name="variant_label_3" class="form-control form-control-sm" value="Large" placeholder="Label">
+                        </div>
+                        <div class="col-6">
+                          <input type="text" name="variant_price_3" class="form-control form-control-sm" placeholder="160">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-text">You can edit labels (for example: Solo, Regular, Family). If prices are set, we save as Options and use the lowest variant price as the main price.</div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-semibold small text-secondary">Status</label>
@@ -130,7 +166,7 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-              <form method="POST" action="/menu/update" class="row g-3" id="menuEditForm">
+              <form method="POST" action="/menu/update" class="row g-3" id="menuEditForm" data-turbo="false">
                 <input type="hidden" name="item_index" id="menuEditIndex">
                 <div class="col-12">
                   <label class="form-label fw-semibold small text-secondary">Item Name</label>
@@ -155,6 +191,42 @@
                 <div class="col-12">
                   <label class="form-label fw-semibold small text-secondary">Description</label>
                   <textarea name="description" class="form-control" id="menuEditDescription" rows="3"></textarea>
+                </div>
+                <div class="col-12">
+                  <label class="form-label fw-semibold small text-secondary">Size Variants (Optional)</label>
+                  <div class="row g-2">
+                    <div class="col-md-4 col-12">
+                      <div class="row g-1">
+                        <div class="col-6">
+                          <input type="text" name="variant_label_1" class="form-control form-control-sm" id="menuEditVariantLabel1" value="Small" placeholder="Label">
+                        </div>
+                        <div class="col-6">
+                          <input type="text" name="variant_price_1" class="form-control form-control-sm" id="menuEditVariantPrice1" placeholder="120">
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4 col-12">
+                      <div class="row g-1">
+                        <div class="col-6">
+                          <input type="text" name="variant_label_2" class="form-control form-control-sm" id="menuEditVariantLabel2" value="Medium" placeholder="Label">
+                        </div>
+                        <div class="col-6">
+                          <input type="text" name="variant_price_2" class="form-control form-control-sm" id="menuEditVariantPrice2" placeholder="140">
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-4 col-12">
+                      <div class="row g-1">
+                        <div class="col-6">
+                          <input type="text" name="variant_label_3" class="form-control form-control-sm" id="menuEditVariantLabel3" value="Large" placeholder="Label">
+                        </div>
+                        <div class="col-6">
+                          <input type="text" name="variant_price_3" class="form-control form-control-sm" id="menuEditVariantPrice3" placeholder="160">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-text">Editing variants will regenerate the Options text and set base price to the lowest variant.</div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fw-semibold small text-secondary">Status</label>
@@ -631,6 +703,41 @@
   const menuEditPrice = document.getElementById('menuEditPrice');
   const menuEditCategory = document.getElementById('menuEditCategory');
   const menuEditStatus = document.getElementById('menuEditStatus');
+  const menuEditVariantLabel1 = document.getElementById('menuEditVariantLabel1');
+  const menuEditVariantLabel2 = document.getElementById('menuEditVariantLabel2');
+  const menuEditVariantLabel3 = document.getElementById('menuEditVariantLabel3');
+  const menuEditVariantPrice1 = document.getElementById('menuEditVariantPrice1');
+  const menuEditVariantPrice2 = document.getElementById('menuEditVariantPrice2');
+  const menuEditVariantPrice3 = document.getElementById('menuEditVariantPrice3');
+
+  function parseVariantListFromDescription(description) {
+    const text = (description || '').toString();
+    const match = text.match(/options\s*:\s*(.*)$/i);
+    if (!match || !match[1]) {
+      return [];
+    }
+
+    return match[1]
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean)
+      .map(part => {
+        const pair = part.split('=');
+        if (pair.length !== 2) return null;
+        const label = (pair[0] || '').trim();
+        const value = (pair[1] || '').trim();
+        if (!label || !value) return null;
+        return { label, price: value };
+      })
+      .filter(Boolean);
+  }
+
+  function cleanupBootstrapBackdrops() {
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+  }
 
   function toggleMenuEditor(show) {
     // If show is undefined, toggle based on current state
@@ -727,6 +834,20 @@
         if (menuEditCategory) menuEditCategory.value = data.category || '';
         if (menuEditStatus) menuEditStatus.value = data.status || 'Live';
 
+        const variants = parseVariantListFromDescription(data.description || '');
+        const fallbackLabels = ['Small', 'Medium', 'Large'];
+        const variantRows = [
+          { labelEl: menuEditVariantLabel1, priceEl: menuEditVariantPrice1 },
+          { labelEl: menuEditVariantLabel2, priceEl: menuEditVariantPrice2 },
+          { labelEl: menuEditVariantLabel3, priceEl: menuEditVariantPrice3 }
+        ];
+
+        variantRows.forEach((row, index) => {
+          const variant = variants[index] || null;
+          if (row.labelEl) row.labelEl.value = (variant && variant.label) ? variant.label : fallbackLabels[index];
+          if (row.priceEl) row.priceEl.value = (variant && variant.price) ? variant.price : '';
+        });
+
         // Show modal
         if (editModal) {
           editModal.show();
@@ -744,6 +865,7 @@
       const modalEl = document.getElementById('addMenuItemModal');
       const modal = bootstrap.Modal.getInstance(modalEl);
       if (modal) modal.hide();
+      cleanupBootstrapBackdrops();
     });
   }
   if (menuEditForm && menuEditForm.dataset.listenerAttached !== '1') {
@@ -751,14 +873,12 @@
     menuEditForm.addEventListener('submit', () => {
       sessionStorage.setItem('menuEditorOpen', 'true');
       if (editModal) editModal.hide();
+      cleanupBootstrapBackdrops();
     });
   }
 
   // Cleanup potential stuck backdrops on load
-  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-  document.body.classList.remove('modal-open');
-  document.body.style.overflow = '';
-  document.body.style.paddingRight = '';
+  cleanupBootstrapBackdrops();
 
   if (sessionStorage.getItem('menuEditorOpen') === 'true') {
     toggleMenuEditor(true);
