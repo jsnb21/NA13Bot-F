@@ -225,6 +225,8 @@
             const fieldName = container.getAttribute('data-field');
             const defaultColor = container.getAttribute('data-default') || '#1e40af';
             const hiddenInput = document.querySelector(`[name="${fieldName}"]`);
+            const inlineTrigger = document.querySelector(`[data-color-inline-preview="${fieldName}"]`);
+            const pickerHost = container.closest('.col-md-6') || container.parentElement || document.body;
 
             if (!fieldName || !hiddenInput) return;
 
@@ -241,7 +243,10 @@
                 }
 
                 pickers[fieldName] = Pickr.create({
-                    el: container,
+                    el: inlineTrigger || container,
+                    useAsButton: true,
+                    container: pickerHost,
+                    position: 'bottom-start',
                     theme: 'classic',
                     default: defaultColor,
                     components: {
@@ -304,7 +309,6 @@
                     hiddenInput.addEventListener('change', () => syncColorPreview(fieldName, hiddenInput.value));
                 }
 
-                const inlineTrigger = document.querySelector(`[data-color-inline-preview="${fieldName}"]`);
                 if (inlineTrigger) {
                     inlineTrigger.setAttribute('role', 'button');
                     inlineTrigger.setAttribute('tabindex', '0');

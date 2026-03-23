@@ -820,16 +820,16 @@ body:has(.settings-page) {
 
 .modern-color-picker,
 .pickr-container {
-    width: 0;
-    height: 0;
+    width: auto;
+    height: auto;
     display: block;
     position: relative;
     overflow: visible;
 }
 
 .pickr {
-    position: absolute;
-    inset: 0;
+    position: static;
+    inset: auto;
 }
 
 .pickr .pcr-button {
