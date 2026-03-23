@@ -91,6 +91,7 @@ import re
 import logging
 import uuid
 import shutil
+import os
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
@@ -109,30 +110,31 @@ def normalize_email(email: str) -> str:
 
 
 def load_global_system_prompt():
-    """Load the global system prompt for all restaurants."""
-    config_path = Path(__file__).parent / 'config.json'
-    try:
-        if config_path.exists():
-            data = json.loads(config_path.read_text())
-            return data.get('global_system_prompt', '')
-    except Exception:
-        pass
+    """Load the global system prompt for all restaurants.
+    
+    Should be set via GLOBAL_SYSTEM_PROMPT environment variable in .env file.
+    Database storage support can be added later.
+    """
+    prompt = os.environ.get('GLOBAL_SYSTEM_PROMPT', '').strip()
+    if prompt:
+        return prompt
     return ''
 
 
 def save_global_system_prompt(prompt: str):
-    """Save the global system prompt for all restaurants."""
-    config_path = Path(__file__).parent / 'config.json'
-    try:
-        data = {}
-        if config_path.exists():
-            data = json.loads(config_path.read_text())
-        data['global_system_prompt'] = prompt
-        config_path.write_text(json.dumps(data, indent=2))
-        return True
-    except Exception as e:
-        logger.exception("Error saving global system prompt")
-        return False
+    """Save global system prompt.
+    
+    This function is deprecated. System prompts should be managed via:
+    1. .env file (GLOBAL_SYSTEM_PROMPT environment variable)
+    2. Database storage (to be implemented)
+    
+    Config.json is no longer used for storing configuration.
+    """
+    logger.warning(
+        "save_global_system_prompt() is deprecated. "
+        "Use environment variable GLOBAL_SYSTEM_PROMPT in .env file instead."
+    )
+    return False
 
 def load_config(restaurant_id: str = None):
     cfg = {}

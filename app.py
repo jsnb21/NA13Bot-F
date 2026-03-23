@@ -1188,6 +1188,11 @@ def login_required(f):
 
 
 def _get_superadmin_credentials():
+    """Get superadmin credentials from environment variables only.
+    
+    SUPERADMIN_USER and SUPERADMIN_PASSWORD must be set in .env file.
+    Falls back to defaults if not set, but config.json is never used for security.
+    """
     default_user = 'admin'
     default_password = 'admin123'
 
@@ -1195,23 +1200,6 @@ def _get_superadmin_credentials():
     env_password = (os.environ.get('SUPERADMIN_PASSWORD') or '').strip()
     if env_user and env_password:
         return env_user, env_password
-
-    config_path = Path(__file__).resolve().parent / 'config.json'
-    try:
-        if config_path.exists():
-            data = json.loads(config_path.read_text(encoding='utf-8'))
-            user = (
-                (data.get('superadmin_username') or '').strip()
-                or (data.get('superadmin_user') or '').strip()
-            )
-            password = (
-                (data.get('superadmin_password') or '').strip()
-                or (data.get('superadmin_pass') or '').strip()
-            )
-            if user and password:
-                return user, password
-    except Exception:
-        pass
 
     return default_user, default_password
 

@@ -114,7 +114,14 @@
     border-radius: 8px;
     font-weight: 600;
     font-size: 0.85rem;
-    transition: 0.2s;
+    transition: all 0.3s ease;
+  }
+
+  .btn-action:hover:not(:disabled) {
+    background: var(--brand-dark) !important;
+    color: var(--main-foreground, #ffffff) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
   }
 
   .auth-footer {

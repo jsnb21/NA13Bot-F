@@ -90,19 +90,16 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-def _load_config_json():
-    """Load database config from config.json if it exists."""
-    config_path = Path(__file__).parent / 'config.json'
-    if config_path.exists():
-        try:
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-                return config.get('db', {})
-        except Exception:
-            pass
-    return {}
-
 def get_connection():
+    """Get PostgreSQL connection from environment variables only.
+    
+    Credentials MUST be set in .env file or as environment variables.
+    NO fallback to config.json for security reasons.
+    
+    Supports:
+    1. DATABASE_URL - Full connection string
+    2. DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD - Individual components
+    """
     # Load .env if python-dotenv is available
     if load_dotenv is not None:
         load_dotenv()
@@ -112,32 +109,27 @@ def get_connection():
     if db_url:
         return psycopg.connect(db_url)
 
-    # Env vars take precedence
-    env_host = os.environ.get("DB_HOST")
-    env_port = os.environ.get("DB_PORT")
-    env_name = os.environ.get("DB_NAME")
-    env_user = os.environ.get("DB_USER")
-    env_password = os.environ.get("DB_PASSWORD")
+    # Individual connection parameters from env vars
+    host = os.environ.get("DB_HOST")
+    port = os.environ.get("DB_PORT")
+    dbname = os.environ.get("DB_NAME")
+    user = os.environ.get("DB_USER")
+    password = os.environ.get("DB_PASSWORD")
 
-    # Fallback to config.json if env vars not set
-    if not all([env_host, env_port, env_name, env_user, env_password]):
-        config_db = _load_config_json()
-        host = env_host or config_db.get('host', 'localhost')
-        port = int(env_port) if env_port else (config_db.get('port', 5432))
-        name = env_name or config_db.get('name')
-        user = env_user or config_db.get('user')
-        password = env_password or config_db.get('password')
-    else:
-        host = env_host
-        port = int(env_port) if env_port else 5432
-        name = env_name
-        user = env_user
-        password = env_password
+    if not all([host, dbname, user, password]):
+        missing = [k for k in ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'] 
+                   if not os.environ.get(k)]
+        raise ValueError(
+            f"Missing required database credentials in environment variables: {', '.join(missing)}. "
+            f"Set these in your .env file."
+        )
+
+    port = int(port) if port else 5432
 
     return psycopg.connect(
         host=host,
         port=port,
-        dbname=name,
+        dbname=dbname,
         user=user,
         password=password
     )

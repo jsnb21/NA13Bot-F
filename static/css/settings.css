@@ -111,16 +111,17 @@ body:has(.settings-page) {
     border-radius: 12px;
     padding: 11px 18px;
     font-weight: 700;
-    color: #fff;
-    background: linear-gradient(135deg, #103843, #165565);
-    box-shadow: 0 12px 24px rgba(16, 56, 67, 0.26);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    color: var(--main-foreground) !important;
+    background: var(--brand-dark) !important;
+    transition: all 0.3s ease;
 }
 
 .page-action-btn:hover {
-    color: #fff;
-    transform: translateY(-1px);
-    box-shadow: 0 14px 30px rgba(16, 56, 67, 0.31);
+    color: var(--sub-foreground) !important;
+    background: var(--sub-color) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18) !important;
+    transition: all 0.3s ease !important;
 }
 
 .hero-secondary-btn {
@@ -133,8 +134,8 @@ body:has(.settings-page) {
 }
 
 .hero-secondary-btn:hover {
-    border-color: #1f4b57;
-    color: #1f4b57;
+    border-color: var(--brand-dark);
+    color: var(--brand-dark);
 }
 
 .settings-shell {
@@ -265,13 +266,13 @@ body:has(.settings-page) {
 
 .section-toggle:hover,
 .edit-btn:hover {
-    border-color: #103843;
-    color: #103843;
+    border-color: var(--brand-dark);
+    color: var(--brand-dark);
     transform: translateY(-1px);
 }
 
 .section-header:focus-within .section-title-wrap h5 {
-    color: #0e4756;
+    color: var(--brand-dark);
 }
 
 .section-kicker {

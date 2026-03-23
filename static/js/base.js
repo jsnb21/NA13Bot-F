@@ -115,6 +115,7 @@ function applyButtonColors(mainColor, subColor, mainFg, subFg) {
     
     allButtons.forEach(btn => {
         // Determine button type from class
+        const isPageActionBtn = btn.classList.contains('page-action-btn');
         const isSubColor = btn.classList.contains('btn-primary') || btn.classList.contains('btn-warning') || btn.classList.contains('btn-success');
         const isOutline = btn.classList.contains('btn-outline-primary') || btn.classList.contains('btn-outline-secondary') || btn.classList.contains('btn-outline-dark');
         const isLight = btn.classList.contains('btn-light');
@@ -125,7 +126,24 @@ function applyButtonColors(mainColor, subColor, mainFg, subFg) {
         // Skip if already has explicit inline styles (user-set colors)
         if(btn.hasAttribute('data-color-locked')) return;
         
-        if(isCategoryBtn) {
+        if(isPageActionBtn) {
+            // Page action buttons: main color background, accent color on hover
+            btn.style.backgroundColor = mainColor;
+            btn.style.color = mainFg;
+            btn.style.border = 'none';
+            btn.onmouseenter = function() {
+                this.style.backgroundColor = subColor;
+                this.style.color = subFg;
+                this.style.transform = 'translateY(-2px)';
+                this.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+            };
+            btn.onmouseleave = function() {
+                this.style.backgroundColor = mainColor;
+                this.style.color = mainFg;
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = 'none';
+            };
+        } else if(isCategoryBtn) {
             // Category filter buttons: outline with main color, accent on hover
             const isActive = btn.classList.contains('active');
             
