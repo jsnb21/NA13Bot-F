@@ -11,7 +11,7 @@
 <div class="container-fluid px-4">
     <div class="ai-header">
         <h2>AI Training Data Management</h2>
-        <p>Upload training files and knowledge bases to enhance your AI agent's responses</p>
+        <p>Upload files so your AI assistant can give better answers. We read your files in small parts to keep answers accurate.</p>
     </div>
 
     {% set menu_items = cfg.get('menu_items', []) %}
@@ -27,7 +27,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
                 <h5 class="mb-1">Menu Sync for AI</h5>
-                <p class="text-muted mb-0">Upload menu files and photos here so menu data and AI training stay in sync.</p>
+                <p class="text-muted mb-0">Start here: upload menu files and photos so menu data and AI training stay in sync.</p>
             </div>
             <button class="btn btn-outline-danger btn-sm" type="button" id="clearMenuBtnAiTraining">
                 <i class="fas fa-trash me-2"></i>Clear Menu Items
@@ -71,10 +71,11 @@
         </div>
     </div>
 
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card-surface mb-4">
-                <h5 class="mb-4">Upload Training Files</h5>
+        <div class="ai-training-stack">
+            <div class="row g-3 priority-actions-row">
+                <div class="col-lg-6">
+                    <div class="card-surface h-100">
+                        <h5 class="mb-4">1. Upload Training Files</h5>
 
                 <div class="templates-section mb-4">
                     <h6 class="mb-3">Start with a Template</h6>
@@ -96,133 +97,194 @@
                         <button class="btn btn-primary" style="background:#667eea; border:none;">Choose Files</button>
                         <input type="file" id="trainingFiles" name="training_files" multiple accept=".txt,.pdf,.docx,.json,.csv">
                     </div>
-                    <p style="color:#999; font-size:0.85rem; margin-top:20px;">Supported formats: TXT, PDF, DOCX, JSON, CSV</p>
+                    <p style="color:#999; font-size:0.85rem; margin-top:20px;">Supported formats: TXT, PDF, DOCX, JSON, CSV. We process each file automatically.</p>
                 </div>
 
                 <div id="uploadProgress" style="display:none; margin-top:20px;">
                     <div id="uploadQueue"></div>
                 </div>
 
-                <div id="validationMessages" style="margin-top:15px;"></div>
-            </div>
-
-            <div class="card-surface">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0">Uploaded Training Files</h5>
-                    <div id="bulkActions" class="bulk-actions" style="display:none;">
-                        <input type="checkbox" id="selectAll" class="me-2">
-                        <span class="text-muted me-3"><span id="selectedCount">0</span> selected</span>
-                        <button class="btn btn-sm btn-danger" id="deleteSelectedBtn">
-                            <i class="fa fa-trash"></i> Delete Selected
-                        </button>
+                        <div id="validationMessages" style="margin-top:15px;"></div>
                     </div>
                 </div>
 
-                <div id="filesList"></div>
+                <div class="col-lg-6">
+                    <div class="card-surface h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">2. Uploaded Training Files</h5>
+                            <div id="bulkActions" class="bulk-actions" style="display:none;">
+                                <input type="checkbox" id="selectAll" class="me-2">
+                                <span class="text-muted me-3"><span id="selectedCount">0</span> selected</span>
+                                <button class="btn btn-sm btn-danger" id="deleteSelectedBtn">
+                                    <i class="fa fa-trash"></i> Delete Selected
+                                </button>
+                            </div>
+                        </div>
 
-                <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
-                    <button id="retrainBtn" class="btn btn-secondary" style="background:#667eea; border:none; margin-right:10px;" disabled>Retrain All Models</button>
-                    <button id="exportBtn" class="btn btn-outline-secondary" disabled>Export Training Data</button>
+                        <div id="filesList"></div>
+
+                        <div class="compact-overview">
+                            <h6 class="mb-2">Training Overview</h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <div class="stat-card compact-stat text-start">
+                                        <div class="stat-value" id="filesCount">0</div>
+                                        <div class="stat-label">Files Uploaded</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="stat-card compact-stat text-start">
+                                        <div class="stat-value" id="totalSize">0 KB</div>
+                                        <div class="stat-label">Total Size</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:12px; padding-top:12px;">
+                            <button id="retrainBtn" class="btn btn-secondary" style="background:#667eea; border:none; margin-right:10px;" disabled>Update AI Knowledge</button>
+                            <button id="exportBtn" class="btn btn-outline-secondary" disabled>Export Training Data</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-surface">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <h5 class="mb-0">What AI Currently Knows</h5>
+                    <button id="refreshKnowledgeBtn" class="btn btn-sm btn-outline-secondary" type="button">
+                        <i class="fa fa-rotate-right"></i> Refresh
+                    </button>
+                </div>
+
+                <p class="text-muted mb-3">A quick view of the information your AI can currently use to answer questions.</p>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3 col-6">
+                        <div class="knowledge-metric">
+                            <div class="knowledge-metric__value" id="knownFileCount">0</div>
+                            <div class="knowledge-metric__label">Files Read</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="knowledge-metric">
+                            <div class="knowledge-metric__value" id="knownChunkCount">0</div>
+                            <div class="knowledge-metric__label">Text Parts</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="knowledge-metric">
+                            <div class="knowledge-metric__value" id="structuredChunkCount">0</div>
+                            <div class="knowledge-metric__label">From Headed Docs</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="knowledge-metric">
+                            <div class="knowledge-metric__value" id="slidingChunkCount">0</div>
+                            <div class="knowledge-metric__label">From Long Text</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table knowledge-table mb-0">
+                        <thead style="background:#f8f9fa;">
+                            <tr>
+                                <th>Source File</th>
+                                <th>Details</th>
+                                <th>Sample Text</th>
+                            </tr>
+                        </thead>
+                        <tbody id="knowledgeBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="row g-3 info-box-row">
+                <div class="col-lg-4 col-md-6 col-12">
+                    <div class="info-box h-100">
+                        <h5>Training File Guidelines</h5>
+                        <ul>
+                            <li><strong>PDF/DOCX:</strong> Add clear headings so related details stay together.</li>
+                            <li><strong>TXT/JSON/CSV:</strong> Write clear short paragraphs.</li>
+                            <li><strong>Helpful Labels:</strong> Keep names like "Invoice #123" or "Section 4.2" if they matter.</li>
+                            <li><strong>Clarity:</strong> Keep related facts close to each other.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 col-12">
+                    <div class="info-box h-100" style="border-left-color:#0b343d; background:#f2fbfd;">
+                        <h5 style="color:#0b343d;">How File Reading Works</h5>
+                        <ul>
+                            <li><strong>Automatic:</strong> The app checks the file and decides the best way to read it.</li>
+                            <li><strong>For PDF/DOCX:</strong> Heading and related text are kept together.</li>
+                            <li><strong>For TXT-like files:</strong> Long text is split into small connected parts.</li>
+                            <li><strong>Extra Details:</strong> We keep useful tags like file type, page number, and section name.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 col-12">
+                    <div class="info-box h-100" style="border-left-color:#ff6b6b;">
+                        <h5 style="color:#ff6b6b;">Best Practices</h5>
+                        <ul style="margin-bottom:0;">
+                            <li>Use clear, consistent formatting</li>
+                            <li>Include context for Q&amp;A pairs</li>
+                            <li>Update files regularly</li>
+                            <li>Keep file sizes under 50MB</li>
+                            <li>Avoid duplicate content</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-surface">
+                <h5 class="mb-3">Simple Training File Example</h5>
+                <p class="text-muted mb-3">Use clear section titles and simple wording in .txt, .docx, or .pdf files. No coding needed.</p>
+
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>1. Restaurant Details</h6>
+                        <div class="training-example-card">
+                            <p><strong>Restaurant Name:</strong> Scott's Restaurant</p>
+                            <p><strong>Address:</strong> 123 Main St, Quezon City</p>
+                            <p><strong>Contact Number:</strong> +63 912 345 6789</p>
+                            <p><strong>Opening Hours:</strong> 10:00 AM to 10:00 PM (Daily)</p>
+                            <p><strong>Delivery Areas:</strong> Quezon City, San Juan</p>
+                            <p class="mb-0"><strong>Special Notes:</strong> We accept dine-in, takeout, and delivery.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>2. Menu Items</h6>
+                        <div class="training-example-card">
+                            <p class="mb-2"><strong>Category:</strong> Main Course</p>
+                            <p><strong>Item:</strong> Beef Tapa</p>
+                            <p><strong>Price:</strong> 180</p>
+                            <p><strong>Description:</strong> Marinated beef strips served with garlic rice and egg.</p>
+                            <hr>
+                            <p class="mb-2"><strong>Category:</strong> Drinks/Beverages</p>
+                            <p><strong>Item:</strong> Iced Latte</p>
+                            <p><strong>Price:</strong> 150</p>
+                            <p class="mb-0"><strong>Description:</strong> Fresh espresso with milk and ice.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>3. Customer Q&amp;A</h6>
+                        <div class="training-example-card">
+                            <p><strong>Q:</strong> What time do you open?</p>
+                            <p><strong>A:</strong> We open daily at 10:00 AM.</p>
+                            <hr>
+                            <p><strong>Q:</strong> Do you offer delivery?</p>
+                            <p><strong>A:</strong> Yes, we deliver within selected nearby areas.</p>
+                            <hr>
+                            <p><strong>Q:</strong> What are your bestsellers?</p>
+                            <p class="mb-0"><strong>A:</strong> Our bestsellers are Beef Tapa and Iced Latte.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-4">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="filesCount">0</div>
-                    <div class="stat-label">Files Uploaded</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalSize">0 KB</div>
-                    <div class="stat-label">Total Size</div>
-                </div>
-            </div>
-
-            <div class="info-box">
-                <h5>Training File Guidelines</h5>
-                <ul>
-                    <li><strong>TXT Files:</strong> Plain text data, Q&A pairs, or knowledge base</li>
-                    <li><strong>JSON Files:</strong> Structured data with menu items, FAQs, or responses</li>
-                    <li><strong>CSV Files:</strong> Tabular data like inventory, pricing, hours</li>
-                    <li><strong>PDF/DOCX:</strong> Documents with training content</li>
-                </ul>
-            </div>
-
-            <div class="info-box" style="border-left-color:#ff6b6b;">
-                <h5 style="color:#ff6b6b;">Best Practices</h5>
-                <ul style="margin-bottom:0;">
-                    <li>Use clear, consistent formatting</li>
-                    <li>Include context for Q&A pairs</li>
-                    <li>Update files regularly</li>
-                    <li>Keep file sizes under 50MB</li>
-                    <li>Avoid duplicate content</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <div class="card-surface mb-4">
-        <h5 class="mb-3">Simple Training File Example (TXT)</h5>
-        <p class="text-muted mb-3">Use plain text like this in a .txt, .docx, or .pdf file. No coding format needed.</p>
-
-        <div class="row">
-            <div class="col-md-4">
-                <h6>1. Restaurant Details</h6>
-                <div class="training-example-card">
-                    <p><strong>Restaurant Name:</strong> Scott's Restaurant</p>
-                    <p><strong>Address:</strong> 123 Main St, Quezon City</p>
-                    <p><strong>Contact Number:</strong> +63 912 345 6789</p>
-                    <p><strong>Opening Hours:</strong> 10:00 AM to 10:00 PM (Daily)</p>
-                    <p><strong>Delivery Areas:</strong> Quezon City, San Juan</p>
-                    <p class="mb-0"><strong>Special Notes:</strong> We accept dine-in, takeout, and delivery.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <h6>2. Menu Items</h6>
-                <div class="training-example-card">
-                    <p class="mb-2"><strong>Category:</strong> Main Course</p>
-                    <p><strong>Item:</strong> Beef Tapa</p>
-                    <p><strong>Price:</strong> 180</p>
-                    <p><strong>Description:</strong> Marinated beef strips served with garlic rice and egg.</p>
-                    <hr>
-                    <p class="mb-2"><strong>Category:</strong> Drinks/Beverages</p>
-                    <p><strong>Item:</strong> Iced Latte</p>
-                    <p><strong>Price:</strong> 150</p>
-                    <p class="mb-0"><strong>Description:</strong> Fresh espresso with milk and ice.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <h6>3. Customer Q&amp;A</h6>
-                <div class="training-example-card">
-                    <p><strong>Q:</strong> What time do you open?</p>
-                    <p><strong>A:</strong> We open daily at 10:00 AM.</p>
-                    <hr>
-                    <p><strong>Q:</strong> Do you offer delivery?</p>
-                    <p><strong>A:</strong> Yes, we deliver within selected nearby areas.</p>
-                    <hr>
-                    <p><strong>Q:</strong> What are your bestsellers?</p>
-                    <p class="mb-0"><strong>A:</strong> Our bestsellers are Beef Tapa and Iced Latte.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card-surface">
-        <h5 class="mb-3">Training Status &amp; History</h5>
-        <table class="table mb-0">
-            <thead style="background:#f8f9fa;">
-                <tr>
-                    <th>Date</th>
-                    <th>Action</th>
-                    <th>Status</th>
-                    <th>Duration</th>
-                </tr>
-            </thead>
-            <tbody id="trainingHistoryBody"></tbody>
-        </table>
-    </div>
-</div>
 
 <div id="previewModal" class="preview-modal" aria-hidden="true">
     <div class="preview-modal__content" role="dialog" aria-modal="true" aria-labelledby="previewTitle">

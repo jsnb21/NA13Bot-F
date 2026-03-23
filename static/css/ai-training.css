@@ -17,6 +17,76 @@
         color: var(--text-secondary, #6b7280);
         font-size: 1.05rem;
     }
+
+    .ai-training-stack > .card-surface,
+    .ai-training-stack > .info-box {
+        margin-bottom: 18px;
+    }
+
+    .ai-training-stack > .priority-actions-row {
+        margin-bottom: 18px;
+    }
+
+    .priority-actions-row .card-surface {
+        padding: 18px;
+    }
+
+    .priority-actions-row .upload-section {
+        padding: 22px;
+        min-height: 260px;
+    }
+
+    .priority-actions-row .upload-icon {
+        font-size: 2.2rem;
+        margin-bottom: 10px;
+    }
+
+    .priority-actions-row .upload-section h5 {
+        font-size: 1.05rem;
+        margin-bottom: 6px;
+    }
+
+    .priority-actions-row .upload-section p {
+        margin-bottom: 12px !important;
+    }
+
+    .priority-actions-row #filesList .text-center {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    .ai-training-stack > .info-box-row {
+        margin-bottom: 18px;
+    }
+
+    .info-box-row .info-box {
+        margin-bottom: 0;
+    }
+
+    .ai-training-stack > :last-child {
+        margin-bottom: 0;
+    }
+
+    .card-surface > h5 {
+        margin-bottom: 14px;
+    }
+
+    .card-surface .table-responsive {
+        margin-top: 12px;
+    }
+
+    .info-box {
+        margin-bottom: 18px;
+        padding: 18px 20px;
+    }
+
+    .info-box h5 {
+        margin-bottom: 10px;
+    }
+
+    .info-box ul {
+        margin-top: 0;
+    }
     
     .upload-section {
         background: white;
@@ -235,6 +305,32 @@
         color: #666;
         font-size: 0.9rem;
     }
+
+    .compact-overview {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .compact-overview h6 {
+        font-weight: 700;
+        color: #334155;
+    }
+
+    .compact-overview .compact-stat {
+        padding: 12px 14px;
+        box-shadow: none;
+        border: 1px solid #e5e7eb;
+    }
+
+    .compact-overview .stat-value {
+        font-size: 1.55rem;
+        margin-bottom: 2px;
+    }
+
+    .compact-overview .stat-label {
+        font-size: 0.82rem;
+    }
     
     .code-example {
         background: #1e1e1e;
@@ -311,6 +407,33 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+    }
+
+    .knowledge-metric {
+        background: #f8fbff;
+        border: 1px solid #d6e4ff;
+        border-radius: 8px;
+        padding: 10px 12px;
+        text-align: center;
+        height: 100%;
+    }
+
+    .knowledge-metric__value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #0b343d;
+        line-height: 1.1;
+    }
+
+    .knowledge-metric__label {
+        font-size: 0.78rem;
+        color: #667085;
+        margin-top: 4px;
+    }
+
+    .knowledge-table td {
+        font-size: 0.9rem;
+        vertical-align: top;
     }
 
     .preview-modal {

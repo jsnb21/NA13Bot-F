@@ -106,6 +106,7 @@ from datetime import datetime, timezone, timedelta
 from chatbot.routes import chatbot_bp
 from chatbot.training import (
     build_training_context,
+    build_training_chunks,
     get_training_dir as training_get_dir,
     get_training_manifest_path as training_get_manifest_path,
     get_training_history_path as training_get_history_path,
@@ -1909,6 +1910,75 @@ def ai_training_history():
     entries = load_training_history(restaurant_id)
     entries.sort(key=lambda item: item.get('started_at') or '', reverse=True)
     return jsonify({'history': entries[:50]})
+
+
+@app.route('/ai-training/knowledge', methods=['GET'])
+@login_required
+def ai_training_knowledge():
+    restaurant_id = get_current_restaurant_id()
+    entries = load_training_manifest(restaurant_id)
+    training_dir = get_training_dir(restaurant_id)
+
+    file_summaries = []
+    chunk_samples = []
+    total_chunks = 0
+    structured_chunks = 0
+    max_samples = 60
+
+    for entry in entries:
+        stored_name = entry.get('stored_name')
+        if not stored_name:
+            continue
+
+        file_path = training_dir / stored_name
+        if not file_path.exists():
+            continue
+
+        chunks = build_training_chunks(restaurant_id, file_path, entry)
+        if not chunks:
+            continue
+
+        source_name = entry.get('original_name') or stored_name
+        file_chunk_count = len(chunks)
+        total_chunks += file_chunk_count
+
+        has_structured_meta = False
+        for chunk in chunks:
+            meta = chunk.get('metadata') or {}
+            if meta.get('page') is not None or meta.get('section_title'):
+                structured_chunks += 1
+                has_structured_meta = True
+
+            if len(chunk_samples) < max_samples:
+                content = (chunk.get('content') or '').strip()
+                chunk_samples.append({
+                    'source_file': source_name,
+                    'content_preview': content[:320],
+                    'metadata': {
+                        'file_ext': meta.get('file_ext'),
+                        'page': meta.get('page'),
+                        'section_title': meta.get('section_title'),
+                        'identifier': meta.get('identifier'),
+                    }
+                })
+
+        file_summaries.append({
+            'source_file': source_name,
+            'chunk_count': file_chunk_count,
+            'chunk_mode': 'structured' if has_structured_meta else 'sliding',
+            'file_ext': file_path.suffix.lower(),
+        })
+
+    return jsonify({
+        'summary': {
+            'file_count': len(file_summaries),
+            'total_chunks': total_chunks,
+            'structured_chunks': structured_chunks,
+            'sliding_chunks': max(0, total_chunks - structured_chunks),
+        },
+        'files': file_summaries,
+        'known_chunks': chunk_samples,
+    })
 
 
 @app.route('/ai-training/retrain', methods=['POST'])

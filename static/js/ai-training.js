@@ -25,7 +25,12 @@
   const selectedCount = document.getElementById('selectedCount');
   const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
     const retrainBtn = document.getElementById('retrainBtn');
-    const historyBody = document.getElementById('trainingHistoryBody');
+    const refreshKnowledgeBtn = document.getElementById('refreshKnowledgeBtn');
+    const knowledgeBody = document.getElementById('knowledgeBody');
+    const knownFileCount = document.getElementById('knownFileCount');
+    const knownChunkCount = document.getElementById('knownChunkCount');
+    const structuredChunkCount = document.getElementById('structuredChunkCount');
+    const slidingChunkCount = document.getElementById('slidingChunkCount');
     const previewModal = document.getElementById('previewModal');
     const previewTitle = document.getElementById('previewTitle');
     const previewMeta = document.getElementById('previewMeta');
@@ -34,7 +39,7 @@
 
   const FILES_ENDPOINT = '/ai-training/files';
   const UPLOAD_ENDPOINT = '/ai-training/upload';
-    const HISTORY_ENDPOINT = '/ai-training/history';
+    const KNOWLEDGE_ENDPOINT = '/ai-training/knowledge';
     const RETRAIN_ENDPOINT = '/ai-training/retrain';
   const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
   const ALLOWED_EXTENSIONS = ['txt', 'pdf', 'docx', 'json', 'csv'];
@@ -203,10 +208,10 @@ function renderFiles(files) {
 
     if (!files || files.length === 0) {
         const empty = document.createElement('div');
-        empty.className = 'text-muted text-center py-4';
+        empty.className = 'text-muted text-center py-2';
         empty.innerHTML = `
-            <div style="font-size:3rem; opacity:0.3;">📚</div>
-            <h5 class="mt-3">No Training Files Yet</h5>
+            <div style="font-size:2.1rem; opacity:0.3;">📚</div>
+            <h5 class="mt-2 mb-1">No Training Files Yet</h5>
             <p>Upload your first file to start training your AI agent</p>
         `;
         filesList.appendChild(empty);
@@ -325,40 +330,86 @@ function renderFiles(files) {
     updateBulkActions();
 }
 
-function renderHistory(entries) {
-    if (!historyBody) {
+function createMetaBadge(text, type = 'secondary') {
+    const badge = document.createElement('span');
+    badge.className = `badge bg-${type} me-1 mb-1`;
+    badge.textContent = text;
+    return badge;
+}
+
+function renderKnowledge(data) {
+    if (!knowledgeBody) {
         return;
     }
-    historyBody.innerHTML = '';
-    if (!entries || entries.length === 0) {
+
+    const summary = data?.summary || {};
+    const knownChunks = data?.known_chunks || [];
+
+    if (knownFileCount) {
+        knownFileCount.textContent = `${summary.file_count || 0}`;
+    }
+    if (knownChunkCount) {
+        knownChunkCount.textContent = `${summary.total_chunks || 0}`;
+    }
+    if (structuredChunkCount) {
+        structuredChunkCount.textContent = `${summary.structured_chunks || 0}`;
+    }
+    if (slidingChunkCount) {
+        slidingChunkCount.textContent = `${summary.sliding_chunks || 0}`;
+    }
+
+    knowledgeBody.innerHTML = '';
+    if (!knownChunks.length) {
         const empty = document.createElement('tr');
-        empty.innerHTML = '<td colspan="4" class="text-muted text-center">No activity yet</td>';
-        historyBody.appendChild(empty);
+        empty.innerHTML = '<td colspan="3" class="text-muted text-center">No information yet. Upload files, then click "Update AI Knowledge".</td>';
+        knowledgeBody.appendChild(empty);
         return;
     }
-    entries.forEach(entry => {
+
+    knownChunks.forEach(item => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${formatDate(entry.started_at)}</td>
-            <td>${entry.action || '—'}</td>
-            <td>${getStatusBadge(entry.status)}</td>
-            <td>${formatDuration(entry.duration_ms)}</td>
-        `;
-        historyBody.appendChild(row);
+
+        const sourceCell = document.createElement('td');
+        sourceCell.className = 'align-top';
+        sourceCell.textContent = item.source_file || 'Unknown';
+
+        const metaCell = document.createElement('td');
+        metaCell.className = 'align-top';
+        const metadata = item.metadata || {};
+        const ext = (metadata.file_ext || '').replace('.', '').toUpperCase() || 'FILE';
+        metaCell.appendChild(createMetaBadge(ext, 'dark'));
+        if (metadata.page !== null && metadata.page !== undefined) {
+            metaCell.appendChild(createMetaBadge(`Page ${metadata.page}`, 'primary'));
+        }
+        if (metadata.section_title) {
+            metaCell.appendChild(createMetaBadge(`Title: ${metadata.section_title}`, 'info'));
+        }
+        if (metadata.identifier) {
+            metaCell.appendChild(createMetaBadge(metadata.identifier, 'success'));
+        }
+
+        const contentCell = document.createElement('td');
+        contentCell.className = 'align-top';
+        contentCell.textContent = item.content_preview || '';
+
+        row.appendChild(sourceCell);
+        row.appendChild(metaCell);
+        row.appendChild(contentCell);
+        knowledgeBody.appendChild(row);
     });
 }
 
-async function fetchHistory() {
-    if (!historyBody) {
+async function fetchKnowledge() {
+    if (!knowledgeBody) {
         return;
     }
-    const res = await fetch(HISTORY_ENDPOINT, { credentials: 'same-origin' });
+    const res = await fetch(KNOWLEDGE_ENDPOINT, { credentials: 'same-origin' });
     if (!res.ok) {
-        renderHistory([]);
+        renderKnowledge({});
         return;
     }
     const data = await res.json();
-    renderHistory(data.history || []);
+    renderKnowledge(data);
 }
 
 async function fetchFiles() {
@@ -467,7 +518,7 @@ function uploadFiles(fileList) {
             }, 2000);
             trainingFiles.value = '';
             fetchFiles();
-            fetchHistory();
+            fetchKnowledge();
         } else {
             fileArray.forEach(file => {
                 updateUploadItem(file.name, 0, 'error');
@@ -535,7 +586,7 @@ async function removeFile(fileId) {
     if (res.ok) {
         showToast('success', 'File deleted successfully');
         fetchFiles();
-        fetchHistory();
+        fetchKnowledge();
     } else {
         showToast('error', 'Unable to remove file');
     }
@@ -582,7 +633,7 @@ deleteSelectedBtn.addEventListener('click', async () => {
         showToast('success', `Deleted ${selectedFiles.size} file(s)`);
         selectedFiles.clear();
         fetchFiles();
-        fetchHistory();
+        fetchKnowledge();
     } catch (err) {
         showToast('error', 'Failed to delete some files');
     }
@@ -594,7 +645,7 @@ if (retrainBtn) {
             return;
         }
         retrainBtn.disabled = true;
-        showToast('warning', 'Retraining started...');
+        showToast('warning', 'Updating AI knowledge...');
         try {
             const res = await fetch(RETRAIN_ENDPOINT, {
                 method: 'POST',
@@ -604,13 +655,19 @@ if (retrainBtn) {
                 const data = await res.json();
                 throw new Error(data.error || 'Retraining failed');
             }
-            showToast('success', 'Retraining completed');
-            fetchHistory();
+            showToast('success', 'AI knowledge updated');
+            fetchKnowledge();
         } catch (err) {
             showToast('error', err.message || 'Retraining failed');
         } finally {
             retrainBtn.disabled = false;
         }
+    });
+}
+
+if (refreshKnowledgeBtn) {
+    refreshKnowledgeBtn.addEventListener('click', () => {
+        fetchKnowledge();
     });
 }
 
@@ -1134,5 +1191,5 @@ document.addEventListener('keydown', (e) => {
 window.aiTrainingRefresh = fetchFiles;
 window.downloadTemplate = downloadTemplate; // Expose downloadTemplate globally
 fetchFiles();
-fetchHistory();
+fetchKnowledge();
 })();
