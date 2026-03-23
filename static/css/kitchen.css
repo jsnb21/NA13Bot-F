@@ -28,22 +28,25 @@
 
     .filter-btn {
         padding: 8px 16px;
-        border: 2px solid var(--border);
-        background: white;
+        border: 2px solid var(--main-color);
+        background: transparent;
         border-radius: 6px;
         cursor: pointer;
         font-weight: 500;
         transition: all 0.3s;
+        color: var(--main-color);
     }
 
     .filter-btn.active {
-        border-color: var(--accent);
-        background: var(--accent);
-        color: white;
+        border-color: var(--sub-color);
+        background: var(--sub-color);
+        color: var(--sub-foreground);
     }
 
-    .filter-btn:hover {
-        border-color: var(--accent);
+    .filter-btn:hover:not(.active) {
+        border-color: var(--sub-color);
+        background: var(--sub-color);
+        color: var(--sub-foreground);
     }
 
     .orders-grid {

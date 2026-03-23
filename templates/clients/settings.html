@@ -96,10 +96,12 @@
                             <div class="editable-input font-input-row">
                                 <select id="font_family" name="font_family" class="form-select" data-input disabled>
                                     <option value="">-- default --</option>
-                                    <option value="Arial" {% if cfg.get('font_family','')=='Arial' %}selected{% endif %}>Arial</option>
-                                    <option value="Helvetica" {% if cfg.get('font_family','')=='Helvetica' %}selected{% endif %}>Helvetica</option>
-                                    <option value="Roboto" {% if cfg.get('font_family','')=='Roboto' %}selected{% endif %}>Roboto</option>
-                                    <option value="Georgia" {% if cfg.get('font_family','')=='Georgia' %}selected{% endif %}>Georgia</option>
+                                    <option value="Inter" {% if cfg.get('font_family','')=='Inter' %}selected{% endif %}>Inter</option>
+                                    <option value="Poppins" {% if cfg.get('font_family','')=='Poppins' %}selected{% endif %}>Poppins</option>
+                                    <option value="Nunito" {% if cfg.get('font_family','')=='Nunito' %}selected{% endif %}>Nunito</option>
+                                    <option value="Lora" {% if cfg.get('font_family','')=='Lora' %}selected{% endif %}>Lora</option>
+                                    <option value="Playfair Display" {% if cfg.get('font_family','')=='Playfair Display' %}selected{% endif %}>Playfair Display</option>
+                                    <option value="Space Grotesk" {% if cfg.get('font_family','')=='Space Grotesk' %}selected{% endif %}>Space Grotesk</option>
                                 </select>
                                 <div id="fontPreviewChip" class="font-preview-chip" data-font-preview>Aa Default</div>
                             </div>
@@ -178,10 +180,6 @@
                     })();
                     </script>
                 </div>
-            </div>
-            <div class="mb-4 settings-actions">
-                <button type="submit" id="saveSettingsBtn" class="btn btn-secondary btn-save-settings">Save Settings</button>
-                <span id="saveStatus" class="save-status"></span>
             </div>
         </div>
 

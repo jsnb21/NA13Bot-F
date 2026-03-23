@@ -1,29 +1,22 @@
 (function(){
     const form = document.getElementById('settingsForm');
-    const btn = document.getElementById('saveSettingsBtn');
-    const status = document.getElementById('saveStatus');
 
     form.addEventListener('submit', async function(e){
         e.preventDefault();
-        btn.disabled = true;
-        const orig = btn.innerHTML;
-        btn.innerHTML = 'Saving...';
-        status.textContent = '';
         try{
             const data = new FormData(form);
+            // Editable fields are disabled outside edit mode, so include them explicitly.
+            document.querySelectorAll('[data-input]').forEach((input) => {
+                if (!input || !input.name) return;
+                data.set(input.name, input.value ?? '');
+            });
             const res = await fetch(window.location.pathname, { method: 'POST', body: data });
             if(res.ok){
-                status.textContent = 'Saved — refreshing...';
                 setTimeout(()=> location.reload(), 600);
                 return;
             }
-            status.textContent = 'Save failed';
         }catch(err){
             console.error(err);
-            status.textContent = 'Save error';
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = orig;
         }
     });
     // sticky save bar logic
@@ -32,7 +25,6 @@
         const sticky = document.getElementById('stickySaveBar');
         const stickySave = document.getElementById('stickySave');
         const stickyCancel = document.getElementById('stickyCancel');
-        const saveBtn = document.getElementById('saveSettingsBtn');
 
         function formToObj(f){
             const o = {};
@@ -73,7 +65,7 @@
             updateSticky();
         });
 
-        stickySave.addEventListener('click', ()=>{ saveBtn.click(); });
+        stickySave.addEventListener('click', ()=>{ form.dispatchEvent(new Event('submit', { bubbles: true })); });
 
         stickyCancel.addEventListener('click', ()=>{
             // restore initial values
@@ -372,11 +364,9 @@
             const actions = document.createElement('div');
             actions.className = 'edit-mode-actions';
             actions.innerHTML = [
-                '<button type="button" class="btn btn-sm btn-save-inline" data-edit-save>Save</button>',
                 '<button type="button" class="btn btn-sm btn-cancel-inline" data-edit-cancel>Cancel</button>'
             ].join('');
             header.appendChild(actions);
-            saveBtn = actions.querySelector('[data-edit-save]');
             cancelBtn = actions.querySelector('[data-edit-cancel]');
         }
 
@@ -427,8 +417,8 @@
                 editBtn.classList.toggle('is-active', isEditing);
                 editBtn.setAttribute('aria-label', 'Edit field');
             }
-            if (saveBtn && cancelBtn) {
-                saveBtn.parentElement.classList.toggle('show', isEditing);
+            if (cancelBtn) {
+                cancelBtn.parentElement.classList.toggle('show', isEditing);
             }
 
             if (isEditing) {
@@ -455,12 +445,6 @@
                     });
                     setEditing(true);
                 }
-            });
-        }
-
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                setEditing(false);
             });
         }
 

@@ -16,6 +16,7 @@
     position: relative;
     padding-bottom: 96px;
     isolation: isolate;
+    background: #f3f4f6;
 }
 
 .settings-page::before {
@@ -24,13 +25,14 @@
     inset: -30px -14px auto;
     height: 320px;
     border-radius: 28px;
-    background:
-        radial-gradient(1100px 220px at 0% 0%, rgba(255, 212, 29, 0.2), transparent 62%),
-        radial-gradient(1200px 260px at 100% 0%, rgba(11, 52, 61, 0.13), transparent 70%),
-        linear-gradient(180deg, var(--settings-bg-1), var(--settings-bg-2));
-    border: 1px solid rgba(255, 255, 255, 0.7);
+    background: transparent;
+    border: 0;
     z-index: -1;
     pointer-events: none;
+}
+
+body:has(.settings-page) {
+    background: #f3f4f6;
 }
 
 .settings-hero {
@@ -70,6 +72,9 @@
     max-width: 720px;
     color: var(--settings-muted);
     font-size: 0.95rem;
+body:has(.settings-page) {
+    background: #f3f4f6;
+}
 }
 
 .hero-pills {
@@ -605,15 +610,24 @@
     padding: 4px 2px;
 }
 
+.btn-accent {
+    background: transparent !important;
+    color: var(--main-color) !important;
+    border: 2px solid var(--main-color) !important;
+    font-weight: 600;
+}
+
+.btn-accent:hover {
+    background: var(--sub-color) !important;
+    color: var(--sub-foreground) !important;
+    border-color: var(--sub-color) !important;
+}
+
 .btn-save-settings {
-    background: linear-gradient(135deg, #f96b64, #e9524a);
-    color: #fff;
-    border: none;
     box-shadow: 0 10px 20px rgba(233, 82, 74, 0.28);
 }
 
 .btn-save-settings:hover {
-    color: #fff;
     filter: brightness(0.98);
 }
 
@@ -765,9 +779,16 @@
 }
 
 .sticky-save-bar .btn-save {
-    background: #eb5d55;
-    color: #fff;
-    border: none;
+    background: transparent !important;
+    color: var(--main-color) !important;
+    border: 2px solid var(--main-color) !important;
+    font-weight: 600;
+}
+
+.sticky-save-bar .btn-save:hover {
+    background: var(--sub-color) !important;
+    color: var(--sub-foreground) !important;
+    border-color: var(--sub-color) !important;
 }
 
 .sticky-save-bar .btn-cancel {
