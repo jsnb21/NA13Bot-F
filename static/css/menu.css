@@ -75,20 +75,24 @@
 }
 .category-btn {
     padding: 8px 16px;
-    border: 2px solid #ddd;
-    background: white;
+    border: 2px solid var(--main-color, #1e40af);
+    background: transparent;
     border-radius: 20px;
     cursor: pointer;
     transition: all 0.3s ease;
     font-size: 0.9rem;
+    color: var(--main-color, #1e40af);
+    font-weight: 600;
 }
 .category-btn.active {
-    background: #ffd41d;
-    color: #0b343d;
-    border-color: #ffd41d;
+    background: var(--main-color, #1e40af);
+    color: var(--main-foreground, #ffffff);
+    border-color: var(--main-color, #1e40af);
 }
 .category-btn:hover {
-    border-color: #ffd41d;
+    background: var(--sub-color, #ffd41d);
+    border-color: var(--sub-color, #ffd41d);
+    color: var(--sub-foreground, #000000);
 }
 
 /* Modern Grid Layout */
@@ -210,20 +214,28 @@ font-size: 3rem;
 .menu-card-price { font-weight: 800; color: var(--brand-dark); font-size: 1.1rem; }
 
 .category-btn {
-border: 1px solid var(--border);
-background: white;
-padding: 8px 20px;
-border-radius: 100px;
-font-size: 0.9rem;
-font-weight: 600;
-margin-right: 8px;
-transition: 0.2s;
+    border: 2px solid var(--main-color, #1e40af);
+    background: transparent;
+    color: var(--main-color, #1e40af);
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-right: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .category-btn.active {
-background: var(--brand-dark);
-color: white;
-border-color: var(--brand-dark);
+    background: var(--main-color, #1e40af);
+    color: var(--main-foreground, #ffffff);
+    border-color: var(--main-color, #1e40af);
+}
+
+.category-btn:hover {
+    background: var(--sub-color, #ffd41d);
+    color: var(--sub-foreground, #000000);
+    border-color: var(--sub-color, #ffd41d);
 }
 
 /* Toast Notifications */

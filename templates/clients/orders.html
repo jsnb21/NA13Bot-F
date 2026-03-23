@@ -4,6 +4,7 @@
 
 {% block head %}
 {{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/orders.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -13,11 +14,10 @@
             <h2 class="page-title">Orders</h2>
             <p class="page-subtitle">Track and manage customer orders.</p>
         </div>
-        <button class="page-action-btn" type="button" onclick="exportOrders()">Export Orders</button>
+        <button class="page-action-btn btn btn-dark" type="button" onclick="exportOrders()">Export Orders</button>
     </div>
 
     <div class="card-surface mb-4 text-center" style="height: calc(100vh - 140px); display:flex; flex-direction:column;">
-        <link rel="stylesheet" href="{{ url_for('static', filename='css/orders.css') }}">
         <div style="display:flex; gap:10px; margin-bottom:15px; justify-content:center;">
             <input type="text" class="form-control" id="searchInput" placeholder="Search orders..." style="max-width:300px; display:inline-block;" onkeyup="filterOrders()">
             <select class="form-select" id="statusFilter" style="max-width:150px; display:inline-block;" onchange="filterOrders()">
@@ -186,8 +186,8 @@ async function updateOrderStatus(orderId) {
                     </div>
                 </div>
                 <div style="padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="closeStatusModal()" style="padding: 10px 20px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #374151; font-weight: 600; cursor: pointer;">Cancel</button>
-                    <button onclick="confirmStatusUpdate('${orderId}')" style="padding: 10px 20px; border: none; border-radius: 6px; background: var(--brand-primary, #3b82f6); color: white; font-weight: 600; cursor: pointer;">Update Status</button>
+                    <button onclick="closeStatusModal()" class="btn btn-light">Cancel</button>
+                    <button onclick="confirmStatusUpdate('${orderId}')" class="btn btn-primary">Update Status</button>
                 </div>
             </div>
         </div>
@@ -222,7 +222,7 @@ function showResultModal(title, message, type = 'success') {
                     <p style="margin: 0 0 24px; color: #6b7280; font-size: 0.95rem;">${message}</p>
                 </div>
                 <div style="padding: 16px 20px; border-top: 1px solid #e5e7eb;">
-                    <button onclick="closeResultModal()" style="width: 100%; padding: 10px 20px; border: none; border-radius: 6px; background: var(--brand-primary, #3b82f6); color: white; font-weight: 600; cursor: pointer;">OK</button>
+                    <button onclick="closeResultModal()" class="btn btn-primary" style="width: 100%;">OK</button>
                 </div>
             </div>
         </div>

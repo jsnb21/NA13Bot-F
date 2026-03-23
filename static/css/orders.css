@@ -23,22 +23,26 @@
             transition: all 0.2s ease;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 5px;
+            min-width: 90px;
         }
         .action-btn i { font-size: 0.9rem; }
         
         .action-btn-view {
-            background: #f3f4f6;
-            color: #374151;
+            background: transparent;
+            color: var(--main-color, #1e40af);
+            border: 1px solid var(--main-color, #1e40af);
         }
         .action-btn-view:hover {
-            background: #e5e7eb;
+            background: var(--main-color, #1e40af);
+            color: var(--main-foreground, #ffffff);
             transform: translateY(-1px);
         }
         
         .action-btn-update {
-            background: var(--sub-color, #0ea5e9);
-            color: white;
+            background: var(--main-color, #1e40af);
+            color: var(--main-foreground, #ffffff);
         }
         .action-btn-update:hover {
             opacity: 0.9;

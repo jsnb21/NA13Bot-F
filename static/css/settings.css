@@ -458,27 +458,43 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 2px 8px;
+    padding: 4px 12px;
     border-radius: 999px;
-    border: 1px solid rgba(11, 52, 61, 0.16);
-    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(11, 52, 61, 0.25);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 244, 248, 0.9) 100%);
     cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.color-label-inline:hover {
+    border-color: rgba(11, 52, 61, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 248, 252, 0.98) 100%);
 }
 
 .color-label-dot {
-    width: 12px;
-    height: 12px;
+    width: 18px;
+    height: 18px;
     border-radius: 999px;
-    border: 1px solid rgba(11, 52, 61, 0.28);
+    border: 2px solid rgba(11, 52, 61, 0.5);
     background: #1e40af;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.color-label-inline:hover .color-label-dot {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transform: scale(1.15);
 }
 
 .color-label-hex {
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.03em;
-    color: #2a4650;
+    color: #0b343d;
+    min-width: 70px;
 }
 
 .input-or {

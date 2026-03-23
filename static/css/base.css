@@ -182,26 +182,42 @@ color: var(--text-primary);
 font-weight: 600;
 }
 
-.btn-primary {
-background: var(--sub-color, var(--secondary));
-color: var(--sub-foreground);
-border: none;
+/* Button styling is handled primarily by JavaScript (applyButtonColors)
+   CSS defines ONLY layout/shape; JS applies all colors via inline styles
+   This prevents Turbo frame mutations from resetting colors */
+
+.btn-primary,
+.btn-secondary,
+.btn-dark,
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-dark,
+.btn-warning,
+.btn-success,
+.btn-light {
 border-radius: 8px;
 padding: 10px 20px;
-transition: all 0.3s ease;
-box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+font-weight: 500;
 }
 
-.btn-primary:hover {
-transform: translateY(-2px);
-box-shadow: 0 8px 16px rgba(0,0,0,0.12);
-color: var(--sub-foreground) !important;
-background: var(--sub-color, var(--secondary));
+.btn-primary {
+/* Colors applied by JavaScript */
 }
 
-.btn-outline-secondary, .btn-outline-primary {
-border-radius: 8px;
-transition: all 0.3s ease;
+.btn-secondary,
+.btn-dark {
+/* Colors applied by JavaScript */
+}
+
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-dark {
+/* Colors applied by JavaScript */
+}
+
+.btn-light {
+border: 1px solid #dee2e6;
 }
 
 .form-control, .form-select {

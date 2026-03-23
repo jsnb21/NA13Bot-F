@@ -172,6 +172,20 @@
 (function(){
     // Modern Pickr.js color picker initialization
     // Wait for Pickr to be available (it loads after this script in HTML)
+    if (!document.getElementById('settingsForm')) return;
+
+    // Persist picker instances across Turbo renders to avoid duplicate init flashes.
+    if (!window.__settingsPickrs) window.__settingsPickrs = {};
+    if (!window.__settingsPickrCacheHandlerAttached) {
+        window.__settingsPickrCacheHandlerAttached = true;
+        document.addEventListener('turbo:before-cache', () => {
+            Object.values(window.__settingsPickrs).forEach((picker) => {
+                try {
+                    if (picker && typeof picker.hide === 'function') picker.hide();
+                } catch (e) {}
+            });
+        });
+    }
     function normalizeHex(value) {
         if (!value) return '';
         let hex = String(value).trim().toLowerCase();
@@ -220,75 +234,104 @@
             const defaultColor = container.getAttribute('data-default') || '#1e40af';
             const hiddenInput = document.querySelector(`[name="${fieldName}"]`);
 
-            if (hiddenInput) {
-                try {
-                    pickers[fieldName] = Pickr.create({
-                        el: container,
-                        theme: 'classic',
-                        default: defaultColor,
-                        components: {
-                            preview: true,
-                            opacity: false,
-                            hue: true,
-                            interaction: {
-                                hex: true,
-                                input: true,
-                                clear: true,
-                                save: true
-                            }
-                        },
-                        strings: {
-                            save: 'Save',
-                            clear: 'Clear'
-                        }
-                    });
+            if (!fieldName || !hiddenInput) return;
 
-                    // Update hidden input when color changes
-                    pickers[fieldName].on('save', (color) => {
-                        if (color) {
-                            const hex = colorToHex(color);
-                            if (hex) {
-                                hiddenInput.value = hex;
-                                syncColorPreview(fieldName, hex);
-                                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
-                                hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
+            // Skip re-initialization if a picker already exists for this field.
+            if (container.dataset.pickrInitialized === '1' && window.__settingsPickrs[fieldName]) {
+                syncColorPreview(fieldName, hiddenInput.value);
+                return;
+            }
+
+            try {
+                // Destroy stale instance if one exists from a previous render.
+                if (window.__settingsPickrs[fieldName] && typeof window.__settingsPickrs[fieldName].destroyAndRemove === 'function') {
+                    try { window.__settingsPickrs[fieldName].destroyAndRemove(); } catch (e) {}
+                }
+
+                pickers[fieldName] = Pickr.create({
+                    el: container,
+                    theme: 'classic',
+                    default: defaultColor,
+                    components: {
+                        preview: true,
+                        opacity: false,
+                        hue: true,
+                        interaction: {
+                            hex: true,
+                            input: true,
+                            clear: true,
+                            save: true
                         }
-                    }).on('clear', () => {
-                        hiddenInput.value = '';
-                        syncColorPreview(fieldName, '');
-                        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    }).on('change', (color) => {
-                        if (color) {
-                            const hex = colorToHex(color);
-                            if (hex) {
-                                hiddenInput.value = hex;
-                                syncColorPreview(fieldName, hex);
-                            }
+                    },
+                    strings: {
+                        save: 'Save',
+                        clear: 'Clear'
+                    }
+                });
+
+                window.__settingsPickrs[fieldName] = pickers[fieldName];
+                container.dataset.pickrInitialized = '1';
+
+                // Ensure picker starts closed to avoid flash on tab switch.
+                try {
+                    if (pickers[fieldName] && typeof pickers[fieldName].hide === 'function') {
+                        pickers[fieldName].hide();
+                    }
+                } catch (e) {}
+
+                // Update hidden input when color changes
+                pickers[fieldName].on('save', (color) => {
+                    if (color) {
+                        const hex = colorToHex(color);
+                        if (hex) {
+                            hiddenInput.value = hex;
+                            syncColorPreview(fieldName, hex);
+                            hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
                         }
-                    });
-                    console.log(`Pickr initialized for ${fieldName}`);
-                    syncColorPreview(fieldName, hiddenInput.value);
+                    }
+                }).on('clear', () => {
+                    hiddenInput.value = '';
+                    syncColorPreview(fieldName, '');
+                    hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }).on('change', (color) => {
+                    if (color) {
+                        const hex = colorToHex(color);
+                        if (hex) {
+                            hiddenInput.value = hex;
+                            syncColorPreview(fieldName, hex);
+                        }
+                    }
+                });
+                console.log(`Pickr initialized for ${fieldName}`);
+                syncColorPreview(fieldName, hiddenInput.value);
+
+                if (hiddenInput.dataset.previewListenersAttached !== '1') {
+                    hiddenInput.dataset.previewListenersAttached = '1';
                     hiddenInput.addEventListener('input', () => syncColorPreview(fieldName, hiddenInput.value));
                     hiddenInput.addEventListener('change', () => syncColorPreview(fieldName, hiddenInput.value));
+                }
 
-                    const inlineTrigger = document.querySelector(`[data-color-inline-preview="${fieldName}"]`);
-                    if (inlineTrigger) {
-                        inlineTrigger.setAttribute('role', 'button');
-                        inlineTrigger.setAttribute('tabindex', '0');
-                        inlineTrigger.setAttribute('aria-label', `Pick ${fieldName.replace('_', ' ')} color`);
+                const inlineTrigger = document.querySelector(`[data-color-inline-preview="${fieldName}"]`);
+                if (inlineTrigger) {
+                    inlineTrigger.setAttribute('role', 'button');
+                    inlineTrigger.setAttribute('tabindex', '0');
+                    inlineTrigger.setAttribute('aria-label', `Pick ${fieldName.replace('_', ' ')} color`);
 
-                        const openPicker = () => {
-                            try {
-                                if (pickers[fieldName] && typeof pickers[fieldName].show === 'function') {
-                                    pickers[fieldName].show();
-                                    return;
-                                }
-                            } catch (e) {}
-                            const hiddenBtn = container.querySelector('.pcr-button');
-                            if (hiddenBtn) hiddenBtn.click();
-                        };
+                    const openPicker = () => {
+                        try {
+                            const picker = window.__settingsPickrs[fieldName] || pickers[fieldName];
+                            if (picker && typeof picker.show === 'function') {
+                                picker.show();
+                                return;
+                            }
+                        } catch (e) {}
+                        const hiddenBtn = container.querySelector('.pcr-button');
+                        if (hiddenBtn) hiddenBtn.click();
+                    };
 
+                    if (inlineTrigger.dataset.openPickerAttached !== '1') {
+                        inlineTrigger.dataset.openPickerAttached = '1';
                         inlineTrigger.addEventListener('click', openPicker);
                         inlineTrigger.addEventListener('keydown', (e) => {
                             if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -296,9 +339,9 @@
                             openPicker();
                         });
                     }
-                } catch (err) {
-                    console.error(`Failed to initialize Pickr for ${fieldName}:`, err);
                 }
+            } catch (err) {
+                console.error(`Failed to initialize Pickr for ${fieldName}:`, err);
             }
         });
     }
