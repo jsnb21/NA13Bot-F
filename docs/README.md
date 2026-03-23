@@ -5,6 +5,63 @@ A professional multi-tenant restaurant AI agent built with Flask (backend) and R
 
 ---
 
+## Menu Import (Image -> AI -> Database)
+
+Yes, menu image upload is a two-pass AI pipeline and it saves to PostgreSQL.
+
+### Current Flow
+
+1. Image upload (`.png`) is sent to the menu upload route.
+2. AI OCR pass extracts text from the image.
+3. AI parsing pass reads extracted text and structures menu items (`name`, `price`, `category`, `status`, and variants).
+4. Server normalization applies:
+   - category fallback/inference when missing
+   - price normalization
+   - variant normalization (including freeform patterns)
+   - review flagging for low-confidence/missing-price rows
+5. Final items are persisted to PostgreSQL `menu_items`.
+
+### Variant Handling
+
+- Variants are no longer treated as plain description text only.
+- Import logic now detects common variant formats such as:
+  - `Small=120, Medium=140, Large=160`
+  - `T 165 G 180`
+  - `165 180` (numeric-only variant lists)
+- Lowest variant price is used as base `price`.
+- Edit modal variant fields are auto-populated from recognized variant formats.
+
+### Database Result
+
+- The uploaded menu is saved in PostgreSQL through the config save pipeline.
+- Item IDs and image links are preserved during menu replacement/merge operations.
+- If AI output is uncertain, rows can be saved as `Draft` for review instead of silently failing.
+
+### Training File Pipeline (Unified)
+
+Training files now follow a matching two-pass pattern using the same shared Gemini helper stack:
+
+1. File upload saves the source document (`.txt`, `.pdf`, `.docx`, `.json`, `.csv`) to training storage.
+2. Pass 1 extracts plain text preview from the uploaded file.
+3. Pass 2 sends extracted text to AI for structured training metadata:
+  - `document_type`
+  - `categories`
+  - `summary`
+  - `key_points`
+  - `faq`
+4. Structured metadata is persisted to PostgreSQL (`training_files`) with fields such as `ai_profile`, `ai_categories`, and `ai_document_type`.
+5. Training activity/audit events are persisted to PostgreSQL (`training_history`).
+
+### Training Storage Model
+
+- Training source files remain in restaurant-scoped disk storage (`training_data/{restaurant_id}/...`).
+- Training metadata and history are DB-backed for reliability, querying, and multi-tenant integrity.
+- File-based manifest/history write-through is retained as a compatibility fallback when DB is unavailable.
+
+This unifies menu ingestion and training ingestion around a shared extract -> AI-structure workflow and reduces duplicated model-call/parsing code.
+
+---
+
 ## System Architecture: Four-Component Stack
 
 The application logic relies on **four distinct files/components** functioning in unison:

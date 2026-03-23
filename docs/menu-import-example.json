@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "restaurant_id": "15d6d150-13a0-4704-adde-04efd6be2e89",
+  "source": {
+    "type": "png",
+    "filename": "sample-menu.png",
+    "extractor_model": "gemini-2.5-flash",
+    "parser_model": "gemini-2.5-flash",
+    "extracted_at_utc": "2026-03-23T10:32:00Z",
+    "raw_text_sha256": "5a221f4585af5c5f2a0fdb83bc1782fa3f13c339b387e41b8e64f4d7f515f219"
+  },
+  "detected_currency": "PHP",
+  "items": [
+    {
+      "external_id": "milk-tea-classic",
+      "name": "Classic Milk Tea",
+      "description": "Black tea with milk and brown sugar pearls.",
+      "category": "Drinks/Beverages",
+      "status": "Live",
+      "base_price": {
+        "amount": 120,
+        "display": "PHP 120",
+        "currency": "PHP"
+      },
+      "variants": [
+        {
+          "label": "Small",
+          "group": "size",
+          "price": {
+            "amount": 120,
+            "display": "PHP 120",
+            "currency": "PHP"
+          },
+          "is_default": true
+        },
+        {
+          "label": "Large",
+          "group": "size",
+          "price": {
+            "amount": 145,
+            "display": "PHP 145",
+            "currency": "PHP"
+          }
+        }
+      ],
+      "needs_review": false,
+      "review_reasons": [],
+      "source_ref": {
+        "line_numbers": [
+          18,
+          19
+        ],
+        "text_snippet": "Classic Milk Tea S 120 L 145"
+      },
+      "confidence": {
+        "ocr": 0.94,
+        "parsing": 0.91,
+        "overall": 0.92
+      }
+    },
+    {
+      "external_id": "pork-sisig",
+      "name": "Pork Sisig",
+      "description": "Sizzling chopped pork with chili and onions.",
+      "category": "Main Course",
+      "status": "Live",
+      "base_price": {
+        "amount": 189,
+        "display": "PHP 189",
+        "currency": "PHP"
+      },
+      "needs_review": false,
+      "review_reasons": [],
+      "source_ref": {
+        "line_numbers": [
+          31
+        ],
+        "text_snippet": "Pork Sisig 189"
+      },
+      "confidence": {
+        "ocr": 0.97,
+        "parsing": 0.96,
+        "overall": 0.96
+      }
+    },
+    {
+      "external_id": "fries-basket",
+      "name": "Fries Basket",
+      "description": "",
+      "category": "Appetizers",
+      "status": "Draft",
+      "needs_review": true,
+      "review_reasons": [
+        "missing_price",
+        "low_parsing_confidence"
+      ],
+      "source_ref": {
+        "line_numbers": [
+          12
+        ],
+        "text_snippet": "Fries Basket"
+      },
+      "confidence": {
+        "ocr": 0.89,
+        "parsing": 0.42,
+        "overall": 0.61
+      }
+    }
+  ],
+  "warnings": [
+    "1 item moved to review queue due to missing price"
+  ]
+}

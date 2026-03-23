@@ -55,6 +55,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+from psycopg import sql
+
+from config import get_connection, get_db_schema
+
 try:
     from pypdf import PdfReader
 except Exception:
@@ -92,6 +96,48 @@ def get_training_history_path(restaurant_id: str):
 
 
 def load_training_manifest(restaurant_id: str):
+    if restaurant_id:
+        schema = get_db_schema()
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        sql.SQL(
+                            """
+                            SELECT id, original_name, stored_name, uploaded_at, status, size_bytes,
+                                   ai_profile, ai_categories, ai_document_type
+                            FROM {}.training_files
+                            WHERE restaurant_id = %s
+                            ORDER BY uploaded_at ASC, created_at ASC
+                            """
+                        ).format(sql.Identifier(schema)),
+                        [str(restaurant_id)]
+                    )
+                    rows = cur.fetchall() or []
+
+            if rows:
+                entries = []
+                for row in rows:
+                    entry = {
+                        'id': row[0],
+                        'original_name': row[1],
+                        'stored_name': row[2],
+                        'uploaded_at': row[3].isoformat() if row[3] else None,
+                        'status': row[4] or 'ready',
+                        'size_bytes': row[5],
+                    }
+                    if row[6] is not None:
+                        entry['ai_profile'] = row[6]
+                    if row[7] is not None:
+                        entry['ai_categories'] = row[7]
+                    if row[8] is not None:
+                        entry['ai_document_type'] = row[8]
+                    entries.append(entry)
+                return entries
+        except Exception:
+            # Fall back to file manifest if DB unavailable.
+            pass
+
     manifest_path = get_training_manifest_path(restaurant_id)
     if manifest_path.exists():
         try:
@@ -102,11 +148,115 @@ def load_training_manifest(restaurant_id: str):
 
 
 def save_training_manifest(restaurant_id: str, entries):
+    if restaurant_id:
+        schema = get_db_schema()
+        items = entries if isinstance(entries, list) else []
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    keep_ids = []
+                    for entry in items:
+                        if not isinstance(entry, dict):
+                            continue
+                        entry_id = str(entry.get('id') or '').strip()
+                        stored_name = str(entry.get('stored_name') or '').strip()
+                        if not entry_id or not stored_name:
+                            continue
+                        keep_ids.append(entry_id)
+                        cur.execute(
+                            sql.SQL(
+                                """
+                                INSERT INTO {}.training_files (
+                                    id, restaurant_id, original_name, stored_name,
+                                    uploaded_at, status, size_bytes,
+                                    ai_profile, ai_categories, ai_document_type, updated_at
+                                )
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, now())
+                                ON CONFLICT (id) DO UPDATE
+                                SET original_name = EXCLUDED.original_name,
+                                    stored_name = EXCLUDED.stored_name,
+                                    uploaded_at = EXCLUDED.uploaded_at,
+                                    status = EXCLUDED.status,
+                                    size_bytes = EXCLUDED.size_bytes,
+                                    ai_profile = EXCLUDED.ai_profile,
+                                    ai_categories = EXCLUDED.ai_categories,
+                                    ai_document_type = EXCLUDED.ai_document_type,
+                                    updated_at = now()
+                                """
+                            ).format(sql.Identifier(schema)),
+                            [
+                                entry_id,
+                                str(restaurant_id),
+                                entry.get('original_name'),
+                                stored_name,
+                                entry.get('uploaded_at'),
+                                entry.get('status', 'ready'),
+                                entry.get('size_bytes'),
+                                json.dumps(entry.get('ai_profile')) if entry.get('ai_profile') is not None else None,
+                                json.dumps(entry.get('ai_categories')) if entry.get('ai_categories') is not None else None,
+                                entry.get('ai_document_type')
+                            ]
+                        )
+
+                    if keep_ids:
+                        cur.execute(
+                            sql.SQL(
+                                "DELETE FROM {}.training_files WHERE restaurant_id = %s AND id <> ALL(%s)"
+                            ).format(sql.Identifier(schema)),
+                            [str(restaurant_id), keep_ids]
+                        )
+                    else:
+                        cur.execute(
+                            sql.SQL("DELETE FROM {}.training_files WHERE restaurant_id = %s")
+                            .format(sql.Identifier(schema)),
+                            [str(restaurant_id)]
+                        )
+            # Keep file manifest for backward compatibility and quick local inspection.
+        except Exception:
+            # Fall through to file-based persistence as resilience path.
+            pass
+
     manifest_path = get_training_manifest_path(restaurant_id)
     manifest_path.write_text(json.dumps(entries, indent=2, default=str))
 
 
 def load_training_history(restaurant_id: str):
+    if restaurant_id:
+        schema = get_db_schema()
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        sql.SQL(
+                            """
+                            SELECT id, action, status, started_at, ended_at, duration_ms, metadata
+                            FROM {}.training_history
+                            WHERE restaurant_id = %s
+                            ORDER BY started_at ASC, created_at ASC
+                            """
+                        ).format(sql.Identifier(schema)),
+                        [str(restaurant_id)]
+                    )
+                    rows = cur.fetchall() or []
+
+            if rows:
+                entries = []
+                for row in rows:
+                    entry = {
+                        'id': row[0],
+                        'action': row[1],
+                        'status': row[2],
+                        'started_at': row[3].isoformat() if row[3] else None,
+                        'ended_at': row[4].isoformat() if row[4] else None,
+                        'duration_ms': row[5],
+                    }
+                    if row[6] is not None and isinstance(row[6], dict):
+                        entry.update(row[6])
+                    entries.append(entry)
+                return entries
+        except Exception:
+            pass
+
     history_path = get_training_history_path(restaurant_id)
     if history_path.exists():
         try:
@@ -117,6 +267,69 @@ def load_training_history(restaurant_id: str):
 
 
 def save_training_history(restaurant_id: str, entries):
+    if restaurant_id:
+        schema = get_db_schema()
+        items = entries if isinstance(entries, list) else []
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    keep_ids = []
+                    for entry in items:
+                        if not isinstance(entry, dict):
+                            continue
+                        entry_id = str(entry.get('id') or '').strip()
+                        if not entry_id:
+                            continue
+                        keep_ids.append(entry_id)
+                        metadata = {
+                            k: v for k, v in entry.items()
+                            if k not in {'id', 'action', 'status', 'started_at', 'ended_at', 'duration_ms'}
+                        }
+                        cur.execute(
+                            sql.SQL(
+                                """
+                                INSERT INTO {}.training_history (
+                                    id, restaurant_id, action, status,
+                                    started_at, ended_at, duration_ms, metadata
+                                )
+                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                                ON CONFLICT (id) DO UPDATE
+                                SET action = EXCLUDED.action,
+                                    status = EXCLUDED.status,
+                                    started_at = EXCLUDED.started_at,
+                                    ended_at = EXCLUDED.ended_at,
+                                    duration_ms = EXCLUDED.duration_ms,
+                                    metadata = EXCLUDED.metadata
+                                """
+                            ).format(sql.Identifier(schema)),
+                            [
+                                entry_id,
+                                str(restaurant_id),
+                                entry.get('action'),
+                                entry.get('status'),
+                                entry.get('started_at'),
+                                entry.get('ended_at'),
+                                entry.get('duration_ms'),
+                                json.dumps(metadata) if metadata else None,
+                            ]
+                        )
+
+                    if keep_ids:
+                        cur.execute(
+                            sql.SQL(
+                                "DELETE FROM {}.training_history WHERE restaurant_id = %s AND id <> ALL(%s)"
+                            ).format(sql.Identifier(schema)),
+                            [str(restaurant_id), keep_ids]
+                        )
+                    else:
+                        cur.execute(
+                            sql.SQL("DELETE FROM {}.training_history WHERE restaurant_id = %s")
+                            .format(sql.Identifier(schema)),
+                            [str(restaurant_id)]
+                        )
+        except Exception:
+            pass
+
     history_path = get_training_history_path(restaurant_id)
     history_path.write_text(json.dumps(entries, indent=2, default=str))
 

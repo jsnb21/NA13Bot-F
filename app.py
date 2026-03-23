@@ -337,7 +337,8 @@ def save_training_upload_bytes(restaurant_id: str, filename: str, data_bytes: by
         'original_name': safe_name,
         'stored_name': stored_name,
         'uploaded_at': datetime.now(timezone.utc).isoformat(),
-        'status': 'ready'
+        'status': 'ready',
+        'size_bytes': len(data_bytes or b'')
     }
     entries = load_training_manifest(restaurant_id)
     entries.append(entry)
@@ -708,19 +709,307 @@ def infer_menu_category(name: str, description: str = '', known_categories=None)
     return 'Uncategorized'
 
 
-def parse_menu_txt_with_ai(content: str):
-    if not content:
+def _format_price_value(value):
+    try:
+        numeric = float(value)
+    except Exception:
+        return ''
+    if numeric.is_integer():
+        return str(int(numeric))
+    return f"{numeric:.2f}".rstrip('0').rstrip('.')
+
+
+def _extract_variant_options(description: str):
+    text = (description or '').strip()
+    if not text:
         return []
+
+    match = re.search(r'\boptions\s*:\s*(.*)$', text, flags=re.IGNORECASE)
+    if not match:
+        return []
+
+    variants = []
+    seen = set()
+    option_text = match.group(1)
+    for token in option_text.split(','):
+        part = token.strip()
+        if '=' not in part:
+            continue
+        label, raw_price = part.split('=', 1)
+        clean_label = (label or '').strip()
+        clean_price = (raw_price or '').strip()
+        if not clean_label or not clean_price:
+            continue
+        key = clean_label.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        variants.append((clean_label, clean_price))
+    return variants
+
+
+def _extract_variants_from_freeform_text(text: str):
+    source = (text or '').strip()
+    if not source:
+        return []
+
+    variants = []
+    seen = set()
+
+    # Labeled format examples: "Small 120", "T=165", "1ea: 150", "SET - 280"
+    labeled_pattern = re.compile(
+        r"\b(?P<label>(?:small|medium|large|sm|md|lg|s|m|l|t|g|v|set|solo|regular|family|\d+\s*(?:ea|pcs?|pc)))\b\s*[:=\-]?\s*(?P<price>(?:[$₱]|php\.?|usd\.?|aud\.?|cad\.?|eur\.?)?\s*\d+(?:\.\d{1,2})?)",
+        re.IGNORECASE
+    )
+    for match in labeled_pattern.finditer(source):
+        label = (match.group('label') or '').strip()
+        price = (match.group('price') or '').strip()
+        if not label or not price:
+            continue
+        key = label.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        variants.append((label, price))
+
+    if len(variants) >= 2:
+        return variants
+
+    # Unlabeled numeric format examples: "165 180", "120 / 140 / 160"
+    numbers = re.findall(r"(?:[$₱]|php\.?|usd\.?|aud\.?|cad\.?|eur\.?)?\s*\d+(?:\.\d{1,2})?", source, flags=re.IGNORECASE)
+    alpha_chars = re.sub(r"[^A-Za-z]+", "", source)
+    if len(numbers) >= 2 and len(alpha_chars) <= 3:
+        default_labels = ['Small', 'Medium', 'Large', 'XL', 'XXL']
+        parsed = []
+        for idx, raw_price in enumerate(numbers[:5]):
+            label = default_labels[idx] if idx < len(default_labels) else f"Option {idx + 1}"
+            parsed.append((label, raw_price.strip()))
+        return parsed
+
+    return []
+
+
+def _normalize_menu_status(status_value: str, force_draft: bool = False) -> str:
+    status_map = {
+        'live': 'Live',
+        'draft': 'Draft',
+        'hidden': 'Hidden'
+    }
+    normalized = status_map.get((status_value or '').strip().lower(), 'Live')
+    if force_draft and normalized == 'Live':
+        return 'Draft'
+    return normalized
+
+
+def _normalize_imported_menu_item(item: dict, known_categories):
+    if not isinstance(item, dict):
+        return None, False
+
+    name = (item.get('name') or '').strip()
+    if not name:
+        return None, False
+
+    description = (item.get('description') or '').strip()
+    category = (item.get('category') or '').strip()
+    if not category or category.lower() == 'uncategorized':
+        category = infer_menu_category(name, description, known_categories)
+
+    base_price_text = (item.get('price') or '').strip()
+    base_numeric = _parse_price_value(base_price_text)
+
+    variants = []
+    for variant in item.get('variants') or []:
+        if not isinstance(variant, dict):
+            continue
+        label = (variant.get('label') or '').strip()
+        if not label:
+            continue
+        raw_price = variant.get('price')
+        if isinstance(raw_price, dict):
+            if raw_price.get('display'):
+                price_text = str(raw_price.get('display')).strip()
+            elif raw_price.get('amount') is not None:
+                price_text = _format_price_value(raw_price.get('amount'))
+            else:
+                price_text = ''
+        else:
+            price_text = str(raw_price or '').strip()
+        if not price_text:
+            continue
+        variants.append((label, price_text))
+
+    if not variants:
+        variants = _extract_variant_options(description)
+    if not variants:
+        variants = _extract_variants_from_freeform_text(description)
+
+    variant_values = [val for _, p in variants if (val := _parse_price_value(p)) is not None]
+    if base_numeric is None and isinstance(item.get('base_price'), dict):
+        base_amount = item.get('base_price', {}).get('amount')
+        if base_amount is not None:
+            base_numeric = _parse_price_value(str(base_amount))
+
+    if variant_values:
+        minimum = min(variant_values)
+        base_numeric = minimum if base_numeric is None else min(base_numeric, minimum)
+        option_text = ', '.join(f"{label}={price}" for label, price in variants)
+        description_core = _strip_options_block(description)
+        description = f"{description_core}. Options: {option_text}".strip('. ') if description_core else f"Options: {option_text}"
+
+    needs_review = bool(item.get('needs_review'))
+    confidence_overall = None
+    if isinstance(item.get('confidence'), dict):
+        try:
+            confidence_overall = float(item.get('confidence', {}).get('overall'))
+        except Exception:
+            confidence_overall = None
+    if confidence_overall is not None and confidence_overall < 0.75:
+        needs_review = True
+
+    if base_numeric is None:
+        base_price = ''
+        needs_review = True
+    else:
+        base_price = _format_price_value(base_numeric)
+
+    status = _normalize_menu_status(item.get('status'), force_draft=needs_review)
+
+    normalized = {
+        'name': name,
+        'description': description,
+        'price': base_price,
+        'category': category,
+        'status': status
+    }
+    if item.get('image_url'):
+        normalized['image_url'] = item.get('image_url')
+    if item.get('id'):
+        normalized['id'] = item.get('id')
+
+    return normalized, needs_review
+
+
+def _extract_json_payload_from_text(text: str):
+    raw = (text or '').strip()
+    if not raw:
+        return None
+
+    try:
+        return json.loads(raw)
+    except Exception:
+        pass
+
+    # Fallback for model responses that wrap JSON with extra text.
+    for opener, closer in (('{', '}'), ('[', ']')):
+        start = raw.find(opener)
+        end = raw.rfind(closer)
+        if start == -1 or end == -1 or end <= start:
+            continue
+        try:
+            return json.loads(raw[start:end + 1])
+        except Exception:
+            continue
+
+    return None
+
+
+def _generate_gemini_text(parts, *, system_instruction: str = '', response_mime_type: str = '', temperature: float = 0.2, max_output_tokens: int = 8000):
     api_key = get_google_api_key()
     if not api_key:
-        return []
+        return ''
 
     try:
         client = genai.Client(api_key=api_key)
+        cfg_kwargs = {
+            'temperature': temperature,
+            'max_output_tokens': max_output_tokens,
+        }
+        if system_instruction:
+            cfg_kwargs['system_instruction'] = system_instruction
+        if response_mime_type:
+            cfg_kwargs['response_mime_type'] = response_mime_type
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[{"role": "user", "parts": parts}],
+            config=genai.types.GenerateContentConfig(**cfg_kwargs)
+        )
+        return (response.text or '').strip()
+    except Exception:
+        return ''
+
+
+def parse_training_text_with_ai(content: str, source_name: str = ''):
+    text = (content or '').strip()
+    if not text:
+        return {}
+
+    # Keep payload bounded to avoid oversized token usage on large manuals.
+    sample = text[:18000]
+    system_instruction = (
+        "You analyze restaurant training documents and return compact JSON metadata only. "
+        "Return object keys: document_type, categories, summary, key_points, faq. "
+        "Rules: categories must be short labels, key_points max 8 items, faq max 8 items. "
+        "Each faq item must include question and answer. "
+        "Do not invent details that are not present in text."
+    )
+
+    prompt = (
+        f"SOURCE: {source_name or 'training_file'}\\n"
+        "Analyze this training content and produce JSON metadata for retrieval and admin review.\\n\\n"
+        f"CONTENT:\\n{sample}"
+    )
+
+    raw = _generate_gemini_text(
+        parts=[{"text": prompt}],
+        system_instruction=system_instruction,
+        response_mime_type='application/json',
+        temperature=0.1,
+        max_output_tokens=3000
+    )
+    payload = _extract_json_payload_from_text(raw)
+    if not isinstance(payload, dict):
+        return {}
+
+    categories = payload.get('categories')
+    if not isinstance(categories, list):
+        categories = []
+    categories = [str(c).strip() for c in categories if str(c).strip()][:8]
+
+    key_points = payload.get('key_points')
+    if not isinstance(key_points, list):
+        key_points = []
+    key_points = [str(p).strip() for p in key_points if str(p).strip()][:8]
+
+    faq_rows = payload.get('faq')
+    faq = []
+    if isinstance(faq_rows, list):
+        for row in faq_rows[:8]:
+            if not isinstance(row, dict):
+                continue
+            q = str(row.get('question') or '').strip()
+            a = str(row.get('answer') or '').strip()
+            if q and a:
+                faq.append({'question': q, 'answer': a})
+
+    return {
+        'document_type': str(payload.get('document_type') or '').strip(),
+        'categories': categories,
+        'summary': str(payload.get('summary') or '').strip(),
+        'key_points': key_points,
+        'faq': faq,
+    }
+
+
+def parse_menu_txt_with_ai(content: str):
+    if not content:
+        return []
+
+    try:
         system_instruction = (
             "Extract ALL restaurant menu items from the provided text. DO NOT SKIP ANY ITEMS. "
             "Return JSON only: an array of objects with keys "
-            "name, description, price, category, status. "
+            "name, description, price, category, status, variants. "
             "Use empty string when a field is missing. "
             "Preserve currency symbols if present in the price. "
             "If a section heading (e.g., APPETIZERS, ESPRESSO BEVERAGE) appears, use it as category. "
@@ -729,32 +1018,25 @@ def parse_menu_txt_with_ai(content: str):
             "Do NOT put standalone numbers (like calories, nutritional values) in the description. "
             "If there's no descriptive text, leave description as empty string. "
             "CRITICAL PRICING VARIANTS: If an item has multiple prices (sizes T/G/V, quantities 1ea/SET, portions, etc.), "
-            "you MUST format the description field EXACTLY as: 'Options: T=160, G=165, V=180' or 'Options: 1ea=150, SET=280'. "
-            "Use the format 'Options: LABEL=PRICE, LABEL=PRICE' where LABEL is the variant (size/quantity/type) and PRICE is the number. "
-            "Always use 'Options:' as the prefix, preserve the original labels (T, G, V, 1ea, SET, Small, Large, etc.). "
+            "store them in variants as an array of objects [{label, price}] and preserve labels exactly. "
             "Put the lowest price in the price field. "
             "Create ONE item per menu item name, not separate items per variant. "
             "COMPLETENESS: Extract EVERY item in the text. Count them if needed to ensure none are missing."
         )
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[{"role": "user", "parts": [{"text": content}]}],
-            config=genai.types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                response_mime_type='application/json',
-                temperature=0.2,
-                max_output_tokens=8000
-            )
+        text = _generate_gemini_text(
+            parts=[{"text": content}],
+            system_instruction=system_instruction,
+            response_mime_type='application/json',
+            temperature=0.2,
+            max_output_tokens=8000
         )
-        text = (response.text or '').strip()
         if not text:
             return []
-        if not text.startswith('['):
-            start = text.find('[')
-            end = text.rfind(']')
-            if start != -1 and end != -1 and end > start:
-                text = text[start:end + 1]
-        data = json.loads(text)
+
+        data = _extract_json_payload_from_text(text)
+
+        if data is None:
+            return []
         if isinstance(data, dict) and 'items' in data:
             data = data.get('items')
         if not isinstance(data, list):
@@ -770,8 +1052,47 @@ def parse_menu_txt_with_ai(content: str):
                 continue
             description = (row.get('description') or '').strip()
             price = (row.get('price') or '').strip()
+            if not price and isinstance(row.get('base_price'), dict):
+                amount = row.get('base_price', {}).get('amount')
+                if amount is not None:
+                    price = _format_price_value(amount)
+
+            variants = []
+            for variant in row.get('variants') or []:
+                if not isinstance(variant, dict):
+                    continue
+                label = (variant.get('label') or '').strip()
+                if not label:
+                    continue
+                raw_price = variant.get('price')
+                if isinstance(raw_price, dict):
+                    display = (raw_price.get('display') or '').strip()
+                    amount = raw_price.get('amount')
+                    variant_price = display or (_format_price_value(amount) if amount is not None else '')
+                else:
+                    variant_price = str(raw_price or '').strip()
+                if variant_price:
+                    variants.append((label, variant_price))
+
+            if variants and 'options:' not in description.lower():
+                option_text = ', '.join(f"{label}={val}" for label, val in variants)
+                description = f"{description}. Options: {option_text}".strip('. ') if description else f"Options: {option_text}"
+            elif not variants:
+                variants = _extract_variants_from_freeform_text(description)
+                if variants and 'options:' not in description.lower():
+                    option_text = ', '.join(f"{label}={val}" for label, val in variants)
+                    description = f"{description}. Options: {option_text}".strip('. ') if description else f"Options: {option_text}"
+
+            needs_review = bool(row.get('needs_review'))
+            if isinstance(row.get('confidence'), dict):
+                try:
+                    if float(row.get('confidence', {}).get('overall')) < 0.75:
+                        needs_review = True
+                except Exception:
+                    pass
+
             category = (row.get('category') or '').strip() or infer_menu_category(name, description, known_categories)
-            status = (row.get('status') or '').strip() or 'Live'
+            status = _normalize_menu_status(row.get('status'), force_draft=needs_review)
             if category and category not in known_categories and category.lower() != 'uncategorized':
                 known_categories.append(category)
             items.append({
@@ -789,11 +1110,7 @@ def parse_menu_txt_with_ai(content: str):
 def extract_image_text_with_ai(data_bytes: bytes, mime_type: str):
     if not data_bytes:
         return ''
-    api_key = get_google_api_key()
-    if not api_key:
-        return ''
     try:
-        client = genai.Client(api_key=api_key)
         prompt = (
             "Extract ALL text from this restaurant menu image. This is CRITICAL - you must not skip any items.\n\n"
             "Instructions:\n"
@@ -808,21 +1125,14 @@ def extract_image_text_with_ai(data_bytes: bytes, mime_type: str):
             "Return ONLY the extracted text, nothing else. BE COMPLETE."
         )
         encoded = base64.b64encode(data_bytes).decode('ascii')
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[{
-                "role": "user",
-                "parts": [
-                    {"text": prompt},
-                    {"inline_data": {"mime_type": mime_type, "data": encoded}}
-                ]
-            }],
-            config=genai.types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=8000
-            )
+        text = _generate_gemini_text(
+            parts=[
+                {"text": prompt},
+                {"inline_data": {"mime_type": mime_type, "data": encoded}}
+            ],
+            temperature=0.1,
+            max_output_tokens=8000
         )
-        text = (response.text or '').strip()
         if not text:
             print("Warning: Gemini API returned empty response for image extraction")
         return text
@@ -1674,16 +1984,27 @@ def menu_upload_menu_file():
             if key and item.get('image_url'):
                 image_map[key] = item.get('image_url')
 
+        normalized_items = []
+        review_flagged = 0
         for item in unique_items:
-            category = (item.get('category') or '').strip()
-            if not category or category.lower() == 'uncategorized':
-                item['category'] = infer_menu_category(item.get('name', ''), item.get('description', ''), known_categories)
-            elif category not in known_categories:
+            normalized_item, needs_review = _normalize_imported_menu_item(item, known_categories)
+            if not normalized_item:
+                continue
+
+            category = (normalized_item.get('category') or '').strip()
+            if category and category not in known_categories and category.lower() != 'uncategorized':
                 known_categories.append(category)
 
-            key = _normalize_menu_key(item.get('name', ''))
-            if key and key in image_map:
-                item['image_url'] = image_map[key]
+            key = _normalize_menu_key(normalized_item.get('name', ''))
+            if key and key in image_map and not normalized_item.get('image_url'):
+                normalized_item['image_url'] = image_map[key]
+
+            if needs_review:
+                review_flagged += 1
+            normalized_items.append(normalized_item)
+
+        if not normalized_items:
+            return jsonify({'error': 'No valid menu items found after normalization'}), 400
 
         # Handle merge mode
         if merge_mode:
@@ -1694,7 +2015,7 @@ def menu_upload_menu_file():
             added_count = 0
             updated_count = 0
             
-            for new_item in unique_items:
+            for new_item in normalized_items:
                 new_key = _normalize_menu_key(new_item.get('name', ''))
                 if new_key in existing_names_normalized:
                     # Item already exists - update it with new info
@@ -1717,13 +2038,18 @@ def menu_upload_menu_file():
             result_message = f"Added {added_count} new items, updated {updated_count} existing items"
         else:
             # Replace mode (default)
-            cfg['menu_items'] = unique_items
-            result_message = f"Replaced menu with {len(unique_items)} items"
+            cfg['menu_items'] = normalized_items
+            result_message = f"Replaced menu with {len(normalized_items)} items"
         
         save_config(cfg, restaurant_id)
         save_training_upload_bytes(restaurant_id, file.filename, data_bytes)
 
-        return jsonify({'saved': len(unique_items), 'message': result_message, 'merge_mode': merge_mode})
+        return jsonify({
+            'saved': len(normalized_items),
+            'flagged_for_review': review_flagged,
+            'message': result_message,
+            'merge_mode': merge_mode
+        })
     except Exception as exc:
         app.logger.exception('Menu upload failed')
         return jsonify({'error': 'Menu upload failed', 'detail': str(exc)}), 500
@@ -2140,8 +2466,25 @@ def ai_training_upload():
             'original_name': safe_name,
             'stored_name': stored_name,
             'uploaded_at': datetime.now(timezone.utc).isoformat(),
-            'status': 'ready'
+            'status': 'ready',
+            'size_bytes': int(size_bytes)
         }
+
+        # Unified two-pass ingestion for training files:
+        # pass 1 = extract plain text from file, pass 2 = AI structure/tagging.
+        try:
+            preview_text = _build_training_preview_text(dest)
+            if preview_text:
+                ai_profile = parse_training_text_with_ai(preview_text, safe_name)
+                if ai_profile:
+                    entry['ai_profile'] = ai_profile
+                    if ai_profile.get('categories'):
+                        entry['ai_categories'] = ai_profile.get('categories')
+                    if ai_profile.get('document_type'):
+                        entry['ai_document_type'] = ai_profile.get('document_type')
+        except Exception:
+            app.logger.exception('Training AI profiling failed for %s', safe_name)
+
         entries.append(entry)
         saved.append(entry)
         add_training_history_entry(restaurant_id, {

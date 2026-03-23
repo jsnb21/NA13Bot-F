@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://resto-ai-agent.local/schemas/menu-import.schema.json",
+  "title": "Menu Import Extraction",
+  "description": "Canonical output format for AI-assisted menu ingestion before writing to DB.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "restaurant_id",
+    "source",
+    "items"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "restaurant_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "filename",
+        "extracted_at_utc"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "png",
+            "jpg",
+            "jpeg",
+            "webp",
+            "pdf",
+            "txt",
+            "csv"
+          ]
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1
+        },
+        "extractor_model": {
+          "type": "string"
+        },
+        "parser_model": {
+          "type": "string"
+        },
+        "extracted_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "raw_text_sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        }
+      }
+    },
+    "detected_currency": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO-like code or symbol seen in source text (for example PHP, USD, $)."
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/menuItem"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "amount"
+      ],
+      "properties": {
+        "amount": {
+          "type": "number",
+          "minimum": 0
+        },
+        "display": {
+          "type": "string",
+          "description": "Original textual price fragment as seen in menu (for example PHP 159)."
+        },
+        "currency": {
+          "type": "string",
+          "description": "Detected currency symbol/code for this specific amount."
+        }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "price"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Variant label (Small, Medium, Large, 1pc, 6pcs, T, G, V, etc)."
+        },
+        "group": {
+          "type": "string",
+          "default": "size",
+          "description": "Variant family (size, quantity, flavor, cut, etc)."
+        },
+        "price": {
+          "$ref": "#/$defs/money"
+        },
+        "is_default": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "overall"
+      ],
+      "properties": {
+        "ocr": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "parsing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "overall": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "menuItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status"
+      ],
+      "properties": {
+        "external_id": {
+          "type": "string",
+          "description": "Stable hash or ID from parser for dedupe/update decisions."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Live",
+            "Draft",
+            "Hidden"
+          ]
+        },
+        "base_price": {
+          "$ref": "#/$defs/money"
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/variant"
+          },
+          "description": "If present, lowest variant price should match base_price when base_price exists."
+        },
+        "needs_review": {
+          "type": "boolean",
+          "default": false
+        },
+        "review_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "missing_price",
+              "price_ambiguous",
+              "low_ocr_confidence",
+              "low_parsing_confidence",
+              "duplicate_name",
+              "category_ambiguous",
+              "variant_conflict",
+              "possible_non_menu_text"
+            ]
+          }
+        },
+        "source_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "line_numbers": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "text_snippet": {
+              "type": "string"
+            }
+          }
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "variants": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "required": [
+              "variants"
+            ]
+          },
+          "then": {
+            "required": [
+              "base_price"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

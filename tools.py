@@ -89,6 +89,7 @@ Dependencies:
 import json
 import re
 import logging
+import uuid
 from pathlib import Path
 from psycopg import sql
 from config import get_connection, get_db_schema
@@ -279,7 +280,7 @@ def _fetch_menu_items(restaurant_id: str = None):
             cur.execute(
                 sql.SQL(
                     """
-                    SELECT id, name, description, price, category, status, (image_data IS NOT NULL) AS has_image
+                    SELECT id, name, description, price, category, status, image_url, (image_data IS NOT NULL) AS has_image
                     FROM {}.menu_items
                     WHERE restaurant_id = %s
                     ORDER BY created_at ASC
@@ -291,8 +292,8 @@ def _fetch_menu_items(restaurant_id: str = None):
 
     items = []
     for row in rows or []:
-        image_url = None
-        if row[6]:  # has_image
+        image_url = row[6]
+        if not image_url and row[7]:  # has_image
             image_url = f"/menu/photo/{row[0]}"
         items.append({
             'id': str(row[0]),
@@ -361,21 +362,23 @@ def _replace_menu_items(restaurant_id: str, menu_items):
             cur.execute(
                 sql.SQL(
                     """
-                    SELECT name, image_data, image_mime
+                    SELECT id, name, image_url, image_data, image_mime
                     FROM {}.menu_items
                     WHERE restaurant_id = %s
                     """
                 ).format(sql.Identifier(schema)),
                 [restaurant_id]
             )
-            image_rows = cur.fetchall()
-            image_map = {}
-            for row in image_rows or []:
-                key = normalize_key(row[0])
+            preserved_rows = cur.fetchall()
+            preserve_map = {}
+            for row in preserved_rows or []:
+                key = normalize_key(row[1])
                 if key:
-                    image_map[key] = {
-                        'image_data': row[1],
-                        'image_mime': row[2]
+                    preserve_map[key] = {
+                        'id': row[0],
+                        'image_url': row[2],
+                        'image_data': row[3],
+                        'image_mime': row[4]
                     }
 
             cur.execute(
@@ -391,24 +394,32 @@ def _replace_menu_items(restaurant_id: str, menu_items):
                     continue
 
                 key = normalize_key(name)
-                preserved = image_map.get(key, {})
-                image_data = preserved.get('image_data')
-                image_mime = preserved.get('image_mime')
+                preserved = preserve_map.get(key, {})
+                item_id_raw = item.get('id') or preserved.get('id')
+                try:
+                    item_id = str(uuid.UUID(str(item_id_raw))) if item_id_raw else str(uuid.uuid4())
+                except Exception:
+                    item_id = str(uuid.uuid4())
+                image_url = (item.get('image_url') or '').strip() or preserved.get('image_url')
+                image_data = item.get('image_data') if item.get('image_data') is not None else preserved.get('image_data')
+                image_mime = item.get('image_mime') if item.get('image_mime') is not None else preserved.get('image_mime')
 
                 cur.execute(
                     sql.SQL(
                         """
-                        INSERT INTO {}.menu_items (restaurant_id, name, description, price, category, status, image_data, image_mime)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        INSERT INTO {}.menu_items (id, restaurant_id, name, description, price, category, status, image_url, image_data, image_mime)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """
                     ).format(sql.Identifier(schema)),
                     [
+                        item_id,
                         restaurant_id,
                         name,
                         (item.get('description') or '').strip(),
                         (item.get('price') or '').strip(),
                         (item.get('category') or '').strip(),
                         (item.get('status') or '').strip(),
+                        image_url,
                         image_data,
                         image_mime
                     ]

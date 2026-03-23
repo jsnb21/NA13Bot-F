@@ -290,6 +290,45 @@ def init_db():
                 ).format(sql.Identifier(schema))
             )
 
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {}.training_files (
+                      id               TEXT PRIMARY KEY,
+                      restaurant_id    UUID NOT NULL,
+                      original_name    TEXT,
+                      stored_name      TEXT,
+                      uploaded_at      TIMESTAMPTZ,
+                      status           TEXT,
+                      size_bytes       BIGINT,
+                      ai_profile       JSONB,
+                      ai_categories    JSONB,
+                      ai_document_type TEXT,
+                      created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+                      updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+                    """
+                ).format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS {}.training_history (
+                      id             TEXT PRIMARY KEY,
+                      restaurant_id  UUID NOT NULL,
+                      action         TEXT,
+                      status         TEXT,
+                      started_at     TIMESTAMPTZ,
+                      ended_at       TIMESTAMPTZ,
+                      duration_ms    INTEGER,
+                      metadata       JSONB,
+                      created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+                    );
+                    """
+                ).format(sql.Identifier(schema))
+            )
+
             # Device tokens for remember-this-device functionality
             cur.execute(
                 sql.SQL(
@@ -412,6 +451,24 @@ def init_db():
             cur.execute(
                 sql.SQL(
                     "CREATE INDEX IF NOT EXISTS orders_restaurant_order_number_idx ON {}.orders (restaurant_id, order_number)"
+                ).format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS training_files_restaurant_uploaded_idx ON {}.training_files (restaurant_id, uploaded_at DESC)"
+                ).format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS training_files_restaurant_stored_name_idx ON {}.training_files (restaurant_id, stored_name)"
+                ).format(sql.Identifier(schema))
+            )
+
+            cur.execute(
+                sql.SQL(
+                    "CREATE INDEX IF NOT EXISTS training_history_restaurant_started_idx ON {}.training_history (restaurant_id, started_at DESC)"
                 ).format(sql.Identifier(schema))
             )
             
