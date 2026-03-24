@@ -9,7 +9,10 @@
     <style>
         :root {
             --main-color: {{ cfg.get('main_color', '#1e40af') }};
-            --accent: {{ cfg.get('sub_color', '#ffd41d') }};
+            --main-foreground: {{ cfg.get('main_foreground', '#ffffff') }};
+            --sub-color: {{ cfg.get('sub_color', '#ffd41d') }};
+            --sub-foreground: {{ cfg.get('sub_foreground', '#000000') }};
+            --accent: var(--sub-color);
             --primary: {{ cfg.get('primary', '#667eea') }};
             --primary-light: {{ cfg.get('primary_light', '#764ba2') }};
             --success: {{ cfg.get('success', '#28a745') }};

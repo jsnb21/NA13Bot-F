@@ -98,7 +98,7 @@
     .order-number {
         font-size: 24px;
         font-weight: bold;
-        color: var(--accent);
+        color: var(--main-foreground, #ffffff);
     }
 
     .order-time {
@@ -286,5 +286,5 @@
         display: block;
         font-size: 18px;
         font-weight: bold;
-        color: var(--accent);
+        color: var(--text-primary, #333333);
     }

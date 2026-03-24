@@ -1,5 +1,36 @@
 // QR Codes Page JavaScript
 
+const QR_STATE_KEY = 'resto.qrCodesState.v1';
+
+function saveQRState(state) {
+    try {
+        window.__qrCodesState = state;
+        sessionStorage.setItem(QR_STATE_KEY, JSON.stringify(state));
+    } catch (e) {
+        // Ignore storage errors (quota/private mode) and keep in-memory fallback.
+        window.__qrCodesState = state;
+    }
+}
+
+function loadQRState() {
+    if (window.__qrCodesState && Array.isArray(window.__qrCodesState.qr_codes)) {
+        return window.__qrCodesState;
+    }
+
+    try {
+        const raw = sessionStorage.getItem(QR_STATE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.qr_codes) || !parsed.qr_codes.length) {
+            return null;
+        }
+        window.__qrCodesState = parsed;
+        return parsed;
+    } catch (e) {
+        return null;
+    }
+}
+
 function initializeQRCodesPage() {
     const generateBtn = document.getElementById('generateBtn');
     const printBtn = document.getElementById('printBtn');
@@ -20,6 +51,19 @@ function initializeQRCodesPage() {
         return;
     }
     generateBtn.dataset.qrInitialized = '1';
+
+    // Restore most recent generated QR set (if any) when returning to this page.
+    const cachedState = loadQRState();
+    if (cachedState && Array.isArray(cachedState.qr_codes) && cachedState.qr_codes.length) {
+        if (Number.isInteger(cachedState.input_count)) {
+            tableCountInput.value = cachedState.input_count;
+        }
+        if (Number.isInteger(cachedState.input_start_table)) {
+            startTableInput.value = cachedState.input_start_table;
+        }
+        displayQRCodes(cachedState.qr_codes, cachedState.count || cachedState.qr_codes.length, { scroll: false });
+        printBtn.disabled = false;
+    }
 
     // Generate QR codes
     generateBtn.addEventListener('click', async function() {
@@ -69,6 +113,15 @@ function initializeQRCodesPage() {
 
             // Display QR codes
             displayQRCodes(data.qr_codes, data.count);
+
+            // Persist generated result so QR preview survives tab/page switches.
+            saveQRState({
+                count: data.count,
+                qr_codes: data.qr_codes,
+                input_count: tableCount,
+                input_start_table: startTable,
+                saved_at: Date.now()
+            });
             
             // Enable print button
             printBtn.disabled = false;
@@ -252,11 +305,14 @@ function initializeQRCodesPage() {
 document.addEventListener('DOMContentLoaded', initializeQRCodesPage);
 document.addEventListener('turbo:load', initializeQRCodesPage);
 document.addEventListener('turbo:frame-load', initializeQRCodesPage);
+document.addEventListener('turbo:render', initializeQRCodesPage);
+document.addEventListener('turbo:after-frame-render', initializeQRCodesPage);
 
-function displayQRCodes(qrCodes, count) {
+function displayQRCodes(qrCodes, count, options = {}) {
     const qrGrid = document.getElementById('qrGrid');
     const qrCodesContainer = document.getElementById('qrCodesContainer');
     const qrCountDisplay = document.getElementById('qrCountDisplay');
+    const shouldScroll = options.scroll !== false;
 
     if (!qrGrid || !qrCodesContainer) {
         alert('Error: Page elements not found. Please refresh the page.');
@@ -302,11 +358,13 @@ function displayQRCodes(qrCodes, count) {
     qrCountDisplay.textContent = count;
     
     // Scroll to QR codes
-    setTimeout(() => {
-        try {
-            qrCodesContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } catch (e) {
-            // Scroll failed silently
-        }
-    }, 100);
+    if (shouldScroll) {
+        setTimeout(() => {
+            try {
+                qrCodesContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (e) {
+                // Scroll failed silently
+            }
+        }, 100);
+    }
 }

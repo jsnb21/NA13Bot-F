@@ -9,6 +9,8 @@
 
 {% block content %}
 <div class="container-fluid px-4 settings-page">
+    {% set theme_main_color = cfg.get('main_color') or cfg.get('color_hex') or '#1e40af' %}
+    {% set theme_sub_color = cfg.get('sub_color') or '#ffd41d' %}
     <form method="post" enctype="multipart/form-data" id="settingsForm" data-turbo="false">
     <div class="settings-shell">
         <div class="settings-main">
@@ -32,12 +34,12 @@
                     <input id="establishment_name" name="establishment_name" type="text" class="form-control editable-input" data-input placeholder="Your restaurant name" value="{{ cfg.get('establishment_name','') }}" disabled>
                 </div>
 
-                <div class="editable-item mb-3" data-empty="Not set">
+                <div class="editable-item mb-3" data-empty="No custom logo" data-display-mode="presence" data-filled="Logo is set">
                     <div class="editable-header">
                         <label for="logo_url" class="form-label">Logo</label>
                     </div>
                     <div class="display-row">
-                        <div class="display-value" data-display>{{ cfg.get('logo_url','') }}</div>
+                        <div class="display-value" data-display>{% if cfg.get('logo_url') %}Logo is set{% else %}No custom logo{% endif %}</div>
                         <button type="button" class="edit-btn" data-edit aria-label="Edit Logo"><span class="edit-icon" aria-hidden="true">&#9998;</span></button>
                     </div>
                     <div class="d-flex align-items-center editable-input editable-input-row" data-input-group>
@@ -49,8 +51,8 @@
                         </label>
                         <span id="logo_filename" class="file-name">&nbsp;</span>
                     </div>
-                    <div class="input-hint">Paste an image URL or upload a local file. Upload overrides the URL.</div>
-                    <div class="mt-2 d-flex align-items-center preview-row">
+                    <div class="input-hint editable-input">Paste an image URL or upload a local file. Upload overrides the URL.</div>
+                    <div class="mt-2 d-flex align-items-center preview-row editable-input">
                         <img id="logo_preview" src="{% if cfg.get('logo_url') %}{{ cfg.get('logo_url') }}{% else %}/brand/image/logo/{{ session.get('restaurant_id') }}?t={{ range(1, 1000000) | random }}{% endif %}" alt="Logo" class="media-preview" onerror="this.style.display='none'">
                         <small class="text-muted">Preview (changes show after Save)</small>
                     </div>
@@ -62,12 +64,12 @@
                             <span>Main Color</span>
                             <span class="color-label-inline" data-color-inline-preview="main_color">
                                 <span class="color-label-dot"></span>
-                                <span class="color-label-hex">{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}</span>
+                                <span class="color-label-hex">{{ theme_main_color }}</span>
                             </span>
                         </label>
                         <div class="modern-color-picker">
-                            <div id="main_color_picker" class="pickr-container" data-field="main_color" data-default="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}"></div>
-                            <input id="main_color" name="main_color" type="hidden" value="{{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }}">
+                            <div id="main_color_picker" class="pickr-container" data-field="main_color" data-default="{{ theme_main_color }}"></div>
+                            <input id="main_color" name="main_color" type="hidden" value="{{ theme_main_color }}">
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -75,12 +77,12 @@
                             <span>Accent / Sub Color</span>
                             <span class="color-label-inline" data-color-inline-preview="sub_color">
                                 <span class="color-label-dot"></span>
-                                <span class="color-label-hex">{{ cfg.get('sub_color', '#ffd41d') }}</span>
+                                <span class="color-label-hex">{{ theme_sub_color }}</span>
                             </span>
                         </label>
                         <div class="modern-color-picker">
-                            <div id="sub_color_picker" class="pickr-container" data-field="sub_color" data-default="{{ cfg.get('sub_color', '#ffd41d') }}"></div>
-                            <input id="sub_color" name="sub_color" type="hidden" value="{{ cfg.get('sub_color', '#ffd41d') }}">
+                            <div id="sub_color_picker" class="pickr-container" data-field="sub_color" data-default="{{ theme_sub_color }}"></div>
+                            <input id="sub_color" name="sub_color" type="hidden" value="{{ theme_sub_color }}">
                         </div>
                     </div>
 
@@ -132,12 +134,12 @@
                     </div>
                 </div>
 
-                <div class="editable-item mb-3" data-empty="Not set">
+                <div class="editable-item mb-3" data-empty="No custom avatar" data-display-mode="presence" data-filled="Avatar is set">
                     <div class="editable-header">
                         <label for="chatbot_avatar_url" class="form-label">Chatbot Avatar</label>
                     </div>
                     <div class="display-row">
-                        <div class="display-value" data-display>{{ cfg.get('chatbot_avatar','/static/img/bot-avatar.svg') }}</div>
+                        <div class="display-value" data-display>{% if cfg.get('chatbot_avatar') %}Avatar is set{% else %}No custom avatar{% endif %}</div>
                         <button type="button" class="edit-btn" data-edit aria-label="Edit Chatbot Avatar"><span class="edit-icon" aria-hidden="true">&#9998;</span></button>
                     </div>
                     <div class="d-flex align-items-center editable-input editable-input-row" data-input-group>
@@ -149,8 +151,8 @@
                         </label>
                         <span id="chatbot_avatar_filename" class="file-name">&nbsp;</span>
                     </div>
-                    <div class="input-hint">Paste an image URL or upload a local file. Upload overrides the URL.</div>
-                    <div class="mt-2 d-flex align-items-center preview-row">
+                    <div class="input-hint editable-input">Paste an image URL or upload a local file. Upload overrides the URL.</div>
+                    <div class="mt-2 d-flex align-items-center preview-row editable-input">
                         <img id="chatbot_avatar_preview" src="{% if cfg.get('chatbot_avatar') and not cfg.get('chatbot_avatar').startswith('/static/img/') %}{{ cfg.get('chatbot_avatar') }}{% else %}/brand/image/chatbot_avatar/{{ session.get('restaurant_id') }}?t={{ range(1, 1000000) | random }}{% endif %}" alt="Chatbot avatar" class="media-preview is-cover" onerror="this.src='{{ url_for('static', filename='img/bot-avatar.svg') }}'">
                         <small class="text-muted">Preview (changes show after Save)</small>
                     </div>
@@ -204,11 +206,11 @@
                 <p class="sidebar-kicker">Brand Palette</p>
                 <div class="color-preview-list">
                     <div class="color-preview-item">
-                        <span class="color-dot" style="background: {{ cfg.get('main_color', cfg.get('color_hex','#1e40af')) }};"></span>
+                        <span class="color-dot" style="background: {{ theme_main_color }};"></span>
                         <span>Main</span>
                     </div>
                     <div class="color-preview-item">
-                        <span class="color-dot" style="background: {{ cfg.get('sub_color', '#ffd41d') }};"></span>
+                        <span class="color-dot" style="background: {{ theme_sub_color }};"></span>
                         <span>Accent</span>
                     </div>
                 </div>

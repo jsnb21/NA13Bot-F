@@ -10,13 +10,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;600;700&family=Nunito:wght@400;600;700&family=Playfair+Display:wght@500;600;700&family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    {% set theme_main_color = cfg.get('main_color') or cfg.get('color_hex') or '#1e40af' %}
+    {% set theme_sub_color = cfg.get('sub_color') or '#ffd41d' %}
     {% block head %}
     <!-- Dynamic color variables from config -->
     <style>
       :root {
-        --main-color: {{ cfg.get('main_color', '#1e40af') }};
+        --main-color: {{ theme_main_color }};
         --main-foreground: {{ cfg.get('main_foreground', '#ffffff') }};
-        --sub-color: {{ cfg.get('sub_color', '#ffd41d') }};
+        --sub-color: {{ theme_sub_color }};
         --sub-foreground: {{ cfg.get('sub_foreground', '#000000') }};
         --text-primary: #1f2937;
         --text-secondary: {{ cfg.get('text_secondary', '#6b7280') }};
@@ -59,8 +61,8 @@
 
     <body
       class="has-sidebar"
-      data-main-color="{{ cfg.get('main_color', '#1e40af') }}"
-      data-sub-color="{{ cfg.get('sub_color', '#ffd41d') }}"
+      data-main-color="{{ theme_main_color }}"
+      data-sub-color="{{ theme_sub_color }}"
       {% if font_css %}style="font-family: {{ font_css }};"{% endif %}
     >
     <div class="d-flex">
@@ -165,6 +167,7 @@
 
     <script src="{{ url_for('static', filename='js/ui-dialog.js') }}"></script>
     <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/qr-codes.js') }}"></script>
     <script src="{{ url_for('static', filename='js/turbo-enhancements.js') }}"></script>
     <!-- Turbo event listeners for tracking active nav links -->
     <script>

@@ -2562,13 +2562,16 @@ def settings():
                 currency_code = currency_choice
                 currency_symbol = currency_map.get(currency_choice, currency_symbol)
 
+        existing_main_color = (cfg.get('main_color') or cfg.get('color_hex') or '#1e40af').strip()
+        existing_sub_color = (cfg.get('sub_color') or '#ffd41d').strip()
+
         main_color = _normalize_hex_color(
-            request.form.get('main_color', request.form.get('color_hex', cfg.get('main_color', cfg.get('color_hex', '')))),
-            cfg.get('main_color', cfg.get('color_hex', '#1e40af'))
+            request.form.get('main_color') or request.form.get('color_hex') or existing_main_color,
+            existing_main_color
         )
         sub_color = _normalize_hex_color(
-            request.form.get('sub_color', cfg.get('sub_color', '')),
-            cfg.get('sub_color', '#ffd41d')
+            request.form.get('sub_color') or existing_sub_color,
+            existing_sub_color
         )
 
         main_foreground = _auto_foreground(main_color)

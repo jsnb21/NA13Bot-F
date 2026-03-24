@@ -47,6 +47,11 @@
 
         let userInteracted = false;
 
+        function markUserInteracted(){
+            userInteracted = true;
+            updateSticky();
+        }
+
         function updateSticky(){
             if(!userInteracted){
                 sticky.classList.remove('show');
@@ -84,6 +89,7 @@
 
         // Expose to other modules (color pickers) so they can re-sync baseline.
         window.__settingsResetInitial = resetInitial;
+        window.__settingsMarkUserInteracted = markUserInteracted;
     })();
 })();
 
@@ -283,14 +289,26 @@
                         if (hex) {
                             hiddenInput.value = hex;
                             syncColorPreview(fieldName, hex);
+                            if (typeof window.__settingsMarkUserInteracted === 'function') {
+                                window.__settingsMarkUserInteracted();
+                            }
                             hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
                             hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            try {
+                                if (pickers[fieldName] && typeof pickers[fieldName].hide === 'function') {
+                                    pickers[fieldName].hide();
+                                }
+                            } catch (e) {}
                         }
                     }
                 }).on('clear', () => {
                     hiddenInput.value = '';
                     syncColorPreview(fieldName, '');
+                    if (typeof window.__settingsMarkUserInteracted === 'function') {
+                        window.__settingsMarkUserInteracted();
+                    }
                     hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
                 }).on('change', (color) => {
                     if (color) {
                         const hex = colorToHex(color);
@@ -360,6 +378,8 @@
         const display = item.querySelector('[data-display]');
         const header = item.querySelector('.editable-header');
         const emptyLabel = item.getAttribute('data-empty') || 'Not set';
+        const displayMode = item.getAttribute('data-display-mode') || 'value';
+        const filledLabel = item.getAttribute('data-filled') || 'Set';
         let snapshot = null;
 
         let saveBtn = null;
@@ -398,6 +418,10 @@
         function getDisplayValue() {
             if (!inputs.length) return '';
             const input = inputs[0];
+            if (displayMode === 'presence') {
+                const hasValue = Boolean((input.value || '').trim());
+                return hasValue ? filledLabel : '';
+            }
             if (input.tagName === 'SELECT') {
                 const option = input.options[input.selectedIndex];
                 return option ? option.textContent.trim() : '';
