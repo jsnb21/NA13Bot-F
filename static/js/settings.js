@@ -25,10 +25,43 @@
         const sticky = document.getElementById('stickySaveBar');
         const stickySave = document.getElementById('stickySave');
         const stickyCancel = document.getElementById('stickyCancel');
+        const logoPreview = document.getElementById('logo_preview');
+        const avatarPreview = document.getElementById('chatbot_avatar_preview');
+        const logoFilename = document.getElementById('logo_filename');
+        const avatarFilename = document.getElementById('chatbot_avatar_filename');
+
+        const initialLogoPreviewSrc = logoPreview ? logoPreview.src : '';
+        const initialAvatarPreviewSrc = avatarPreview ? avatarPreview.src : '';
+
+        function readFieldValue(el){
+            if (!el || !el.name) return '';
+            const tag = (el.tagName || '').toLowerCase();
+            const type = (el.type || '').toLowerCase();
+
+            if (type === 'file') return '';
+
+            if (type === 'checkbox') {
+                return el.checked ? (el.value || 'on') : '';
+            }
+
+            if (type === 'radio') {
+                const checked = form.querySelector(`input[type="radio"][name="${CSS.escape(el.name)}"]:checked`);
+                return checked ? (checked.value || '') : '';
+            }
+
+            if (tag === 'select' && el.multiple) {
+                return Array.from(el.selectedOptions).map((opt) => opt.value).join('|');
+            }
+
+            return el.value ?? '';
+        }
 
         function formToObj(f){
             const o = {};
-            new FormData(f).forEach((v,k)=>{ o[k]=v; });
+            f.querySelectorAll('[name]').forEach((el) => {
+                if (!el.name || o[el.name] !== undefined) return;
+                o[el.name] = readFieldValue(el);
+            });
             return o;
         }
         let initial = formToObj(form);
@@ -73,17 +106,40 @@
         stickySave.addEventListener('click', ()=>{ form.dispatchEvent(new Event('submit', { bubbles: true })); });
 
         stickyCancel.addEventListener('click', ()=>{
-            // restore initial values
-            for(const name in initial){
-                const el = form.elements[name];
-                if(!el) continue;
-                try{ el.value = initial[name]; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
-            }
-            // also trigger change update for color hex fields if present
-            const mainHex = document.getElementById('main_color_hex');
-            const subHex = document.getElementById('sub_color_hex');
-            if(mainHex){ mainHex.value = initial['main_color'] || ''; mainHex.dispatchEvent(new Event('input',{bubbles:true})); }
-            if(subHex){ subHex.value = initial['sub_color'] || ''; subHex.dispatchEvent(new Event('input',{bubbles:true})); }
+            // restore all named fields to the initial baseline, including disabled edit-mode inputs
+            form.querySelectorAll('[name]').forEach((el) => {
+                const name = el.name;
+                if (!name) return;
+                const type = (el.type || '').toLowerCase();
+                const baseline = initial[name] ?? '';
+
+                try {
+                    if (type === 'file') {
+                        el.value = '';
+                    } else if (type === 'checkbox') {
+                        el.checked = baseline === (el.value || 'on');
+                    } else if (type === 'radio') {
+                        el.checked = baseline === (el.value || '');
+                    } else if (el.tagName && el.tagName.toLowerCase() === 'select' && el.multiple) {
+                        const selected = new Set(String(baseline).split('|').filter(Boolean));
+                        Array.from(el.options).forEach((opt) => {
+                            opt.selected = selected.has(opt.value);
+                        });
+                    } else {
+                        el.value = baseline;
+                    }
+
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                } catch (e) {}
+            });
+
+            // Clear upload labels and restore image previews to pre-edit state.
+            if (logoFilename) logoFilename.textContent = '';
+            if (avatarFilename) avatarFilename.textContent = '';
+            if (logoPreview && initialLogoPreviewSrc) logoPreview.src = initialLogoPreviewSrc;
+            if (avatarPreview && initialAvatarPreviewSrc) avatarPreview.src = initialAvatarPreviewSrc;
+
             updateSticky();
         });
 
