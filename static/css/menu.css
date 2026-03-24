@@ -267,6 +267,9 @@ border-left: 4px solid #4caf50;
 .toast-notification.error {
 border-left: 4px solid #f44336;
 }
+.toast-notification.warning {
+border-left: 4px solid #f59e0b;
+}
 .toast-notification .toast-icon {
 font-size: 1.5rem;
 }

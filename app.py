@@ -368,6 +368,108 @@ _CURRENCY_CODE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _CURRENCY_SYMBOL_PATTERN = re.compile(r"(?:A\$|C\$|S\$|HK\$|US\$|CA\$|AU\$|NZ\$|R\$|[$€£¥₹₱]|[\u20A0-\u20CF])")
+_CURRENCY_SYMBOL_MAP = {
+    'PHP': '₱',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'AUD': 'A$',
+    'CAD': 'C$',
+    'SGD': 'S$',
+    'INR': '₹',
+    'HKD': 'HK$',
+    'NZD': 'NZ$',
+    'BRL': 'R$',
+}
+_CURRENCY_CODE_SYMBOL_HINTS = {
+    'PHP': ('₱',),
+    'USD': ('US$', '$'),
+    'EUR': ('€',),
+    'GBP': ('£',),
+    'JPY': ('¥',),
+    'AUD': ('A$',),
+    'CAD': ('C$', 'CA$'),
+    'SGD': ('S$',),
+    'INR': ('₹',),
+    'HKD': ('HK$',),
+    'NZD': ('NZ$',),
+    'BRL': ('R$',),
+}
+
+
+def _detect_currency_from_text(content: str):
+    text = str(content or '')
+    if not text.strip():
+        return None
+
+    scores = {}
+
+    def _bump(code: str, amount: int):
+        if not code or amount <= 0:
+            return
+        scores[code] = scores.get(code, 0) + amount
+
+    upper_text = text.upper()
+    for code in _CURRENCY_CODE_SYMBOL_HINTS.keys():
+        code_hits = len(re.findall(rf"\\b{re.escape(code)}\\.?\\b", upper_text))
+        if code_hits:
+            _bump(code, code_hits * 3)
+
+    symbol_hints = []
+    for code, symbols in _CURRENCY_CODE_SYMBOL_HINTS.items():
+        for symbol in symbols:
+            symbol_hints.append((symbol, code))
+    symbol_hints.sort(key=lambda pair: len(pair[0]), reverse=True)
+
+    for symbol, code in symbol_hints:
+        hits = len(re.findall(re.escape(symbol), text))
+        if not hits:
+            continue
+        weight = 1 if symbol == '$' else 2
+        _bump(code, hits * weight)
+
+    if not scores:
+        return None
+
+    ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+        return None
+
+    detected_code, confidence = ranked[0]
+    return {
+        'code': detected_code,
+        'symbol': _CURRENCY_SYMBOL_MAP.get(detected_code, ''),
+        'confidence': confidence,
+    }
+
+
+def _build_currency_mismatch_warning(configured_code: str, configured_symbol: str, detected_currency):
+    if not detected_currency:
+        return None
+
+    configured_code_value = (configured_code or '').strip().upper()
+    configured_symbol_value = (configured_symbol or '').strip()
+    detected_code = (detected_currency.get('code') or '').strip().upper()
+    detected_symbol = (detected_currency.get('symbol') or '').strip()
+    if not configured_code_value or not detected_code:
+        return None
+
+    if configured_code_value == detected_code:
+        return None
+
+    configured_label = configured_code_value
+    if configured_symbol_value:
+        configured_label = f"{configured_code_value} ({configured_symbol_value})"
+
+    detected_label = detected_code
+    if detected_symbol:
+        detected_label = f"{detected_code} ({detected_symbol})"
+
+    return (
+        f"This PDF appears to use {detected_label}, but your web-app currency is set to {configured_label}. "
+        "Please review imported prices carefully, as they may become inaccurate."
+    )
 
 
 def _strip_currency_tokens(price_text: str) -> str:
@@ -2118,6 +2220,8 @@ def menu_upload_menu_file():
         else:
             content = data_bytes.decode('utf-8', errors='ignore')
 
+        cfg = load_config(restaurant_id)
+
         # Parse the extracted text into structured items
         items = parse_menu_txt_with_ai(content)
         if not items:
@@ -2135,7 +2239,6 @@ def menu_upload_menu_file():
                 seen_names.add(name_lower)
                 unique_items.append(item)
 
-        cfg = load_config(restaurant_id)
         known_categories = _extract_known_categories(cfg.get('menu_items', []))
         existing_items = cfg.get('menu_items', [])
         image_map = {}
@@ -2208,7 +2311,7 @@ def menu_upload_menu_file():
             'saved': len(normalized_items),
             'flagged_for_review': review_flagged,
             'message': result_message,
-            'merge_mode': merge_mode
+            'merge_mode': merge_mode,
         })
     except Exception as exc:
         app.logger.exception('Menu upload failed')
@@ -2579,9 +2682,13 @@ def ai_training_upload():
         return jsonify({'error': 'No files provided'}), 400
 
     entries = load_training_manifest(restaurant_id)
+    cfg = load_config(restaurant_id)
+    configured_currency_code = cfg.get('currency_code', 'PHP')
+    configured_currency_symbol = cfg.get('currency_symbol', '₱')
     training_dir = get_training_dir(restaurant_id)
     saved = []
     errors = []
+    currency_warnings = []
 
     for file in files:
         filename = file.filename or ''
@@ -2634,6 +2741,19 @@ def ai_training_upload():
         # pass 1 = extract plain text from file, pass 2 = AI structure/tagging.
         try:
             preview_text = _build_training_preview_text(dest)
+            if ext == '.pdf' and preview_text:
+                detected_currency = _detect_currency_from_text(preview_text)
+                mismatch_warning = _build_currency_mismatch_warning(
+                    configured_currency_code,
+                    configured_currency_symbol,
+                    detected_currency,
+                )
+                if mismatch_warning:
+                    currency_warnings.append({
+                        'file': safe_name,
+                        'message': mismatch_warning,
+                        'detected_currency': detected_currency,
+                    })
             if preview_text:
                 ai_profile = parse_training_text_with_ai(preview_text, safe_name)
                 if ai_profile:
@@ -2657,7 +2777,7 @@ def ai_training_upload():
         })
 
     save_training_manifest(restaurant_id, entries)
-    return jsonify({'saved': saved, 'errors': errors})
+    return jsonify({'saved': saved, 'errors': errors, 'currency_warnings': currency_warnings})
 
 
 @app.route('/ai-training/files/<file_id>', methods=['DELETE'])

@@ -36,6 +36,10 @@
     const previewMeta = document.getElementById('previewMeta');
     const previewBody = document.getElementById('previewBody');
     const previewClose = document.getElementById('previewClose');
+    const aiReadModal = document.getElementById('aiReadModal');
+    const aiReadTitle = document.getElementById('aiReadTitle');
+    const aiReadPhase = document.getElementById('aiReadPhase');
+    const aiReadStatus = document.getElementById('aiReadStatus');
 
   const FILES_ENDPOINT = '/ai-training/files';
   const UPLOAD_ENDPOINT = '/ai-training/upload';
@@ -46,6 +50,9 @@
 
   let selectedFiles = new Set();
   let allFiles = [];
+    let aiReadPhaseTimer = null;
+    let aiReadPhaseList = [];
+    let aiReadPhaseIndex = 0;
 
   // Toast notification system
   function showToast(type, message) {
@@ -77,6 +84,78 @@
           toast.style.animation = 'slideIn 0.3s ease reverse';
           setTimeout(() => toast.remove(), 300);
       }, 4000);
+  }
+
+  function setAiReadPhase(index) {
+      if (!aiReadPhaseList.length || !aiReadPhase) {
+          return;
+      }
+      const clampedIndex = Math.max(0, Math.min(index, aiReadPhaseList.length - 1));
+      aiReadPhaseIndex = clampedIndex;
+      aiReadPhase.textContent = `Phase ${clampedIndex + 1} of ${aiReadPhaseList.length}: ${aiReadPhaseList[clampedIndex]}`;
+  }
+
+  function showAiReadModal(options = {}) {
+      if (!aiReadModal) {
+          return;
+      }
+
+      if (aiReadPhaseTimer) {
+          clearInterval(aiReadPhaseTimer);
+          aiReadPhaseTimer = null;
+      }
+
+      aiReadPhaseList = Array.isArray(options.phases) ? options.phases.filter(Boolean) : [];
+      aiReadPhaseIndex = 0;
+
+      if (aiReadTitle && options.title) {
+          aiReadTitle.textContent = options.title;
+      }
+      if (aiReadStatus && options.message) {
+          aiReadStatus.textContent = options.message;
+      }
+      if (aiReadPhase) {
+          if (aiReadPhaseList.length) {
+              setAiReadPhase(0);
+              aiReadPhase.style.display = '';
+          } else {
+              aiReadPhase.textContent = 'Phase 1 of 1: Preparing upload';
+              aiReadPhase.style.display = '';
+          }
+      }
+
+      const autoAdvanceMs = Number(options.autoAdvanceMs || 0);
+      if (autoAdvanceMs > 0 && aiReadPhaseList.length > 1) {
+          aiReadPhaseTimer = setInterval(() => {
+              if (aiReadPhaseIndex >= aiReadPhaseList.length - 1) {
+                  clearInterval(aiReadPhaseTimer);
+                  aiReadPhaseTimer = null;
+                  return;
+              }
+              setAiReadPhase(aiReadPhaseIndex + 1);
+          }, autoAdvanceMs);
+      }
+
+      aiReadModal.classList.add('open');
+      aiReadModal.setAttribute('aria-hidden', 'false');
+  }
+
+  function setAiReadStatus(message) {
+      if (aiReadStatus && message) {
+          aiReadStatus.textContent = message;
+      }
+  }
+
+  function hideAiReadModal() {
+      if (!aiReadModal) {
+          return;
+      }
+      if (aiReadPhaseTimer) {
+          clearInterval(aiReadPhaseTimer);
+          aiReadPhaseTimer = null;
+      }
+      aiReadModal.classList.remove('open');
+      aiReadModal.setAttribute('aria-hidden', 'true');
   }
 
   function formatBytes(bytes) {
@@ -485,6 +564,18 @@ function uploadFiles(fileList) {
     // Show upload queue
     uploadProgress.style.display = 'block';
     uploadQueue.innerHTML = '';
+
+    showAiReadModal({
+        title: 'Uploading Training Files',
+        message: `Preparing ${fileArray.length} file(s) for upload...`,
+        phases: [
+            'Uploading files',
+            'Validating and reading file contents',
+            'Extracting details for AI knowledge',
+            'Saving training details to database',
+        ],
+        autoAdvanceMs: 1600,
+    });
     
     fileArray.forEach(file => {
         uploadQueue.appendChild(createUploadItem(file.name));
@@ -499,6 +590,17 @@ function uploadFiles(fileList) {
             fileArray.forEach(file => {
                 updateUploadItem(file.name, pct, 'uploading');
             });
+
+            if (pct < 35) {
+                setAiReadPhase(0);
+                setAiReadStatus(`Uploading files (${pct}%)...`);
+            } else if (pct < 75) {
+                setAiReadPhase(1);
+                setAiReadStatus('Reading and validating file contents...');
+            } else {
+                setAiReadPhase(2);
+                setAiReadStatus('Extracting details for AI knowledge...');
+            }
         }
     });
 
@@ -506,12 +608,34 @@ function uploadFiles(fileList) {
         if (xhr.readyState !== 4) {
             return;
         }
+
+        let response = {};
+        try {
+            response = JSON.parse(xhr.responseText || '{}');
+        } catch (err) {
+            response = {};
+        }
         
         if (xhr.status >= 200 && xhr.status < 300) {
+            setAiReadPhase(3);
+            setAiReadStatus('Saving training details to database...');
             fileArray.forEach(file => {
                 updateUploadItem(file.name, 100, 'success');
             });
-            showToast('success', `Successfully uploaded ${fileArray.length} file(s)!`);
+            const savedCount = Array.isArray(response.saved) ? response.saved.length : fileArray.length;
+            showToast('success', `Successfully uploaded ${savedCount} file(s)!`);
+
+            const currencyWarnings = Array.isArray(response.currency_warnings)
+                ? response.currency_warnings
+                : [];
+            currencyWarnings.forEach((warning) => {
+                const filename = warning && warning.file ? `${warning.file}: ` : '';
+                const message = warning && warning.message ? warning.message : '';
+                if (message) {
+                    showToast('warning', `${filename}${message}`);
+                }
+            });
+
             setTimeout(() => {
                 uploadProgress.style.display = 'none';
                 validationMessages.innerHTML = '';
@@ -519,11 +643,14 @@ function uploadFiles(fileList) {
             trainingFiles.value = '';
             fetchFiles();
             fetchKnowledge();
+            setTimeout(() => hideAiReadModal(), 300);
         } else {
             fileArray.forEach(file => {
                 updateUploadItem(file.name, 0, 'error');
             });
-            showToast('error', 'Upload failed. Please try again.');
+            const message = response && response.error ? response.error : 'Upload failed. Please try again.';
+            showToast('error', message);
+            hideAiReadModal();
         }
     };
 
@@ -1037,23 +1164,6 @@ const menuUploadInput = document.getElementById('menuUploadAiTraining');
 const menuPhotoTrigger = document.getElementById('menuPhotoTriggerAiTraining');
 const menuPhotoInput = document.getElementById('menuPhotoUploadAiTraining');
 const clearMenuBtn = document.getElementById('clearMenuBtnAiTraining');
-const aiReadModal = document.getElementById('aiReadModal');
-const aiReadStatus = document.getElementById('aiReadStatus');
-
-function showAiReadModal(message) {
-    if (!aiReadModal) return;
-    if (aiReadStatus && message) {
-        aiReadStatus.textContent = message;
-    }
-    aiReadModal.classList.add('open');
-    aiReadModal.setAttribute('aria-hidden', 'false');
-}
-
-function hideAiReadModal() {
-    if (!aiReadModal) return;
-    aiReadModal.classList.remove('open');
-    aiReadModal.setAttribute('aria-hidden', 'true');
-}
 
 if (menuUploadTrigger && menuUploadInput) {
     menuUploadTrigger.addEventListener('click', () => menuUploadInput.click());
@@ -1065,18 +1175,34 @@ if (menuUploadTrigger && menuUploadInput) {
         const file = menuUploadInput.files[0];
         const formData = new FormData();
         formData.append('menu_file', file, file.name);
-        showAiReadModal(`Reading ${file.name} with AI. This may take a moment...`);
+        const isImageFile = /\.png$/i.test(file.name || '');
+        showAiReadModal({
+            title: 'Syncing Menu File',
+            message: `Uploading ${file.name}...`,
+            phases: [
+                'Uploading menu file',
+                isImageFile ? 'Reading image content' : 'Reading file content',
+                'Extracting menu details with AI',
+                'Saving menu details to database',
+            ],
+            autoAdvanceMs: 1500,
+        });
 
         try {
+            setAiReadPhase(0);
             const res = await fetch('/menu/upload', {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin'
             });
+            setAiReadPhase(2);
+            setAiReadStatus('Extracting and structuring menu details...');
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 throw new Error(data.error || 'Menu upload failed');
             }
+            setAiReadPhase(3);
+            setAiReadStatus('Saving menu details to database...');
             showToast('success', `Menu synced: ${data.saved || 0} item(s) processed.`);
             setTimeout(() => window.location.reload(), 900);
         } catch (err) {
@@ -1100,18 +1226,33 @@ if (menuPhotoTrigger && menuPhotoInput) {
             formData.append('menu_photos', file, file.name);
         });
         const count = menuPhotoInput.files.length;
-        showAiReadModal(`Processing ${count} image file${count > 1 ? 's' : ''}. Please wait...`);
+        showAiReadModal({
+            title: 'Uploading Menu Photos',
+            message: `Uploading ${count} image file${count > 1 ? 's' : ''}...`,
+            phases: [
+                'Uploading image files',
+                'Reading image files',
+                'Matching photos to menu items',
+                'Saving image details to database',
+            ],
+            autoAdvanceMs: 1300,
+        });
 
         try {
+            setAiReadPhase(0);
             const res = await fetch('/menu/photos/upload', {
                 method: 'POST',
                 body: formData,
                 credentials: 'same-origin'
             });
+            setAiReadPhase(2);
+            setAiReadStatus('Matching photos to menu items...');
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
                 throw new Error(data.error || 'Photo upload failed');
             }
+            setAiReadPhase(3);
+            setAiReadStatus('Saving image details to database...');
             showToast('success', `Photos uploaded: ${data.uploaded || 0}, matched: ${data.matched || 0}.`);
             setTimeout(() => window.location.reload(), 900);
         } catch (err) {

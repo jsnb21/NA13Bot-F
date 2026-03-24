@@ -572,6 +572,11 @@
     @keyframes aiReadSpin {
         to { transform: rotate(360deg); }
     }
+    .ai-read-phase {
+        color: #0b343d;
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
 
     .action-confirm-modal {
         position: fixed;
