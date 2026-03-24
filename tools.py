@@ -103,6 +103,39 @@ from werkzeug.security import generate_password_hash, check_password_hash
 logger = logging.getLogger(__name__)
 
 
+_CATEGORY_NAME_PREFIX_ALIASES = {
+    'appetizers': ['appetizer', 'appetizers', 'starter', 'starters'],
+    'main course': ['main course', 'main', 'entree', 'entrees'],
+    'desserts': ['dessert', 'desserts'],
+    'drinks beverages': ['drinks beverages', 'drinks', 'drink', 'beverages', 'beverage']
+}
+
+
+def normalize_menu_item_name(name: str, category: str = '') -> str:
+    """Remove category-like prefixes from a menu item name."""
+    cleaned_name = ' '.join(str(name or '').split())
+    if not cleaned_name:
+        return ''
+
+    category_text = (category or '').strip().lower()
+    normalized_category = re.sub(r'[^a-z0-9]+', ' ', category_text).strip()
+
+    aliases = set()
+    if category_text:
+        aliases.add(category_text)
+    if normalized_category:
+        aliases.add(normalized_category)
+        aliases.update(_CATEGORY_NAME_PREFIX_ALIASES.get(normalized_category, []))
+
+    for prefix in sorted((alias for alias in aliases if alias), key=len, reverse=True):
+        pattern = rf'^\s*{re.escape(prefix)}(?:\s*[:\-|]\s*|\s+)'
+        candidate = re.sub(pattern, '', cleaned_name, count=1, flags=re.IGNORECASE).strip()
+        if candidate and candidate != cleaned_name:
+            return candidate
+
+    return cleaned_name
+
+
 def normalize_email(email: str) -> str:
     if not email:
         return ''
@@ -298,9 +331,10 @@ def _fetch_menu_items(restaurant_id: str = None):
         image_url = row[6]
         if not image_url and row[7]:  # has_image
             image_url = f"/menu/photo/{row[0]}"
+        name = normalize_menu_item_name(row[1], row[4])
         items.append({
             'id': str(row[0]),
-            'name': row[1],
+            'name': name,
             'description': row[2],
             'price': row[3],
             'category': row[4],

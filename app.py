@@ -80,7 +80,16 @@ Dependencies:
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response, make_response
 from flask_turbo import Turbo
-from tools import save_config, load_config, add_user, verify_user, user_exists, get_user, update_user_meta
+from tools import (
+    save_config,
+    load_config,
+    add_user,
+    verify_user,
+    user_exists,
+    get_user,
+    update_user_meta,
+    normalize_menu_item_name,
+)
 from config import init_db, get_connection, get_db_schema
 import os
 from werkzeug.utils import secure_filename
@@ -933,6 +942,9 @@ def _normalize_imported_menu_item(item: dict, known_categories):
     category = (item.get('category') or '').strip()
     if not category or category.lower() == 'uncategorized':
         category = infer_menu_category(name, description, known_categories)
+    normalized_name = normalize_menu_item_name(name, category)
+    if normalized_name:
+        name = normalized_name
 
     base_price_text = _strip_currency_tokens(item.get('price'))
     base_numeric = _parse_price_value(base_price_text)
@@ -1894,6 +1906,9 @@ def menu_add_item():
     known_categories = _extract_known_categories(cfg.get('menu_items', []))
     category_input = request.form.get('category', '').strip()
     category = category_input or infer_menu_category(name, description, known_categories)
+    normalized_name = normalize_menu_item_name(name, category)
+    if normalized_name:
+        name = normalized_name
     status = request.form.get('status', '').strip() or 'Live'
     image_url = request.form.get('image_url', '').strip()
 
@@ -1956,6 +1971,9 @@ def menu_update_item():
     known_categories = _extract_known_categories(items)
     category_input = request.form.get('category', '').strip()
     category = category_input or infer_menu_category(name, description, known_categories)
+    normalized_name = normalize_menu_item_name(name, category)
+    if normalized_name:
+        name = normalized_name
 
     # Preserve ID from existing item
     existing_item = items[index]
