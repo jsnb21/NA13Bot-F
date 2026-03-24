@@ -86,6 +86,28 @@
       }, 4000);
   }
 
+  async function showCurrencyWarningsModal(currencyWarnings) {
+      const messages = (Array.isArray(currencyWarnings) ? currencyWarnings : [])
+          .map((warning) => {
+              const filename = warning && warning.file ? `${warning.file}: ` : '';
+              const message = warning && warning.message ? warning.message : '';
+              return message ? `${filename}${message}` : '';
+          })
+          .filter(Boolean);
+
+      if (!messages.length) {
+          return;
+      }
+
+      if (typeof window.appShowAlert === 'function') {
+          const modalMessage = messages.map((msg, idx) => `${idx + 1}. ${msg}`).join('\n\n');
+          await window.appShowAlert(modalMessage, 'Currency Mismatch Warning');
+          return;
+      }
+
+      messages.forEach((msg) => showToast('warning', msg));
+  }
+
   function setAiReadPhase(index) {
       if (!aiReadPhaseList.length || !aiReadPhase) {
           return;
@@ -604,7 +626,7 @@ function uploadFiles(fileList) {
         }
     });
 
-    xhr.onreadystatechange = () => {
+    xhr.onreadystatechange = async () => {
         if (xhr.readyState !== 4) {
             return;
         }
@@ -628,13 +650,7 @@ function uploadFiles(fileList) {
             const currencyWarnings = Array.isArray(response.currency_warnings)
                 ? response.currency_warnings
                 : [];
-            currencyWarnings.forEach((warning) => {
-                const filename = warning && warning.file ? `${warning.file}: ` : '';
-                const message = warning && warning.message ? warning.message : '';
-                if (message) {
-                    showToast('warning', `${filename}${message}`);
-                }
-            });
+            await showCurrencyWarningsModal(currencyWarnings);
 
             setTimeout(() => {
                 uploadProgress.style.display = 'none';
@@ -1204,6 +1220,10 @@ if (menuUploadTrigger && menuUploadInput) {
             setAiReadPhase(3);
             setAiReadStatus('Saving menu details to database...');
             showToast('success', `Menu synced: ${data.saved || 0} item(s) processed.`);
+            const currencyWarnings = Array.isArray(data.currency_warnings)
+                ? data.currency_warnings
+                : [];
+            await showCurrencyWarningsModal(currencyWarnings);
             setTimeout(() => window.location.reload(), 900);
         } catch (err) {
             showToast('error', err.message || 'Menu upload failed');

@@ -464,7 +464,14 @@ def _build_currency_mismatch_warning(configured_code: str, configured_symbol: st
     if not configured_code_value or not detected_code:
         return None
 
-    if configured_code_value == detected_code:
+    code_mismatch = configured_code_value != detected_code
+    symbol_mismatch = bool(
+        configured_symbol_value
+        and detected_symbol
+        and configured_symbol_value != detected_symbol
+    )
+
+    if not code_mismatch and not symbol_mismatch:
         return None
 
     configured_label = configured_code_value
@@ -476,7 +483,7 @@ def _build_currency_mismatch_warning(configured_code: str, configured_symbol: st
         detected_label = f"{detected_code} ({detected_symbol})"
 
     return (
-        f"This PDF appears to use {detected_label}, but your web-app currency is set to {configured_label}. "
+        f"This uploaded file appears to use {detected_label}, but your web-app currency is set to {configured_label}. "
         "Please review imported prices carefully, as they may become inaccurate."
     )
 
@@ -2239,6 +2246,22 @@ def menu_upload_menu_file():
             content = data_bytes.decode('utf-8', errors='ignore')
 
         cfg = load_config(restaurant_id)
+        configured_currency_code = cfg.get('currency_code', 'PHP')
+        configured_currency_symbol = cfg.get('currency_symbol', '₱')
+
+        detected_currency = _detect_currency_from_text(content)
+        mismatch_warning = _build_currency_mismatch_warning(
+            configured_currency_code,
+            configured_currency_symbol,
+            detected_currency,
+        )
+        currency_warnings = []
+        if mismatch_warning:
+            currency_warnings.append({
+                'file': file.filename,
+                'message': mismatch_warning,
+                'detected_currency': detected_currency,
+            })
 
         # Parse the extracted text into structured items
         items = parse_menu_txt_with_ai(content)
@@ -2330,6 +2353,7 @@ def menu_upload_menu_file():
             'flagged_for_review': review_flagged,
             'message': result_message,
             'merge_mode': merge_mode,
+            'currency_warnings': currency_warnings,
         })
     except Exception as exc:
         app.logger.exception('Menu upload failed')
@@ -2762,7 +2786,7 @@ def ai_training_upload():
         # pass 1 = extract plain text from file, pass 2 = AI structure/tagging.
         try:
             preview_text = _build_training_preview_text(dest)
-            if ext == '.pdf' and preview_text:
+            if preview_text:
                 detected_currency = _detect_currency_from_text(preview_text)
                 mismatch_warning = _build_currency_mismatch_warning(
                     configured_currency_code,
