@@ -363,14 +363,32 @@ def _canonical_size_label(label: str) -> str:
     return mapping.get(token, '')
 
 
+_CURRENCY_CODE_PATTERN = re.compile(
+    r"\b(?:php|usd|aud|cad|eur|gbp|jpy|sgd|inr|hkd|cny|rmb|myr|thb|vnd|idr|krw|chf|nzd)\.?\b",
+    re.IGNORECASE,
+)
+_CURRENCY_SYMBOL_PATTERN = re.compile(r"(?:A\$|C\$|S\$|HK\$|US\$|CA\$|AU\$|NZ\$|R\$|[$€£¥₹₱]|[\u20A0-\u20CF])")
+
+
+def _strip_currency_tokens(price_text: str) -> str:
+    text = str(price_text or '').strip()
+    if not text:
+        return ''
+    text = _CURRENCY_CODE_PATTERN.sub('', text)
+    text = _CURRENCY_SYMBOL_PATTERN.sub('', text)
+    text = re.sub(r"\s{2,}", ' ', text)
+    return text.strip(" \t:-")
+
+
 def _parse_price_value(price_text: str):
-    if not price_text:
+    clean = _strip_currency_tokens(price_text)
+    if not clean:
         return None
-    match = re.search(r"\d+(?:\.\d{1,2})?", price_text)
+    match = re.search(r"\d[\d,]*(?:\.\d{1,2})?", clean)
     if not match:
         return None
     try:
-        return float(match.group(0))
+        return float(match.group(0).replace(',', ''))
     except Exception:
         return None
 
@@ -396,7 +414,7 @@ def _parse_size_variant_line(line: str):
     seen = set()
     for match in matches:
         label = _canonical_size_label(match.group('label'))
-        price = (match.group('price') or '').strip()
+        price = _strip_currency_tokens(match.group('price'))
         if not label or not price or label in seen:
             continue
         seen.add(label)
@@ -445,7 +463,7 @@ def _merge_small_medium_large_variants(items):
 
         label = _canonical_size_label(match.group('label'))
         base_name = (match.group('base') or '').strip(" -:\t|,")
-        price = (item.get('price') or '').strip()
+        price = _strip_currency_tokens(item.get('price'))
         if not label or not base_name or not price:
             merged.append(item)
             continue
@@ -513,7 +531,7 @@ def _build_variant_options_from_form(form_data):
     default_labels = ['Small', 'Medium', 'Large']
     for idx in range(1, 4):
         label = (form_data.get(f'variant_label_{idx}') or '').strip()
-        value = (form_data.get(f'variant_price_{idx}') or '').strip()
+        value = _strip_currency_tokens(form_data.get(f'variant_price_{idx}'))
         if not value:
             continue
         if not label:
@@ -523,7 +541,7 @@ def _build_variant_options_from_form(form_data):
     # Backward compatibility with older fixed field names.
     if not options:
         for label, key in (('Small', 'variant_small'), ('Medium', 'variant_medium'), ('Large', 'variant_large')):
-            value = (form_data.get(key) or '').strip()
+            value = _strip_currency_tokens(form_data.get(key))
             if value:
                 options.append((label, value))
 
@@ -547,7 +565,7 @@ def _build_variant_options_from_form(form_data):
 def _apply_variant_form_values(description: str, price: str, form_data):
     variant_data = _build_variant_options_from_form(form_data)
     if not variant_data:
-        return description, price
+        return description, _strip_currency_tokens(price)
 
     base_description = _strip_options_block(description)
     if base_description:
@@ -575,7 +593,7 @@ def parse_menu_txt(content: str):
         name = (match.group(1) or '').strip()
         if not name:
             continue
-        price = (match.group(2) or '').strip()
+        price = _strip_currency_tokens(match.group(2))
         description = (match.group(3) or '').strip()
         category = 'Uncategorized'
         for pos, heading in reversed(headings):
@@ -605,7 +623,7 @@ def parse_menu_txt(content: str):
         match = price_pattern.search(clean)
         if not match:
             continue
-        price = match.group(1).strip()
+        price = _strip_currency_tokens(match.group(1))
         name_part = clean[:match.start()].strip(" -:\t")
         desc_part = clean[match.end():].strip(" -:\t")
         if not name_part:
@@ -642,7 +660,7 @@ def parse_menu_txt(content: str):
         if not name:
             continue
         description = row[1].strip() if len(row) > 1 else ''
-        price = row[2].strip() if len(row) > 2 else ''
+        price = _strip_currency_tokens(row[2]) if len(row) > 2 else ''
         category = row[3].strip() if len(row) > 3 else 'Uncategorized'
         status = row[4].strip() if len(row) > 4 else 'Live'
         items.append({
@@ -737,7 +755,7 @@ def _extract_variant_options(description: str):
             continue
         label, raw_price = part.split('=', 1)
         clean_label = (label or '').strip()
-        clean_price = (raw_price or '').strip()
+        clean_price = _strip_currency_tokens(raw_price)
         if not clean_label or not clean_price:
             continue
         key = clean_label.lower()
@@ -763,7 +781,7 @@ def _extract_variants_from_freeform_text(text: str):
     )
     for match in labeled_pattern.finditer(source):
         label = (match.group('label') or '').strip()
-        price = (match.group('price') or '').strip()
+        price = _strip_currency_tokens(match.group('price'))
         if not label or not price:
             continue
         key = label.lower()
@@ -783,7 +801,7 @@ def _extract_variants_from_freeform_text(text: str):
         parsed = []
         for idx, raw_price in enumerate(numbers[:5]):
             label = default_labels[idx] if idx < len(default_labels) else f"Option {idx + 1}"
-            parsed.append((label, raw_price.strip()))
+            parsed.append((label, _strip_currency_tokens(raw_price)))
         return parsed
 
     return []
@@ -814,7 +832,7 @@ def _normalize_imported_menu_item(item: dict, known_categories):
     if not category or category.lower() == 'uncategorized':
         category = infer_menu_category(name, description, known_categories)
 
-    base_price_text = (item.get('price') or '').strip()
+    base_price_text = _strip_currency_tokens(item.get('price'))
     base_numeric = _parse_price_value(base_price_text)
 
     variants = []
@@ -833,7 +851,7 @@ def _normalize_imported_menu_item(item: dict, known_categories):
             else:
                 price_text = ''
         else:
-            price_text = str(raw_price or '').strip()
+            price_text = _strip_currency_tokens(raw_price)
         if not price_text:
             continue
         variants.append((label, price_text))
@@ -1011,7 +1029,7 @@ def parse_menu_txt_with_ai(content: str):
             "Return JSON only: an array of objects with keys "
             "name, description, price, category, status, variants. "
             "Use empty string when a field is missing. "
-            "Preserve currency symbols if present in the price. "
+            "Return prices as plain numbers without currency symbols or codes. "
             "If a section heading (e.g., APPETIZERS, ESPRESSO BEVERAGE) appears, use it as category. "
             "Default status to Live. "
             "DESCRIPTION RULES: The description should contain actual descriptive text about the item. "
@@ -1051,7 +1069,7 @@ def parse_menu_txt_with_ai(content: str):
             if not name:
                 continue
             description = (row.get('description') or '').strip()
-            price = (row.get('price') or '').strip()
+            price = _strip_currency_tokens(row.get('price'))
             if not price and isinstance(row.get('base_price'), dict):
                 amount = row.get('base_price', {}).get('amount')
                 if amount is not None:
@@ -1068,9 +1086,9 @@ def parse_menu_txt_with_ai(content: str):
                 if isinstance(raw_price, dict):
                     display = (raw_price.get('display') or '').strip()
                     amount = raw_price.get('amount')
-                    variant_price = display or (_format_price_value(amount) if amount is not None else '')
+                    variant_price = _strip_currency_tokens(display) or (_format_price_value(amount) if amount is not None else '')
                 else:
-                    variant_price = str(raw_price or '').strip()
+                    variant_price = _strip_currency_tokens(raw_price)
                 if variant_price:
                     variants.append((label, variant_price))
 
@@ -1769,7 +1787,7 @@ def menu_add_item():
     cfg = load_config(restaurant_id)
     name = request.form.get('name', '').strip()
     description = request.form.get('description', '').strip()
-    price = request.form.get('price', '').strip()
+    price = _strip_currency_tokens(request.form.get('price'))
     description, price = _apply_variant_form_values(description, price, request.form)
     known_categories = _extract_known_categories(cfg.get('menu_items', []))
     category_input = request.form.get('category', '').strip()
@@ -1831,7 +1849,7 @@ def menu_update_item():
         return redirect(url_for('menu'))
 
     description = request.form.get('description', '').strip()
-    incoming_price = request.form.get('price', '').strip()
+    incoming_price = _strip_currency_tokens(request.form.get('price'))
     description, final_price = _apply_variant_form_values(description, incoming_price, request.form)
     known_categories = _extract_known_categories(items)
     category_input = request.form.get('category', '').strip()

@@ -298,10 +298,18 @@
               <td class="fw-semibold text-dark">
                 {% set symbol = cfg.get('currency_symbol', '₱') %}
                 {% if symbol == 'None' or symbol == '' %}{% set symbol = '₱' %}{% endif %}
+                {% set clean_item_price = (item.get('price','') | string
+                  | replace('A$','') | replace('C$','') | replace('S$','') | replace('HK$','')
+                  | replace('₱', '') | replace('$', '') | replace('€', '') | replace('£', '') | replace('¥', '') | replace('₹', '')
+                  | replace('PHP', '') | replace('php', '') | replace('USD', '') | replace('usd', '')
+                  | replace('AUD', '') | replace('aud', '') | replace('CAD', '') | replace('cad', '')
+                  | replace('EUR', '') | replace('eur', '') | replace('GBP', '') | replace('gbp', '')
+                  | replace('JPY', '') | replace('jpy', '') | replace('SGD', '') | replace('sgd', '')
+                  | trim) %}
                 {% if has_sizes %}
                   <small class="text-muted">{{ sizes_part }}</small>
                 {% else %}
-                  {{ symbol }}{{ item.get('price','') }}
+                  {{ symbol }}{{ clean_item_price }}
                 {% endif %}
               </td>
               <td>
@@ -390,8 +398,16 @@
                   {% for pair in option_pairs %}
                     {% set opt_price = pair.strip().split('=') %}
                     {% if opt_price|length == 2 %}
+                    {% set clean_opt_price = (opt_price[1] | string
+                      | replace('A$','') | replace('C$','') | replace('S$','') | replace('HK$','')
+                      | replace('₱', '') | replace('$', '') | replace('€', '') | replace('£', '') | replace('¥', '') | replace('₹', '')
+                      | replace('PHP', '') | replace('php', '') | replace('USD', '') | replace('usd', '')
+                      | replace('AUD', '') | replace('aud', '') | replace('CAD', '') | replace('cad', '')
+                      | replace('EUR', '') | replace('eur', '') | replace('GBP', '') | replace('gbp', '')
+                      | replace('JPY', '') | replace('jpy', '') | replace('SGD', '') | replace('sgd', '')
+                      | trim) %}
                     <span class="badge" style="background: var(--brand-dark); color: white; font-size: 0.85rem; padding: 0.35rem 0.6rem;">
-                      {{ opt_price[0] }}: {{ symbol }}{{ opt_price[1] }}
+                      {{ opt_price[0] }}: {{ symbol }}{{ clean_opt_price }}
                     </span>
                     {% endif %}
                   {% endfor %}
