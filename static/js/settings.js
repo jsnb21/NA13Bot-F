@@ -38,7 +38,11 @@
             const tag = (el.tagName || '').toLowerCase();
             const type = (el.type || '').toLowerCase();
 
-            if (type === 'file') return '';
+            if (type === 'file') {
+                const files = Array.from(el.files || []);
+                if (!files.length) return '';
+                return files.map((file) => file.name || '').join('|');
+            }
 
             if (type === 'checkbox') {
                 return el.checked ? (el.value || 'on') : '';
@@ -170,6 +174,13 @@
             preview.style.display = 'block';
         };
         reader.readAsDataURL(f);
+
+        // Uploaded file takes precedence over URL input.
+        if (urlInput) {
+            urlInput.value = '';
+            urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+            urlInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     });
 })();
 

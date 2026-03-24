@@ -330,7 +330,7 @@ def _fetch_menu_items(restaurant_id: str = None):
     for row in rows or []:
         image_url = row[6]
         if not image_url and row[7]:  # has_image
-            image_url = f"/menu/photo/{row[0]}"
+            image_url = f"/menu/photo/{row[0]}?restaurant_id={resolved_id}"
         name = normalize_menu_item_name(row[1], row[4])
         items.append({
             'id': str(row[0]),

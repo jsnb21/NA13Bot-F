@@ -2438,13 +2438,15 @@ def menu_upload_photos():
 
 # Menu Photo Serving Route
 @app.route('/menu/photo/<photo_id>', methods=['GET'])
-@login_required
 def menu_get_photo(photo_id):
-    """Serve a menu item photo from the database."""
+    """Serve a menu item photo from the database for admin and QR customer flows."""
     try:
-        restaurant_id = get_current_restaurant_id()
+        restaurant_id = (request.args.get('restaurant_id') or session.get('restaurant_id') or '').strip()
+        if not restaurant_id:
+            return jsonify({'error': 'Photo not found'}), 404
+
         schema = get_db_schema()
-        
+
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(

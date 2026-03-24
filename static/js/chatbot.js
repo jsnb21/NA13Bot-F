@@ -88,6 +88,16 @@ function setOrderNumber(value) {
     badge.textContent = normalized;
 }
 
+function scrollMessagesToBottom(behavior = 'auto') {
+    const messages = document.getElementById('messages');
+    if (!messages) return;
+    try {
+        messages.scrollTo({ top: messages.scrollHeight, behavior });
+    } catch (error) {
+        messages.scrollTop = messages.scrollHeight;
+    }
+}
+
 function isAssistantOpen() {
     return Boolean(assistantPanel && !assistantPanel.classList.contains('is-closed'));
 }
@@ -256,7 +266,7 @@ function showTyping() {
     if (el && messages) {
         messages.appendChild(el);
         el.style.display = 'block';
-        messages.scrollTop = messages.scrollHeight;
+        scrollMessagesToBottom();
     }
 }
 
@@ -334,13 +344,44 @@ function slugifyCategory(value) {
     return (value || 'Other').toString().trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
+function normalizeMediaUrl(urlValue) {
+    const raw = (urlValue || '').toString().trim();
+    if (!raw) return '';
+    if (/^data:/i.test(raw)) return raw;
+
+    // Normalize bare static/upload paths to root-relative URLs.
+    if (!/^https?:\/\//i.test(raw) && !raw.startsWith('/')) {
+        return `/${raw.replace(/^\.?\//, '')}`;
+    }
+
+    if (!/^https?:\/\//i.test(raw)) {
+        return raw;
+    }
+
+    try {
+        const parsed = new URL(raw);
+        const host = (parsed.hostname || '').toLowerCase();
+        const localOnlyHosts = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1']);
+
+        // QR scans are often opened on a different device, where localhost is unreachable.
+        if (localOnlyHosts.has(host)) {
+            parsed.protocol = window.location.protocol;
+            parsed.host = window.location.host;
+        }
+
+        return parsed.toString();
+    } catch (error) {
+        return raw;
+    }
+}
+
 function getKioskData() {
     const items = (chatbotConfig.menu_items || [])
         .filter((item) => item && item.name)
         .map((item) => {
             const category = (item.category || 'Other').toString().trim() || 'Other';
-            const imageUrl = (item.image_url || '').toString().trim();
-            const fallbackImage = (chatbotConfig.logo_url || '').toString().trim() || '/static/uploads/logo.png';
+            const imageUrl = normalizeMediaUrl(item.image_url);
+            const fallbackImage = normalizeMediaUrl(chatbotConfig.logo_url) || '/static/uploads/logo.png';
             const variants = parseVariantOptions(item.description);
             const hasVariants = variants.length > 0;
             const variantPrices = variants.map((variant) => variant.priceValue).filter((price) => price > 0);
@@ -615,7 +656,7 @@ function postMiniKiosk() {
     row.appendChild(img);
     row.appendChild(bubble);
     container.appendChild(row);
-    container.scrollTop = container.scrollHeight;
+    scrollMessagesToBottom();
 }
 
 function renderAIResult(result) {
@@ -859,7 +900,8 @@ function extractPhotoUrl(line) {
     // Match: database photo URLs (/menu/photo/{uuid}), external URLs, or filesystem URLs with extensions
     const match = line.match(/(?:\/menu\/photo\/[a-f0-9\-]+|https?:\/\/[^\s]+|\/static\/uploads\/[^\s]+?\.(?:png|jpe?g|gif|svg))/i);
     if (!match) return '';
-    return match[0].replace(/[),.!?]+$/, '');
+    const normalized = match[0].replace(/[),.!?]+$/, '');
+    return normalizeMediaUrl(normalized);
 }
 
 function buildBotBubbleContent(text) {
@@ -941,7 +983,7 @@ function postMessage(text, from = 'user') {
     row.appendChild(bubble);
 
     container.appendChild(row);
-    container.scrollTop = container.scrollHeight;
+    scrollMessagesToBottom();
 
     if (from === 'bot') {
         bumpAssistantUnread();
@@ -984,7 +1026,7 @@ function postOrderForm(orderData) {
     row.appendChild(img);
     row.appendChild(bubble);
     container.appendChild(row);
-    container.scrollTop = container.scrollHeight;
+    scrollMessagesToBottom();
     bumpAssistantUnread();
     
     // Store order data and attach event listener
@@ -1045,8 +1087,47 @@ function postCartSummary(items, total) {
     row.appendChild(img);
     row.appendChild(bubble);
     container.appendChild(row);
-    container.scrollTop = container.scrollHeight;
+    scrollMessagesToBottom();
     bumpAssistantUnread();
+}
+
+function updateKeyboardOffset() {
+    const root = document.documentElement;
+    const vv = window.visualViewport;
+    if (!root || !vv) return;
+
+    const overlap = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+    root.style.setProperty('--keyboard-offset', `${Math.round(overlap)}px`);
+
+    if (document.activeElement && document.activeElement.id === 'txt') {
+        window.requestAnimationFrame(() => scrollMessagesToBottom());
+    }
+}
+
+function initKeyboardViewportHandling() {
+    if (!window.visualViewport) return;
+
+    updateKeyboardOffset();
+    window.visualViewport.addEventListener('resize', updateKeyboardOffset);
+    window.visualViewport.addEventListener('scroll', updateKeyboardOffset);
+    window.addEventListener('orientationchange', updateKeyboardOffset);
+
+    const txt = document.getElementById('txt');
+    if (!txt) return;
+
+    txt.addEventListener('focus', () => {
+        window.setTimeout(() => {
+            updateKeyboardOffset();
+            scrollMessagesToBottom('smooth');
+        }, 120);
+    });
+
+    txt.addEventListener('blur', () => {
+        window.setTimeout(() => {
+            updateKeyboardOffset();
+            scrollMessagesToBottom();
+        }, 120);
+    });
 }
 
 async function sendToAI(message) {
@@ -1116,6 +1197,7 @@ if (txtInput) {
     applyConfig(cfg);
     renderKioskPanel();
     loadOrderNumber();
+    initKeyboardViewportHandling();
     syncAssistantUnreadBadge();
     setAssistantOpen(false);
     setKioskFilterOpen(false);
