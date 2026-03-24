@@ -2963,6 +2963,29 @@ def signup():
         establishment_name = request.form.get('establishment_name', '')
         main_color = request.form.get('main_color', '')
         sub_color = request.form.get('sub_color', '')
+        currency_choice = request.form.get('currency_choice', '').strip()
+
+        currency_code = 'PHP'
+        currency_symbol = '₱'
+        currency_map = {
+            'PHP': '₱',
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'AUD': 'A$',
+            'CAD': 'C$',
+            'SGD': 'S$',
+            'INR': '₹'
+        }
+        if currency_choice:
+            if '|' in currency_choice:
+                code_part, symbol_part = currency_choice.split('|', 1)
+                currency_code = (code_part or '').strip() or currency_code
+                currency_symbol = (symbol_part or '').strip() or currency_symbol
+            else:
+                currency_code = currency_choice
+                currency_symbol = currency_map.get(currency_choice, currency_symbol)
 
         existing_pending = session.get('pending_signup') or {}
         pending_restaurant_id = existing_pending.get('restaurant_id') or str(uuid.uuid4())
@@ -2992,7 +3015,9 @@ def signup():
                     'establishment_name': establishment_name,
                     'logo_url': logo_url,
                     'main_color': main_color,
-                    'sub_color': sub_color
+                    'sub_color': sub_color,
+                    'currency_code': currency_code,
+                    'currency_symbol': currency_symbol
                 }
                 otp_code = set_otp(email, 'signup')
                 sent, send_error = send_otp_email(email, otp_code, 'signup', cfg)
@@ -3028,6 +3053,8 @@ def signup_verify():
         'logo_url': pending.get('logo_url', ''),
         'main_color': pending.get('main_color', ''),
         'sub_color': pending.get('sub_color', ''),
+        'currency_code': pending.get('currency_code', 'PHP'),
+        'currency_symbol': pending.get('currency_symbol', '₱'),
         'restaurant_id': restaurant_id
     }
     success = add_user(email, password=None, meta=meta)
@@ -3040,7 +3067,9 @@ def signup_verify():
         'establishment_name': pending.get('establishment_name', ''),
         'logo_url': pending.get('logo_url', ''),
         'main_color': pending.get('main_color', ''),
-        'sub_color': pending.get('sub_color', '')
+        'sub_color': pending.get('sub_color', ''),
+        'currency_code': pending.get('currency_code', 'PHP'),
+        'currency_symbol': pending.get('currency_symbol', '₱')
     })
     save_config(cfg, restaurant_id)
     session.pop('pending_signup', None)
